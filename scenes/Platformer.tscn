@@ -7,6 +7,9 @@
 [ext_resource type="Texture2D" uid="uid://d3r4vqxwe55qy" path="res://assets/simonka-jump.png" id="4_jump"]
 [ext_resource type="Texture2D" uid="uid://d08lr05pssn10" path="res://assets/simonka-punch.png" id="5_punch"]
 [ext_resource type="Texture2D" uid="uid://68kpo5m6ffrc" path="res://assets/simonka-kick.png" id="6_kick"]
+[ext_resource type="Texture2D" uid="uid://dl77ymerni0t4" path="res://assets/simonka-gets-hit.png" id="7_gets_hit"]
+[ext_resource type="Texture2D" uid="uid://dtrcg1aawnn27" path="res://assets/simonka-falls.png" id="8_falls"]
+[ext_resource type="Script" path="res://scripts/platformer.gd" id="9_platformer"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
 radius = 16.0
@@ -92,6 +95,38 @@ region = Rect2(0, 512, 512, 512)
 atlas = ExtResource("3_walk")
 region = Rect2(512, 512, 512, 512)
 
+[sub_resource type="AtlasTexture" id="Atlas_gets_hit_0"]
+atlas = ExtResource("7_gets_hit")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_gets_hit_1"]
+atlas = ExtResource("7_gets_hit")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_gets_hit_2"]
+atlas = ExtResource("7_gets_hit")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_gets_hit_3"]
+atlas = ExtResource("7_gets_hit")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_falls_0"]
+atlas = ExtResource("8_falls")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_falls_1"]
+atlas = ExtResource("8_falls")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_falls_2"]
+atlas = ExtResource("8_falls")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_falls_3"]
+atlas = ExtResource("8_falls")
+region = Rect2(512, 512, 512, 512)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_new"]
 animations = [{
 "frames": [{
@@ -175,6 +210,57 @@ animations = [{
 "loop": true,
 "name": &"walk",
 "speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_gets_hit_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_gets_hit_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_gets_hit_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_gets_hit_3")
+}],
+"loop": false,
+"name": &"gets_hit",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_3")
+}],
+"loop": false,
+"name": &"falls",
+"speed": 7.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_falls_0")
+}],
+"loop": false,
+"name": &"getup",
+"speed": 5.0
 }]
 
 [sub_resource type="RectangleShape2D" id="RectShape_ground"]
@@ -184,6 +270,7 @@ size = Vector2(1024, 32)
 size = Vector2(32, 700)
 
 [node name="Platformer" type="Node2D" unique_id=1161821515]
+script = ExtResource("9_platformer")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=876258121]
 position = Vector2(679, 172)
@@ -196,6 +283,7 @@ texture = ExtResource("0_bg")
 [node name="Player" type="CharacterBody2D" parent="." unique_id=72232667]
 position = Vector2(300, 380)
 script = ExtResource("1_pemr4")
+health_bar_path = NodePath("../HUD/P1HealthBar")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=505158247]
 position = Vector2(0, -24)
@@ -204,6 +292,31 @@ shape = SubResource("CapsuleShape2D_player")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player" unique_id=345921866]
 position = Vector2(134, 77)
 scale = Vector2(0.6, 0.6)
+sprite_frames = SubResource("SpriteFrames_new")
+animation = &"jump"
+autoplay = "idle"
+offset = Vector2(0, -256)
+
+[node name="Player2" type="CharacterBody2D" parent="." unique_id=999888777]
+position = Vector2(960, 380)
+script = ExtResource("1_pemr4")
+key_left = 65
+key_right = 68
+key_jump = 87
+key_punch = 70
+key_kick = 71
+face_left = true
+display_name = "Evil Simonka"
+health_bar_path = NodePath("../HUD/P2HealthBar")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player2" unique_id=888777666]
+position = Vector2(0, -24)
+shape = SubResource("CapsuleShape2D_player")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player2" unique_id=777666555]
+position = Vector2(134, 77)
+scale = Vector2(0.6, 0.6)
+modulate = Color(1, 0.75, 0.85, 1)
 sprite_frames = SubResource("SpriteFrames_new")
 animation = &"jump"
 autoplay = "idle"
@@ -228,3 +341,44 @@ position = Vector2(1162, 200)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WallRight" unique_id=1080076327]
 shape = SubResource("RectShape_wall")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="P1HealthBar" type="ProgressBar" parent="HUD"]
+offset_left = 20.0
+offset_top = 15.0
+offset_right = 520.0
+offset_bottom = 48.0
+min_value = 0.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="P2HealthBar" type="ProgressBar" parent="HUD"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -520.0
+offset_top = 15.0
+offset_right = -20.0
+offset_bottom = 48.0
+min_value = 0.0
+max_value = 100.0
+value = 100.0
+show_percentage = false
+fill_mode = 1
+
+[node name="WinScreen" type="ColorRect" parent="HUD"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.65)
+visible = false
+
+[node name="WinLabel" type="Label" parent="HUD/WinScreen"]
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 0.0
+anchor_bottom = 1.0
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 56
