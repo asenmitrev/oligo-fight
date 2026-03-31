@@ -1,0 +1,230 @@
+[gd_scene format=3 uid="uid://bsi2yfi5mnmgw"]
+
+[ext_resource type="Texture2D" uid="uid://c681gv2k08asj" path="res://assets/bg.png" id="0_bg"]
+[ext_resource type="Script" uid="uid://cc5aw0i4kptlf" path="res://scripts/player.gd" id="1_pemr4"]
+[ext_resource type="Texture2D" uid="uid://dg3rgwhk6nkga" path="res://assets/simonka-idle.png" id="2_idle"]
+[ext_resource type="Texture2D" uid="uid://3me27df8feg7" path="res://assets/simonka-walk.png" id="3_walk"]
+[ext_resource type="Texture2D" uid="uid://d3r4vqxwe55qy" path="res://assets/simonka-jump.png" id="4_jump"]
+[ext_resource type="Texture2D" uid="uid://d08lr05pssn10" path="res://assets/simonka-punch.png" id="5_punch"]
+[ext_resource type="Texture2D" uid="uid://68kpo5m6ffrc" path="res://assets/simonka-kick.png" id="6_kick"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
+radius = 16.0
+height = 48.0
+
+[sub_resource type="AtlasTexture" id="Atlas_idle_0"]
+atlas = ExtResource("2_idle")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_idle_1"]
+atlas = ExtResource("2_idle")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_idle_2"]
+atlas = ExtResource("2_idle")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_idle_3"]
+atlas = ExtResource("2_idle")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_jump_0"]
+atlas = ExtResource("4_jump")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_jump_1"]
+atlas = ExtResource("4_jump")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_jump_2"]
+atlas = ExtResource("4_jump")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_jump_3"]
+atlas = ExtResource("4_jump")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_kick_0"]
+atlas = ExtResource("6_kick")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_kick_1"]
+atlas = ExtResource("6_kick")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_kick_2"]
+atlas = ExtResource("6_kick")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_kick_3"]
+atlas = ExtResource("6_kick")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_punch_0"]
+atlas = ExtResource("5_punch")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_punch_1"]
+atlas = ExtResource("5_punch")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_punch_2"]
+atlas = ExtResource("5_punch")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_punch_3"]
+atlas = ExtResource("5_punch")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_walk_0"]
+atlas = ExtResource("3_walk")
+region = Rect2(0, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_walk_1"]
+atlas = ExtResource("3_walk")
+region = Rect2(512, 0, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_walk_2"]
+atlas = ExtResource("3_walk")
+region = Rect2(0, 512, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Atlas_walk_3"]
+atlas = ExtResource("3_walk")
+region = Rect2(512, 512, 512, 512)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_new"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_idle_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_idle_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_idle_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_idle_3")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 4.0,
+"texture": SubResource("Atlas_jump_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_jump_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_jump_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_jump_3")
+}],
+"loop": true,
+"name": &"jump",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_kick_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_kick_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_kick_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_kick_3")
+}],
+"loop": false,
+"name": &"kick",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_punch_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_punch_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_punch_2")
+}],
+"loop": false,
+"name": &"punch",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_walk_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_walk_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_walk_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_walk_3")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 8.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectShape_ground"]
+size = Vector2(1024, 32)
+
+[sub_resource type="RectangleShape2D" id="RectShape_wall"]
+size = Vector2(32, 700)
+
+[node name="Platformer" type="Node2D" unique_id=1161821515]
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=876258121]
+position = Vector2(679, 172)
+
+[node name="Background" type="Sprite2D" parent="." unique_id=217487891]
+position = Vector2(679, 172)
+scale = Vector2(0.82421875, 0.82421875)
+texture = ExtResource("0_bg")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=72232667]
+position = Vector2(300, 380)
+script = ExtResource("1_pemr4")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=505158247]
+position = Vector2(0, -24)
+shape = SubResource("CapsuleShape2D_player")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player" unique_id=345921866]
+position = Vector2(134, 77)
+scale = Vector2(0.6, 0.6)
+sprite_frames = SubResource("SpriteFrames_new")
+animation = &"jump"
+autoplay = "idle"
+offset = Vector2(0, -256)
+
+[node name="Ground" type="StaticBody2D" parent="." unique_id=1278545249]
+position = Vector2(634, 484)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground" unique_id=1395468989]
+position = Vector2(25, -28)
+shape = SubResource("RectShape_ground")
+
+[node name="WallLeft" type="StaticBody2D" parent="." unique_id=1786445720]
+position = Vector2(106, 200)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallLeft" unique_id=1231382248]
+position = Vector2(43, -56)
+shape = SubResource("RectShape_wall")
+
+[node name="WallRight" type="StaticBody2D" parent="." unique_id=294633482]
+position = Vector2(1162, 200)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallRight" unique_id=1080076327]
+shape = SubResource("RectShape_wall")
