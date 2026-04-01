@@ -14,13 +14,91 @@ var p2_wins: int = 0
 var current_round: int = 1
 var round_in_progress: bool = false
 
+var _pause_menu: CanvasLayer
+var _is_paused: bool = false
+var _was_round_in_progress: bool = false
+
 func _ready() -> void:
+	_build_pause_menu()
 	_apply_character_selections()
 	for player in get_tree().get_nodes_in_group("players"):
 		player.connect("defeated", self, "_on_player_defeated")
 	_update_wins_display()
 	call_deferred("_setup_countdown_scale")
 	_start_round()
+
+func _build_pause_menu() -> void:
+	_pause_menu = CanvasLayer.new()
+	_pause_menu.layer = 20
+	add_child(_pause_menu)
+
+	var bg = ColorRect.new()
+	bg.anchor_right = 1.0
+	bg.anchor_bottom = 1.0
+	bg.color = Color(0, 0, 0, 0.75)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pause_menu.add_child(bg)
+
+	var panel = ColorRect.new()
+	panel.color = Color(0.1, 0.1, 0.15, 0.95)
+	panel.anchor_left = 0.35
+	panel.anchor_right = 0.65
+	panel.anchor_top = 0.25
+	panel.anchor_bottom = 0.75
+	bg.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.anchor_right = 1.0
+	vbox.anchor_bottom = 1.0
+	vbox.margin_left = 20
+	vbox.margin_right = -20
+	vbox.margin_top = 20
+	vbox.margin_bottom = -20
+	vbox.add_constant_override("separation", 24)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "PAUSED"
+	title.align = Label.ALIGN_CENTER
+	vbox.add_child(title)
+
+	var char_btn = Button.new()
+	char_btn.text = "Character Select"
+	char_btn.connect("pressed", self, "_on_pause_character_select")
+	vbox.add_child(char_btn)
+
+	var quit_btn = Button.new()
+	quit_btn.text = "Quit Game"
+	quit_btn.connect("pressed", self, "_on_pause_quit")
+	vbox.add_child(quit_btn)
+
+	_pause_menu.visible = false
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		if _is_paused:
+			_resume_game()
+		else:
+			_pause_game()
+
+func _pause_game() -> void:
+	_is_paused = true
+	_was_round_in_progress = round_in_progress
+	_set_players_frozen(true)
+	_pause_menu.visible = true
+
+func _resume_game() -> void:
+	_is_paused = false
+	_pause_menu.visible = false
+	if _was_round_in_progress:
+		_set_players_frozen(false)
+
+func _on_pause_character_select() -> void:
+	_is_paused = false
+	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
+
+func _on_pause_quit() -> void:
+	get_tree().quit()
 
 func _setup_countdown_scale() -> void:
 	countdown_label.rect_pivot_offset = countdown_label.rect_size / 2.0

@@ -1,0 +1,148 @@
+[gd_scene load_steps=8 format=2]
+
+[ext_resource path="res://scripts/character_select.gd" type="Script" id=1]
+[ext_resource path="res://assets/georgi-idle.png" type="Texture" id=3]
+
+[sub_resource type="AtlasTexture" id=6]
+flags = 4
+atlas = ExtResource( 3 )
+region = Rect2( 0, 0, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=7]
+flags = 4
+atlas = ExtResource( 3 )
+region = Rect2( 512, 0, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=8]
+flags = 4
+atlas = ExtResource( 3 )
+region = Rect2( 0, 512, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=9]
+flags = 4
+atlas = ExtResource( 3 )
+region = Rect2( 512, 512, 512, 512 )
+
+[sub_resource type="SpriteFrames" id=10]
+animations = [ {
+"frames": [ SubResource( 6 ), SubResource( 7 ), SubResource( 8 ), SubResource( 9 ) ],
+"loop": true,
+"name": "idle",
+"speed": 8.0
+} ]
+
+[node name="CharacterSelect" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+georgi_idle_frames = SubResource( 10 )
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0.04, 0.04, 0.14, 1 )
+
+[node name="Title" type="Label" parent="."]
+anchor_right = 1.0
+margin_top = 20.0
+margin_bottom = 80.0
+text = "CHOOSE YOUR FIGHTER"
+align = 1
+
+[node name="P1Header" type="Label" parent="."]
+anchor_right = 0.5
+margin_top = 85.0
+margin_bottom = 130.0
+text = "PLAYER 1"
+align = 1
+
+[node name="P2Header" type="Label" parent="."]
+anchor_left = 0.5
+anchor_right = 1.0
+margin_top = 85.0
+margin_bottom = 130.0
+text = "PLAYER 2"
+align = 1
+
+[node name="P1Sprite" type="AnimatedSprite" parent="."]
+position = Vector2( 340, 384 )
+scale = Vector2( 0.45, 0.45 )
+offset = Vector2( 0, -256 )
+
+[node name="P2Sprite" type="AnimatedSprite" parent="."]
+modulate = Color( 1, 0.75, 0.85, 1 )
+position = Vector2( 1020, 384 )
+scale = Vector2( 0.45, 0.45 )
+offset = Vector2( 0, -256 )
+flip_h = true
+
+[node name="P1CharName" type="Label" parent="."]
+anchor_right = 0.5
+margin_top = 380.0
+margin_bottom = 430.0
+text = "<  Simonka  >"
+align = 1
+
+[node name="P2CharName" type="Label" parent="."]
+modulate = Color( 1, 0.75, 0.85, 1 )
+anchor_left = 0.5
+anchor_right = 1.0
+margin_top = 380.0
+margin_bottom = 430.0
+text = "<  Evil Simonka  >"
+align = 1
+
+[node name="P1Keys" type="Label" parent="."]
+modulate = Color( 0.7, 0.7, 0.7, 1 )
+anchor_right = 0.5
+margin_top = 435.0
+margin_bottom = 465.0
+text = "<- -> to select"
+align = 1
+
+[node name="P2Keys" type="Label" parent="."]
+modulate = Color( 0.7, 0.7, 0.7, 1 )
+anchor_left = 0.5
+anchor_right = 1.0
+margin_top = 435.0
+margin_bottom = 465.0
+text = "A  D to select"
+align = 1
+
+[node name="P1Status" type="Label" parent="."]
+anchor_right = 0.5
+margin_top = 468.0
+margin_bottom = 510.0
+text = "Press Z to confirm"
+align = 1
+
+[node name="P2Status" type="Label" parent="."]
+anchor_left = 0.5
+anchor_right = 1.0
+margin_top = 468.0
+margin_bottom = 510.0
+text = "Press F to confirm"
+align = 1
+
+[node name="VSLabel" type="Label" parent="."]
+modulate = Color( 1, 0.85, 0.1, 1 )
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -50.0
+margin_top = 220.0
+margin_right = 50.0
+margin_bottom = 340.0
+text = "VS"
+align = 1
+valign = 1
+
+[node name="FightLabel" type="Label" parent="."]
+visible = false
+modulate = Color( 1, 0.4, 0.1, 1 )
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_top = -80.0
+margin_bottom = 80.0
+text = "FIGHT!"
+align = 1
