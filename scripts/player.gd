@@ -1,4 +1,4 @@
-extends CharacterBody2D
+extends KinematicBody2D
 
 const SPEED := 200.0
 const JUMP_VELOCITY := -600.0
@@ -11,44 +11,62 @@ const HIT_WINDOW := 3.0
 const PUNCH_REACH := 140.0
 const KICK_REACH := 180.0
 
-@export var key_left: int = KEY_LEFT
-@export var key_right: int = KEY_RIGHT
-@export var key_jump: int = KEY_SPACE
-@export var key_punch: int = KEY_Z
-@export var key_kick: int = KEY_X
-@export var face_left: bool = false
-@export var health_bar_path: NodePath
-@export var display_name: String = "Simonka"
+export var action_left: String = "p1_left"
+export var action_right: String = "p1_right"
+export var action_jump: String = "p1_jump"
+export var action_punch: String = "p1_punch"
+export var action_kick: String = "p1_kick"
+export var face_left: bool = false
+export var health_bar_path: NodePath
+export var display_name: String = "Simonka"
 
-@onready var anim: AnimatedSprite2D = $AnimatedSprite2D
+onready var anim: AnimatedSprite = $AnimatedSprite
 
 enum State { NORMAL, HIT, FALLEN, GETUP }
 
 signal defeated
 
-var state := State.NORMAL
+var state = State.NORMAL
 var health := 100
 var is_defeated := false
 var hit_count := 0
 var hit_timer := 0.0
 var _attacking := false
-var _opponent: CharacterBody2D
+var _opponent: KinematicBody2D
 var _health_bar: ProgressBar
+var frozen: bool = false
+var _start_position: Vector2
+var velocity: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
+	_start_position = global_position
 	add_to_group("players")
-	anim.animation_finished.connect(_on_animation_finished)
-	anim.frame_changed.connect(_on_frame_changed)
+	anim.connect("animation_finished", self, "_on_animation_finished")
+	anim.connect("frame_changed", self, "_on_frame_changed")
 	if face_left:
 		anim.flip_h = true
 	if health_bar_path:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.value = health
 
+func reset_for_round() -> void:
+	health = 100
+	is_defeated = false
+	state = State.NORMAL
+	hit_count = 0
+	hit_timer = 0.0
+	_attacking = false
+	_opponent = null
+	velocity = Vector2.ZERO
+	global_position = _start_position
+	if _health_bar:
+		_health_bar.value = health
+	anim.play("idle")
+
 func _find_opponent() -> void:
 	for p in get_tree().get_nodes_in_group("players"):
 		if p != self:
-			_opponent = p as CharacterBody2D
+			_opponent = p as KinematicBody2D
 			return
 
 func _on_animation_finished() -> void:
@@ -57,7 +75,7 @@ func _on_animation_finished() -> void:
 			state = State.NORMAL
 		State.FALLEN:
 			if is_defeated:
-				pass  # stay down permanently
+				pass
 			else:
 				state = State.GETUP
 				anim.play("getup")
@@ -110,7 +128,7 @@ func _enter_defeated() -> void:
 	_attacking = false
 	velocity = Vector2.ZERO
 	anim.play("falls")
-	defeated.emit()
+	emit_signal("defeated")
 
 func _try_hit_opponent(is_kick: bool) -> void:
 	if _opponent == null:
@@ -127,20 +145,21 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		_opponent.take_hit(is_kick)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if state != State.NORMAL:
+	if frozen or state != State.NORMAL:
 		return
-	if event is InputEventKey and event.pressed and not event.echo:
-		if not _attacking:
-			if event.keycode == key_punch:
-				_attacking = true
-				anim.play("punch")
-			elif event.keycode == key_kick:
-				_attacking = true
-				anim.play("kick")
-		if event.keycode == key_jump and is_on_floor():
-			velocity.y = JUMP_VELOCITY
+	if not _attacking:
+		if event.is_action_pressed(action_punch):
+			_attacking = true
+			anim.play("punch")
+		elif event.is_action_pressed(action_kick):
+			_attacking = true
+			anim.play("kick")
+	if event.is_action_pressed(action_jump) and is_on_floor():
+		velocity.y = JUMP_VELOCITY
 
 func _physics_process(delta: float) -> void:
+	if frozen:
+		return
 	if hit_timer > 0.0:
 		hit_timer -= delta
 		if hit_timer <= 0.0:
@@ -152,11 +171,11 @@ func _physics_process(delta: float) -> void:
 
 	if state == State.FALLEN or state == State.GETUP:
 		velocity.x = 0.0
-		move_and_slide()
+		velocity = move_and_slide(velocity, Vector2.UP)
 		return
 
-	var left := Input.is_key_pressed(key_left)
-	var right := Input.is_key_pressed(key_right)
+	var left := Input.is_action_pressed(action_left)
+	var right := Input.is_action_pressed(action_right)
 	var direction := float(right) - float(left)
 
 	if state == State.HIT:
@@ -164,7 +183,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = direction * SPEED
 
-	move_and_slide()
+	velocity = move_and_slide(velocity, Vector2.UP)
 
 	if state == State.NORMAL and not _attacking:
 		if not is_on_floor():
