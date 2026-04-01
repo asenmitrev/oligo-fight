@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=47 format=2]
+[gd_resource type="SpriteFrames" load_steps=52 format=2]
 
 [ext_resource path="res://assets/georgi-idle.png" type="Texture" id=1]
 [ext_resource path="res://assets/georgi-walk.png" type="Texture" id=2]
@@ -10,6 +10,27 @@
 [ext_resource path="res://assets/georgi-falls.png" type="Texture" id=8]
 [ext_resource path="res://assets/georgi-flykick.png" type="Texture" id=9]
 [ext_resource path="res://assets/georgi-flypunch.png" type="Texture" id=10]
+[ext_resource path="res://assets/georgi-block.png" type="Texture" id=11]
+
+[sub_resource type="AtlasTexture" id=73]
+flags = 4
+atlas = ExtResource( 11 )
+region = Rect2( 0, 0, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=74]
+flags = 4
+atlas = ExtResource( 11 )
+region = Rect2( 512, 0, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=75]
+flags = 4
+atlas = ExtResource( 11 )
+region = Rect2( 0, 512, 512, 512 )
+
+[sub_resource type="AtlasTexture" id=76]
+flags = 4
+atlas = ExtResource( 11 )
+region = Rect2( 512, 512, 512, 512 )
 
 [sub_resource type="AtlasTexture" id=61]
 flags = 4
@@ -193,6 +214,11 @@ region = Rect2( 512, 512, 512, 512 )
 
 [resource]
 animations = [ {
+"frames": [ SubResource( 73 ), SubResource( 74 ), SubResource( 75 ), SubResource( 76 ) ],
+"loop": true,
+"name": "block",
+"speed": 8.0
+}, {
 "frames": [ SubResource( 61 ), SubResource( 62 ), SubResource( 63 ), SubResource( 64 ) ],
 "loop": false,
 "name": "falls",

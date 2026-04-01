@@ -11,6 +11,7 @@ onready var win_screen: ColorRect = $HUD/WinScreen
 onready var win_label: Label = $HUD/WinScreen/WinLabel
 onready var p1_wins_label: Label = $HUD/P1WinsLabel
 onready var p2_wins_label: Label = $HUD/P2WinsLabel
+onready var camera: Camera2D = $Camera2D
 
 var p1_wins: int = 0
 var p2_wins: int = 0
@@ -23,22 +24,52 @@ var _pause_quit_btn: Button
 var _is_paused: bool = false
 var _was_round_in_progress: bool = false
 
-func _apply_fight_background() -> void:
-	var idx: int = int(clamp(
-			GameState.fight_background_index,
-			0,
-			FIGHT_BACKGROUNDS.size() - 1))
-	$Background.texture = FIGHT_BACKGROUNDS[idx]
+# Camera Shake
+var _shake_intensity: float = 0.0
+var _shake_duration: float = 0.0
+var _camera_origin: Vector2
 
 func _ready() -> void:
 	assert(FIGHT_BACKGROUNDS.size() == GameState.FIGHT_BACKGROUND_COUNT)
 	_apply_fight_background()
 	_build_pause_menu()
 	_apply_character_selections()
+	_camera_origin = camera.position
+	
 	for player in get_tree().get_nodes_in_group("players"):
 		player.connect("defeated", self, "_on_player_defeated")
+		player.connect("hit_landed", self, "_on_player_hit_landed")
+		
 	_update_wins_display()
 	_start_round()
+
+func _process(delta: float) -> void:
+	if _shake_duration > 0:
+		_shake_duration -= delta
+		var offset = Vector2(
+			rand_range(-_shake_intensity, _shake_intensity),
+			rand_range(-_shake_intensity, _shake_intensity)
+		)
+		camera.position = _camera_origin + offset
+		if _shake_duration <= 0:
+			camera.position = _camera_origin
+
+func shake_camera(intensity: float, duration: float) -> void:
+	_shake_intensity = intensity
+	_shake_duration = duration
+
+func _on_player_hit_landed(is_heavy: bool) -> void:
+	if is_heavy:
+		shake_camera(8.0, 0.15)
+	else:
+		shake_camera(3.0, 0.1)
+
+func _apply_fight_background() -> void:
+	var idx: int = int(clamp(
+			GameState.fight_background_index,
+			0,
+			FIGHT_BACKGROUNDS.size() - 1))
+	$Background.texture = FIGHT_BACKGROUNDS[idx]
 
 func _build_pause_menu() -> void:
 	_pause_menu = CanvasLayer.new()
@@ -105,8 +136,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _is_paused:
 		return
 	if event.is_action_pressed("ui_cancel"):
-		# Escape is both `pause` and `ui_cancel`. _input opens pause first; without this,
-		# the same key would immediately close via ui_cancel before the menu appears.
 		if event.is_action_pressed("pause"):
 			return
 		_resume_game()
@@ -170,6 +199,7 @@ func _on_player_defeated() -> void:
 		return
 	round_in_progress = false
 	_set_players_frozen(true)
+	shake_camera(15.0, 0.5) # Heavy shake on KO
 
 	var winner_name: String = ""
 	var winner_is_p1: bool = false

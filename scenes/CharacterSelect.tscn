@@ -14,7 +14,6 @@ anchor_bottom = 1.0
 color = Color( 0.04, 0.04, 0.14, 1 )
 
 [node name="BgCharacter-select" type="Sprite" parent="Background"]
-visible = false
 position = Vector2( 680, 384 )
 texture = ExtResource( 2 )
 
@@ -23,21 +22,6 @@ anchor_top = 0.026
 anchor_right = 1.0
 anchor_bottom = 0.104
 text = "CHOOSE YOUR FIGHTER"
-align = 1
-
-[node name="P1Header" type="Label" parent="."]
-anchor_top = 0.111
-anchor_right = 0.5
-anchor_bottom = 0.169
-text = "PLAYER 1"
-align = 1
-
-[node name="P2Header" type="Label" parent="."]
-anchor_left = 0.5
-anchor_top = 0.111
-anchor_right = 1.0
-anchor_bottom = 0.169
-text = "PLAYER 2"
 align = 1
 
 [node name="VSLabel" type="Label" parent="."]
@@ -64,25 +48,6 @@ position = Vector2( 1020, 641 )
 scale = Vector2( 0.45, 0.45 )
 offset = Vector2( 0, -256 )
 flip_h = true
-
-[node name="P1CharName" type="Label" parent="."]
-anchor_top = 0.495
-anchor_right = 0.5
-anchor_bottom = 0.559
-margin_top = 333.84
-margin_bottom = 334.608
-text = "Simonka"
-align = 1
-
-[node name="P2CharName" type="Label" parent="."]
-anchor_left = 0.5
-anchor_top = 0.495
-anchor_right = 1.0
-anchor_bottom = 0.56
-margin_top = 333.84
-margin_bottom = 333.84
-text = "Georgi"
-align = 1
 
 [node name="FightLabel" type="Label" parent="."]
 visible = false

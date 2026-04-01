@@ -2,19 +2,30 @@ extends KinematicBody2D
 
 const CharacterDef = preload("res://scripts/character_def.gd")
 
-const SPEED := 200.0
-const JUMP_VELOCITY := -600.0
-const GRAVITY := 980.0
+# Tighter, snappier movement constants
+const SPEED := 350.0
+const JUMP_VELOCITY := -850.0
+const GRAVITY := 2400.0
 const FLOOR_SNAP := Vector2(0, 24)
 
 const PUNCH_DAMAGE := 10
-const KICK_DAMAGE := 20
+const KICK_DAMAGE := 18
 const HIT_COMBO_THRESHOLD := 3
-const HIT_WINDOW := 3.0
-const PUNCH_REACH := 220.0
-const KICK_REACH := 270.0
+const HIT_WINDOW := 2.0
+const PUNCH_REACH := 140.0
+const KICK_REACH := 180.0
+
+# Gameplay Feel Constants
+const KNOCKBACK_FORCE := 500.0
+const BLOCK_DAMAGE_MODIFIER := 0.15
+const HITSTOP_DURATION := 0.1
+const COUNTER_HIT_BONUS := 1.5
+const PROXIMITY_BLOCK_RANGE := 500.0
+const BLOCK_STUN_DURATION := 0.2
+const WALK_BACK_SPEED_MULT := 0.65
 
 export var action_left: String = "p1_left"
+# ... (rest of the exports)
 export var action_right: String = "p1_right"
 export var action_jump: String = "p1_jump"
 export var action_punch: String = "p1_punch"
@@ -25,9 +36,10 @@ export var display_name: String = "Simonka"
 
 onready var anim: AnimatedSprite = $AnimatedSprite
 
-enum State { NORMAL, HIT, FALLEN, GETUP }
+enum State { NORMAL, HIT, FALLEN, GETUP, BLOCKING }
 
 signal defeated
+signal hit_landed(is_heavy)
 
 var state = State.NORMAL
 var health := 100
@@ -40,10 +52,15 @@ var _health_bar: ProgressBar
 var frozen: bool = false
 var _start_position: Vector2
 var velocity: Vector2 = Vector2.ZERO
+var _hitstop_timer := 0.0
+var _knockback_velocity := Vector2.ZERO
+var _block_stun_timer := 0.0
 
 func _ready() -> void:
 	_start_position = global_position
 	add_to_group("players")
+	# Ensure players collide with each other (Layer 2)
+	collision_mask |= 2
 	anim.connect("animation_finished", self, "_on_animation_finished")
 	anim.connect("frame_changed", self, "_on_frame_changed")
 	if face_left:
@@ -58,7 +75,6 @@ func apply_character(def: CharacterDef) -> void:
 	anim.modulate = def.modulate
 	anim.play("idle")
 
-
 func reset_for_round() -> void:
 	health = 100
 	is_defeated = false
@@ -68,6 +84,9 @@ func reset_for_round() -> void:
 	_attacking = false
 	_opponent = null
 	velocity = Vector2.ZERO
+	_knockback_velocity = Vector2.ZERO
+	_hitstop_timer = 0.0
+	_block_stun_timer = 0.0
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -83,7 +102,8 @@ func _move_with_floor_snap() -> Vector2:
 	var snap := Vector2.ZERO
 	if velocity.y >= 0.0:
 		snap = FLOOR_SNAP
-	return move_and_slide_with_snap(velocity, snap, Vector2.UP)
+	# move_and_slide handles player-to-player pushing automatically if collision mask is set
+	return move_and_slide_with_snap(velocity + _knockback_velocity, snap, Vector2.UP)
 
 func _on_animation_finished() -> void:
 	match state:
@@ -99,41 +119,81 @@ func _on_animation_finished() -> void:
 			state = State.NORMAL
 			hit_count = 0
 		_:
-			_attacking = false
+			if _attacking:
+				_attacking = false
+				if state == State.NORMAL:
+					anim.play("idle")
 
 func _on_frame_changed() -> void:
-	if anim.animation == "punch" and anim.frame == 1:
+	if not _attacking: return
+	
+	var frame = anim.frame
+	var anim_name = anim.animation
+	
+	if (anim_name == "punch" and frame == 1) or \
+	   (anim_name == "flypunch" and frame == 1):
 		_try_hit_opponent(false)
-	elif anim.animation == "kick" and anim.frame == 2:
-		_try_hit_opponent(true)
-	elif anim.animation == "flypunch" and anim.frame == 2:
-		_try_hit_opponent(false)
-	elif anim.animation == "flykick" and anim.frame == 2:
+	elif (anim_name == "kick" and frame == 2) or \
+	     (anim_name == "flykick" and frame == 2):
 		_try_hit_opponent(true)
 
-func take_hit(is_kick: bool) -> void:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) -> void:
 	if is_defeated or state == State.FALLEN or state == State.GETUP:
 		return
+
+	# Blocking Logic
+	var is_blocking = _check_blocking()
 	var damage := KICK_DAMAGE if is_kick else PUNCH_DAMAGE
+	if is_counter: damage *= COUNTER_HIT_BONUS
+	
+	if is_blocking:
+		damage = int(damage * BLOCK_DAMAGE_MODIFIER)
+		# Blocking prevents hitstun and combo buildup
+		_apply_impact(attacker_pos, 0.5) # Reduced knockback when blocking
+		state = State.BLOCKING
+		_block_stun_timer = BLOCK_STUN_DURATION
+	else:
+		_apply_impact(attacker_pos, 1.0)
+		hit_count += 1
+		hit_timer = HIT_WINDOW
+	
 	health = max(0, health - damage)
 	if _health_bar:
 		_health_bar.value = health
+	
 	if health <= 0:
 		_enter_defeated()
 		return
-	if not is_on_floor():
-		hit_count = 0
-		hit_timer = 0.0
-		_enter_fallen()
-		return
-	hit_count += 1
-	hit_timer = HIT_WINDOW
-	if hit_count >= HIT_COMBO_THRESHOLD:
-		hit_count = 0
-		hit_timer = 0.0
-		_enter_fallen()
-	else:
-		_enter_hit()
+
+	if not is_blocking:
+		if not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
+			hit_count = 0
+			hit_timer = 0.0
+			_enter_fallen()
+		else:
+			_enter_hit()
+	
+	# Trigger hitstop (freeze)
+	_hitstop_timer = HITSTOP_DURATION
+
+func _check_blocking() -> bool:
+	if _opponent == null: _find_opponent()
+	if _opponent == null: return false
+	
+	var to_opp = _opponent.global_position.x - global_position.x
+	var input_left = Input.is_action_pressed(action_left)
+	var input_right = Input.is_action_pressed(action_right)
+	
+	# Block by holding away from opponent
+	if to_opp > 0 and input_left: return true
+	if to_opp < 0 and input_right: return true
+	return false
+
+func _apply_impact(attacker_pos: Vector2, multiplier: float) -> void:
+	var dir = (global_position.x - attacker_pos.x)
+	if dir == 0: dir = -1.0 if anim.flip_h else 1.0
+	dir = sign(dir)
+	_knockback_velocity.x = dir * KNOCKBACK_FORCE * multiplier
 
 func _enter_hit() -> void:
 	state = State.HIT
@@ -160,47 +220,71 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		_find_opponent()
 	if _opponent == null:
 		return
+	
+	# Height check for air attacks
+	var y_diff = abs(global_position.y - _opponent.global_position.y)
+	if y_diff > 100: return
+
 	var dist := global_position.distance_to(_opponent.global_position)
 	var reach := KICK_REACH if is_kick else PUNCH_REACH
 	if dist > reach:
 		return
+		
 	var to_opponent := _opponent.global_position.x - global_position.x
 	var facing_right := not anim.flip_h
+	
 	if (facing_right and to_opponent > 0) or (not facing_right and to_opponent < 0):
-		_opponent.take_hit(is_kick)
+		var is_counter = _opponent._attacking
+		_opponent.take_hit(is_kick, global_position, is_counter)
+		_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
+		emit_signal("hit_landed", is_kick)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if frozen or state != State.NORMAL:
+	if frozen or state != State.NORMAL or _hitstop_timer > 0:
 		return
+		
 	if not _attacking:
 		if event.is_action_pressed(action_punch):
 			_attacking = true
-			if not is_on_floor() and anim.frames.has_animation("flypunch"):
+			if not is_on_floor():
 				anim.play("flypunch")
 			else:
 				anim.play("punch")
 		elif event.is_action_pressed(action_kick):
 			_attacking = true
-			if not is_on_floor() and anim.frames.has_animation("flykick"):
+			if not is_on_floor():
 				anim.play("flykick")
 			else:
 				anim.play("kick")
-	if event.is_action_pressed(action_jump) and is_on_floor():
+				
+	if event.is_action_pressed(action_jump) and is_on_floor() and not _attacking:
 		velocity.y = JUMP_VELOCITY
 
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
+		
+	if _hitstop_timer > 0:
+		_hitstop_timer -= delta
+		return # Freeze all movement and animation processing
+
 	if hit_timer > 0.0:
 		hit_timer -= delta
 		if hit_timer <= 0.0:
 			hit_count = 0
-			hit_timer = 0.0
+
+	# Friction for knockback
+	_knockback_velocity.x = lerp(_knockback_velocity.x, 0, delta * 10.0)
+
+	if _block_stun_timer > 0:
+		_block_stun_timer -= delta
+		if _block_stun_timer <= 0:
+			state = State.NORMAL
 
 	if not is_on_floor():
 		velocity.y += GRAVITY * delta
 
-	if state == State.FALLEN or state == State.GETUP:
+	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
 		if is_on_floor():
@@ -211,23 +295,66 @@ func _physics_process(delta: float) -> void:
 	var right := Input.is_action_pressed(action_right)
 	var direction := float(right) - float(left)
 
+	if _opponent == null: _find_opponent()
+	var is_blocking_input = _check_blocking()
+	var is_opponent_attacking = _opponent != null and _opponent._attacking
+	var dist_to_opp = 0.0
+	var is_walking_back = false
+	if _opponent:
+		var to_opp = _opponent.global_position.x - global_position.x
+		dist_to_opp = abs(to_opp)
+		if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
+			is_walking_back = true
+			
+	var should_block_visually = is_blocking_input and is_opponent_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
+
 	if state == State.HIT:
 		velocity.x = 0.0
+	elif _attacking:
+		# Small forward lunge when attacking on ground
+		if is_on_floor():
+			var lunge = 1.0 if not anim.flip_h else -1.0
+			velocity.x = lunge * (SPEED * 0.3)
+	elif should_block_visually and is_on_floor():
+		# Stick in place like SF2 during proximity block
+		velocity.x = 0.0
 	else:
-		velocity.x = direction * SPEED
+		# Slower back-walk for SF feel
+		var current_speed = SPEED
+		if is_walking_back:
+			current_speed = SPEED * WALK_BACK_SPEED_MULT
+		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
 	if is_on_floor():
 		velocity.y = 0.0
 
+	# Animation updates
 	if state == State.NORMAL and not _attacking:
-		if not is_on_floor():
-			anim.speed_scale = 0.5
+		if should_block_visually and is_on_floor():
+			anim.play("block")
+			# Freeze on frame index 1 (the second frame) to hold the block pose
+			if anim.frame >= 1:
+				anim.frame = 1
+				anim.stop()
+		elif not is_on_floor():
 			anim.play("jump")
 		elif direction != 0:
-			anim.speed_scale = 1.0
-			anim.flip_h = direction < 0
 			anim.play("walk")
 		else:
-			anim.speed_scale = 1.0
 			anim.play("idle")
+	
+	# Block animation during stun
+	if state == State.BLOCKING:
+		anim.play("block")
+		if anim.frame >= 1:
+			anim.frame = 1
+			anim.stop()
+	
+	# Auto-face opponent when idle, walking, or blocking
+	if not _attacking and is_on_floor() and (state == State.NORMAL or state == State.BLOCKING):
+		if _opponent == null: _find_opponent()
+		if _opponent:
+			var to_opp = _opponent.global_position.x - global_position.x
+			if abs(to_opp) > 50:
+				anim.flip_h = to_opp < 0
