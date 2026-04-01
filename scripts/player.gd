@@ -187,9 +187,12 @@ func _physics_process(delta: float) -> void:
 
 	if state == State.NORMAL and not _attacking:
 		if not is_on_floor():
+			anim.speed_scale = 0.5
 			anim.play("jump")
 		elif direction != 0:
+			anim.speed_scale = 1.0
 			anim.flip_h = direction < 0
 			anim.play("walk")
 		else:
+			anim.speed_scale = 1.0
 			anim.play("idle")

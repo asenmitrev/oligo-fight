@@ -19,7 +19,12 @@ func _ready() -> void:
 	for player in get_tree().get_nodes_in_group("players"):
 		player.connect("defeated", self, "_on_player_defeated")
 	_update_wins_display()
+	call_deferred("_setup_countdown_scale")
 	_start_round()
+
+func _setup_countdown_scale() -> void:
+	countdown_label.rect_pivot_offset = countdown_label.rect_size / 2.0
+	countdown_label.rect_scale = Vector2(5.0, 5.0)
 
 func _apply_character_selections() -> void:
 	_configure_player($Player, GameState.p1_character)

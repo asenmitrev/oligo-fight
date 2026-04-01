@@ -18,6 +18,14 @@ config/icon="res://icon.svg"
 
 GameState="*res://scripts/game_state.gd"
 
+[display]
+
+window/size/width=1360
+window/size/height=768
+window/stretch/mode="2d"
+window/stretch/aspect="keep"
+window/fullscreen=true
+
 [input]
 
 p1_left={
