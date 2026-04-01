@@ -106,7 +106,7 @@ anchor_left = 0.5
 anchor_right = 1.0
 margin_top = 435.0
 margin_bottom = 465.0
-text = "A  D to select"
+text = "<- -> to select"
 align = 1
 
 [node name="P1Status" type="Label" parent="."]
