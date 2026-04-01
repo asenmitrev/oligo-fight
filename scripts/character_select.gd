@@ -1,5 +1,7 @@
 extends Control
 
+const MIRROR_MODULATE := Color(1, 0.75, 0.85, 1)
+
 var p1_index := 0
 var p2_index := 1
 var p1_confirmed := false
@@ -54,7 +56,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			p1_index = (p1_index + 1) % CharacterDB.all_characters.size()
 			_update_ui()
 	elif event.is_action_pressed("p1_confirm"):
-		if not p1_confirmed and p1_index != p2_index:
+		if not p1_confirmed:
 			p1_confirmed = true
 			_update_ui()
 			_check_start()
@@ -67,7 +69,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			p2_index = (p2_index + 1) % CharacterDB.all_characters.size()
 			_update_ui()
 	elif event.is_action_pressed("p2_confirm"):
-		if not p2_confirmed and p1_index != p2_index:
+		if not p2_confirmed:
 			p2_confirmed = true
 			_update_ui()
 			_check_start()
@@ -85,18 +87,16 @@ func _update_ui() -> void:
 	p1_sprite.frames = p1_def.get_preview_sprite_frames()
 	p1_sprite.play("idle")
 
+	var p2_modulate = MIRROR_MODULATE if same else p2_def.modulate
 	p2_char_name.text = "<  " + p2_def.display_name + "  >"
-	p2_char_name.modulate = p2_def.modulate
-	p2_sprite.modulate = p2_def.modulate
+	p2_char_name.modulate = p2_modulate
+	p2_sprite.modulate = p2_modulate
 	p2_sprite.frames = p2_def.get_preview_sprite_frames()
 	p2_sprite.play("idle")
 
 	if p1_confirmed:
 		p1_status.text = "READY!"
 		p1_status.add_color_override("font_color", Color(0.2, 1, 0.2))
-	elif same:
-		p1_status.text = "Already taken - pick another!"
-		p1_status.add_color_override("font_color", Color(1, 0.3, 0.3))
 	else:
 		p1_status.text = "Z or [A] to confirm"
 		p1_status.add_color_override("font_color", Color(1, 1, 1))
@@ -105,8 +105,8 @@ func _update_ui() -> void:
 		p2_status.text = "READY!"
 		p2_status.add_color_override("font_color", Color(0.2, 1, 0.2))
 	elif same:
-		p2_status.text = "Already taken - pick another!"
-		p2_status.add_color_override("font_color", Color(1, 0.3, 0.3))
+		p2_status.text = "Mirror match!"
+		p2_status.add_color_override("font_color", MIRROR_MODULATE)
 	else:
 		p2_status.text = "F or [A] to confirm"
 		p2_status.add_color_override("font_color", Color(1, 1, 1))
@@ -118,6 +118,7 @@ func _check_start() -> void:
 		var p2_def = CharacterDB.all_characters[p2_index]
 		GameState.p1_character = p1_def.display_name
 		GameState.p2_character = p2_def.display_name
+		GameState.p2_is_mirror = (p1_index == p2_index)
 		fight_label.visible = true
 		for i in range(3, 0, -1):
 			fight_label.text = str(i)

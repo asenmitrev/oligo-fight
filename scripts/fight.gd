@@ -137,14 +137,16 @@ func _on_pause_quit() -> void:
 	get_tree().quit()
 
 func _apply_character_selections() -> void:
-	_configure_player($Player, GameState.p1_character)
-	_configure_player($Player2, GameState.p2_character)
+	_configure_player($Player, GameState.p1_character, false)
+	_configure_player($Player2, GameState.p2_character, GameState.p2_is_mirror)
 
-func _configure_player(player: KinematicBody2D, char_name: String) -> void:
+func _configure_player(player: KinematicBody2D, char_name: String, is_mirror: bool) -> void:
 	var def = CharacterDB.get_by_display_name(char_name)
 	if def == null:
 		def = CharacterDB.all_characters[0]
 	player.apply_character(def)
+	if is_mirror:
+		player.anim.modulate = Color(1, 0.75, 0.85, 1)
 
 func _update_wins_display() -> void:
 	p1_wins_label.text = _wins_dots(p1_wins)

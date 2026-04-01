@@ -10,7 +10,6 @@ var all_characters: Array = []
 
 func _init() -> void:
 	_register(_make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1)))
-	_register(_make_def("evil_simonka", "Evil Simonka", _simonka_frames, Color(1, 0.75, 0.85, 1)))
 	_register(_make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1)))
 
 
