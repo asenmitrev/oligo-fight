@@ -1,8 +1,11 @@
 extends KinematicBody2D
 
+const CharacterDef = preload("res://scripts/character_def.gd")
+
 const SPEED := 200.0
 const JUMP_VELOCITY := -600.0
 const GRAVITY := 980.0
+const FLOOR_SNAP := Vector2(0, 24)
 
 const PUNCH_DAMAGE := 10
 const KICK_DAMAGE := 20
@@ -49,6 +52,13 @@ func _ready() -> void:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.value = health
 
+func apply_character(def: CharacterDef) -> void:
+	display_name = def.display_name
+	anim.frames = def.sprite_frames
+	anim.modulate = def.modulate
+	anim.play("idle")
+
+
 func reset_for_round() -> void:
 	health = 100
 	is_defeated = false
@@ -68,6 +78,12 @@ func _find_opponent() -> void:
 		if p != self:
 			_opponent = p as KinematicBody2D
 			return
+
+func _move_with_floor_snap() -> Vector2:
+	var snap := Vector2.ZERO
+	if velocity.y >= 0.0:
+		snap = FLOOR_SNAP
+	return move_and_slide_with_snap(velocity, snap, Vector2.UP)
 
 func _on_animation_finished() -> void:
 	match state:
@@ -171,7 +187,9 @@ func _physics_process(delta: float) -> void:
 
 	if state == State.FALLEN or state == State.GETUP:
 		velocity.x = 0.0
-		velocity = move_and_slide(velocity, Vector2.UP)
+		velocity = _move_with_floor_snap()
+		if is_on_floor():
+			velocity.y = 0.0
 		return
 
 	var left := Input.is_action_pressed(action_left)
@@ -183,7 +201,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = direction * SPEED
 
-	velocity = move_and_slide(velocity, Vector2.UP)
+	velocity = _move_with_floor_snap()
+	if is_on_floor():
+		velocity.y = 0.0
 
 	if state == State.NORMAL and not _attacking:
 		if not is_on_floor():

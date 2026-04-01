@@ -8,6 +8,16 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "Resource",
+"class": "CharacterDef",
+"language": "GDScript",
+"path": "res://scripts/character_def.gd"
+} ]
+_global_script_class_icons={
+"CharacterDef": ""
+}
+
 [application]
 
 config/name="Simonka Boi"
@@ -17,6 +27,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+CharacterDB="*res://scripts/character_db.gd"
 
 [display]
 
