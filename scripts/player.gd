@@ -121,6 +121,11 @@ func take_hit(is_kick: bool) -> void:
 	if health <= 0:
 		_enter_defeated()
 		return
+	if not is_on_floor():
+		hit_count = 0
+		hit_timer = 0.0
+		_enter_fallen()
+		return
 	hit_count += 1
 	hit_timer = HIT_WINDOW
 	if hit_count >= HIT_COMBO_THRESHOLD:

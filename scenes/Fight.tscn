@@ -92,17 +92,18 @@ shape = SubResource( 63 )
 layer = 10
 
 [node name="P1HealthBar" type="ProgressBar" parent="HUD"]
+anchor_right = 0.39
 margin_left = 20.0
 margin_top = 15.0
-margin_right = 520.0
+margin_right = -20.0
 margin_bottom = 48.0
 value = 100.0
 percent_visible = false
 
 [node name="P2HealthBar" type="ProgressBar" parent="HUD"]
-anchor_left = 1.0
+anchor_left = 0.61
 anchor_right = 1.0
-margin_left = -520.0
+margin_left = 20.0
 margin_top = 15.0
 margin_right = -20.0
 margin_bottom = 48.0
@@ -122,16 +123,17 @@ align = 1
 valign = 1
 
 [node name="P1WinsLabel" type="Label" parent="HUD"]
+anchor_right = 0.39
 margin_left = 20.0
 margin_top = 55.0
-margin_right = 220.0
+margin_right = -20.0
 margin_bottom = 85.0
 text = "○○"
 
 [node name="P2WinsLabel" type="Label" parent="HUD"]
-anchor_left = 1.0
+anchor_left = 0.61
 anchor_right = 1.0
-margin_left = -220.0
+margin_left = 20.0
 margin_top = 55.0
 margin_right = -20.0
 margin_bottom = 85.0

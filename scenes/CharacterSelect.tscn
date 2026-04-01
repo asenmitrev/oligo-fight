@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=3 format=2]
 
 [ext_resource path="res://scripts/character_select.gd" type="Script" id=1]
+[ext_resource path="res://assets/bg_character-select.png" type="Texture" id=2]
 
 [node name="CharacterSelect" type="Control"]
 anchor_right = 1.0
@@ -12,99 +13,76 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color( 0.04, 0.04, 0.14, 1 )
 
+[node name="BgCharacter-select" type="Sprite" parent="Background"]
+visible = false
+position = Vector2( 680, 384 )
+texture = ExtResource( 2 )
+
 [node name="Title" type="Label" parent="."]
+anchor_top = 0.026
 anchor_right = 1.0
-margin_top = 20.0
-margin_bottom = 80.0
+anchor_bottom = 0.104
 text = "CHOOSE YOUR FIGHTER"
 align = 1
 
 [node name="P1Header" type="Label" parent="."]
+anchor_top = 0.111
 anchor_right = 0.5
-margin_top = 85.0
-margin_bottom = 130.0
+anchor_bottom = 0.169
 text = "PLAYER 1"
 align = 1
 
 [node name="P2Header" type="Label" parent="."]
 anchor_left = 0.5
+anchor_top = 0.111
 anchor_right = 1.0
-margin_top = 85.0
-margin_bottom = 130.0
+anchor_bottom = 0.169
 text = "PLAYER 2"
-align = 1
-
-[node name="P1Sprite" type="AnimatedSprite" parent="."]
-position = Vector2( 340, 384 )
-scale = Vector2( 0.45, 0.45 )
-offset = Vector2( 0, -256 )
-
-[node name="P2Sprite" type="AnimatedSprite" parent="."]
-modulate = Color( 1, 0.75, 0.85, 1 )
-position = Vector2( 1020, 384 )
-scale = Vector2( 0.45, 0.45 )
-offset = Vector2( 0, -256 )
-flip_h = true
-
-[node name="P1CharName" type="Label" parent="."]
-anchor_right = 0.5
-margin_top = 380.0
-margin_bottom = 430.0
-text = "<  Simonka  >"
-align = 1
-
-[node name="P2CharName" type="Label" parent="."]
-modulate = Color( 1, 0.75, 0.85, 1 )
-anchor_left = 0.5
-anchor_right = 1.0
-margin_top = 380.0
-margin_bottom = 430.0
-text = "<  Evil Simonka  >"
-align = 1
-
-[node name="P1Keys" type="Label" parent="."]
-modulate = Color( 0.7, 0.7, 0.7, 1 )
-anchor_right = 0.5
-margin_top = 435.0
-margin_bottom = 465.0
-text = "<- -> to select"
-align = 1
-
-[node name="P2Keys" type="Label" parent="."]
-modulate = Color( 0.7, 0.7, 0.7, 1 )
-anchor_left = 0.5
-anchor_right = 1.0
-margin_top = 435.0
-margin_bottom = 465.0
-text = "<- -> to select"
-align = 1
-
-[node name="P1Status" type="Label" parent="."]
-anchor_right = 0.5
-margin_top = 468.0
-margin_bottom = 510.0
-text = "Press Z to confirm"
-align = 1
-
-[node name="P2Status" type="Label" parent="."]
-anchor_left = 0.5
-anchor_right = 1.0
-margin_top = 468.0
-margin_bottom = 510.0
-text = "Press F to confirm"
 align = 1
 
 [node name="VSLabel" type="Label" parent="."]
 modulate = Color( 1, 0.85, 0.1, 1 )
 anchor_left = 0.5
+anchor_top = 0.17
 anchor_right = 0.5
+anchor_bottom = 0.225
 margin_left = -50.0
-margin_top = 220.0
 margin_right = 50.0
-margin_bottom = 340.0
 text = "VS"
 align = 1
 valign = 1
+
+[node name="SelectGrid" type="Control" parent="."]
+
+[node name="P1Sprite" type="AnimatedSprite" parent="."]
+position = Vector2( 340, 641 )
+scale = Vector2( 0.45, 0.45 )
+offset = Vector2( 0, -256 )
+
+[node name="P2Sprite" type="AnimatedSprite" parent="."]
+position = Vector2( 1020, 641 )
+scale = Vector2( 0.45, 0.45 )
+offset = Vector2( 0, -256 )
+flip_h = true
+
+[node name="P1CharName" type="Label" parent="."]
+anchor_top = 0.495
+anchor_right = 0.5
+anchor_bottom = 0.559
+margin_top = 333.84
+margin_bottom = 334.608
+text = "Simonka"
+align = 1
+
+[node name="P2CharName" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 0.495
+anchor_right = 1.0
+anchor_bottom = 0.56
+margin_top = 333.84
+margin_bottom = 333.84
+text = "Georgi"
+align = 1
 
 [node name="FightLabel" type="Label" parent="."]
 visible = false
