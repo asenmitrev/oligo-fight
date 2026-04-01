@@ -125,4 +125,4 @@ func _check_start() -> void:
 		fight_label.text = "FIGHT!"
 		yield(get_tree().create_timer(0.5), "timeout")
 		GameState.fight_background_index = randi() % GameState.FIGHT_BACKGROUND_COUNT
-		get_tree().change_scene("res://scenes/Platformer.tscn")
+		get_tree().change_scene("res://scenes/Fight.tscn")

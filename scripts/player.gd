@@ -11,8 +11,8 @@ const PUNCH_DAMAGE := 10
 const KICK_DAMAGE := 20
 const HIT_COMBO_THRESHOLD := 3
 const HIT_WINDOW := 3.0
-const PUNCH_REACH := 140.0
-const KICK_REACH := 180.0
+const PUNCH_REACH := 220.0
+const KICK_REACH := 270.0
 
 export var action_left: String = "p1_left"
 export var action_right: String = "p1_right"
@@ -106,6 +106,10 @@ func _on_frame_changed() -> void:
 		_try_hit_opponent(false)
 	elif anim.animation == "kick" and anim.frame == 2:
 		_try_hit_opponent(true)
+	elif anim.animation == "flypunch" and anim.frame == 2:
+		_try_hit_opponent(false)
+	elif anim.animation == "flykick" and anim.frame == 2:
+		_try_hit_opponent(true)
 
 func take_hit(is_kick: bool) -> void:
 	if is_defeated or state == State.FALLEN or state == State.GETUP:
@@ -166,10 +170,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _attacking:
 		if event.is_action_pressed(action_punch):
 			_attacking = true
-			anim.play("punch")
+			if not is_on_floor() and anim.frames.has_animation("flypunch"):
+				anim.play("flypunch")
+			else:
+				anim.play("punch")
 		elif event.is_action_pressed(action_kick):
 			_attacking = true
-			anim.play("kick")
+			if not is_on_floor() and anim.frames.has_animation("flykick"):
+				anim.play("flykick")
+			else:
+				anim.play("kick")
 	if event.is_action_pressed(action_jump) and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 

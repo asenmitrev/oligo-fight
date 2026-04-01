@@ -28,31 +28,11 @@ func _apply_fight_background() -> void:
 			GameState.fight_background_index,
 			0,
 			FIGHT_BACKGROUNDS.size() - 1))
-	var tex: Texture = FIGHT_BACKGROUNDS[idx]
-	# World Sprite + viewport math in _ready often gets scale 0 (viewport size not ready yet) → gray screen.
-	# Screen-space TextureRect always fills the window and draws behind the arena (CanvasLayer layer -100).
-	$Background.visible = false
-	var bg_layer := CanvasLayer.new()
-	bg_layer.layer = -100
-	add_child(bg_layer)
-	var tr := TextureRect.new()
-	tr.anchor_left = 0.0
-	tr.anchor_top = 0.0
-	tr.anchor_right = 1.0
-	tr.anchor_bottom = 1.0
-	tr.margin_left = 0.0
-	tr.margin_top = 0.0
-	tr.margin_right = 0.0
-	tr.margin_bottom = 0.0
-	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tr.texture = tex
-	tr.expand = true
-	tr.stretch_mode = TextureRect.STRETCH_SCALE
-	bg_layer.add_child(tr)
+	$Background.texture = FIGHT_BACKGROUNDS[idx]
 
 func _ready() -> void:
 	assert(FIGHT_BACKGROUNDS.size() == GameState.FIGHT_BACKGROUND_COUNT)
-	call_deferred("_apply_fight_background")
+	_apply_fight_background()
 	_build_pause_menu()
 	_apply_character_selections()
 	for player in get_tree().get_nodes_in_group("players"):
