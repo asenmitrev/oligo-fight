@@ -24,6 +24,11 @@ const SELECT_GRID_HEIGHT := SLOT_TOTAL_HEIGHT - SLOT_MARGIN_TOP
 const DESIGN_VIEWPORT_HEIGHT := 768.0
 const PREVIEW_SPRITE_Y_DESIGN := 668.0
 
+const P1_COLOR := Color(1.0, 0.2, 0.2, 1.0)
+const P2_COLOR := Color(0.2, 0.5, 1.0, 1.0)
+const BORDER_WIDTH_NORMAL := 5
+const BORDER_WIDTH_CONFIRMED := 12
+
 var char_slots: Array = []
 var char_previews: Array = []
 var p1_borders: Array = []
@@ -31,9 +36,13 @@ var p2_borders: Array = []
 
 onready var fight_label: Label = $FightLabel
 onready var select_grid: Control = $SelectGrid
+onready var p1_tween: Tween = Tween.new()
+onready var p2_tween: Tween = Tween.new()
 
 
 func _ready() -> void:
+	add_child(p1_tween)
+	add_child(p2_tween)
 	_setup_select_grid()
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
@@ -78,11 +87,11 @@ func _setup_select_grid() -> void:
 		p1_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var p1_sty := StyleBoxFlat.new()
 		p1_sty.bg_color = Color(0, 0, 0, 0)
-		p1_sty.border_color = Color(1.0, 0.2, 0.2, 1.0)
-		p1_sty.border_width_left = 5
-		p1_sty.border_width_right = 5
-		p1_sty.border_width_top = 5
-		p1_sty.border_width_bottom = 5
+		p1_sty.border_color = P1_COLOR
+		p1_sty.border_width_left = BORDER_WIDTH_NORMAL
+		p1_sty.border_width_right = BORDER_WIDTH_NORMAL
+		p1_sty.border_width_top = BORDER_WIDTH_NORMAL
+		p1_sty.border_width_bottom = BORDER_WIDTH_NORMAL
 		p1_b.add_stylebox_override("panel", p1_sty)
 		p1_b.visible = false
 		slot.add_child(p1_b)
@@ -95,11 +104,11 @@ func _setup_select_grid() -> void:
 		p2_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var p2_sty := StyleBoxFlat.new()
 		p2_sty.bg_color = Color(0, 0, 0, 0)
-		p2_sty.border_color = Color(0.2, 0.5, 1.0, 1.0)
-		p2_sty.border_width_left = 5
-		p2_sty.border_width_right = 5
-		p2_sty.border_width_top = 5
-		p2_sty.border_width_bottom = 5
+		p2_sty.border_color = P2_COLOR
+		p2_sty.border_width_left = BORDER_WIDTH_NORMAL
+		p2_sty.border_width_right = BORDER_WIDTH_NORMAL
+		p2_sty.border_width_top = BORDER_WIDTH_NORMAL
+		p2_sty.border_width_bottom = BORDER_WIDTH_NORMAL
 		p2_b.add_stylebox_override("panel", p2_sty)
 		p2_b.visible = false
 		slot.add_child(p2_b)
@@ -141,34 +150,74 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not p1_confirmed:
 			p1_index = (p1_index - 1 + CharacterDB.all_characters.size()) % CharacterDB.all_characters.size()
 			_update_ui()
+			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
 	elif event.is_action_pressed("p1_right"):
 		if not p1_confirmed:
 			p1_index = (p1_index + 1) % CharacterDB.all_characters.size()
 			_update_ui()
+			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
 	elif event.is_action_pressed("p1_confirm"):
 		if not p1_confirmed:
 			p1_confirmed = true
 			_update_ui()
+			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween, true)
 			_check_start()
 	elif event.is_action_pressed("p2_left"):
 		if not p2_confirmed:
 			p2_index = (p2_index - 1 + CharacterDB.all_characters.size()) % CharacterDB.all_characters.size()
 			_update_ui()
+			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 	elif event.is_action_pressed("p2_right"):
 		if not p2_confirmed:
 			p2_index = (p2_index + 1) % CharacterDB.all_characters.size()
 			_update_ui()
+			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 	elif event.is_action_pressed("p2_confirm"):
 		if not p2_confirmed:
 			p2_confirmed = true
 			_update_ui()
+			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
 			_check_start()
 
 
 func _update_ui() -> void:
 	for i in range(char_slots.size()):
-		p1_borders[i].visible = (p1_index == i)
-		p2_borders[i].visible = (p2_index == i)
+		var p1_b : Panel = p1_borders[i]
+		var p2_b : Panel = p2_borders[i]
+		
+		p1_b.visible = (p1_index == i)
+		p2_b.visible = (p2_index == i)
+		
+		var p1_sty : StyleBoxFlat = p1_b.get_stylebox("panel")
+		var p2_sty : StyleBoxFlat = p2_b.get_stylebox("panel")
+		
+		var p1_w := BORDER_WIDTH_CONFIRMED if p1_confirmed else BORDER_WIDTH_NORMAL
+		p1_sty.border_width_left = p1_w
+		p1_sty.border_width_right = p1_w
+		p1_sty.border_width_top = p1_w
+		p1_sty.border_width_bottom = p1_w
+		
+		var p2_w := BORDER_WIDTH_CONFIRMED if p2_confirmed else BORDER_WIDTH_NORMAL
+		p2_sty.border_width_left = p2_w
+		p2_sty.border_width_right = p2_w
+		p2_sty.border_width_top = p2_w
+		p2_sty.border_width_bottom = p2_w
+
+
+func _flash_selection(panel: Panel, color: Color, tween: Tween, is_confirm: bool = false) -> void:
+	var style : StyleBoxFlat = panel.get_stylebox("panel")
+	tween.stop_all()
+	
+	var flash_color = color
+	flash_color.a = 0.7 if is_confirm else 0.3
+	var duration = 0.5 if is_confirm else 0.2
+	
+	# Flash background
+	tween.interpolate_property(style, "bg_color", flash_color, Color(0, 0, 0, 0), duration, Tween.TRANS_SINE, Tween.EASE_OUT)
+	# Flash border to white then back to player color
+	tween.interpolate_property(style, "border_color", Color.white, color, duration, Tween.TRANS_SINE, Tween.EASE_OUT)
+	
+	tween.start()
 
 func _check_start() -> void:
 	if p1_confirmed and p2_confirmed:
