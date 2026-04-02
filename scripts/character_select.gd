@@ -28,6 +28,11 @@ var char_previews: Array = []
 var p1_borders: Array = []
 var p2_borders: Array = []
 
+var _pause_menu: CanvasLayer
+var _resume_btn: Button
+var _quit_btn: Button
+var _is_paused: bool = false
+
 onready var fight_label: Label = $FightLabel
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
@@ -38,6 +43,7 @@ func _ready() -> void:
 	add_child(p1_tween)
 	add_child(p2_tween)
 	_setup_select_grid()
+	_build_pause_menu()
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
 
@@ -135,7 +141,99 @@ func _apply_ui_text_scale() -> void:
 		lbl.rect_scale = Vector2(UI_TEXT_SCALE, UI_TEXT_SCALE)
 
 
+func _build_pause_menu() -> void:
+	_pause_menu = CanvasLayer.new()
+	_pause_menu.layer = 20
+	add_child(_pause_menu)
+
+	var bg = ColorRect.new()
+	bg.anchor_right = 1.0
+	bg.anchor_bottom = 1.0
+	bg.color = Color(0, 0, 0, 0.75)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pause_menu.add_child(bg)
+
+	var panel = ColorRect.new()
+	panel.color = Color(0.1, 0.1, 0.15, 0.95)
+	panel.anchor_left = 0.35
+	panel.anchor_right = 0.65
+	panel.anchor_top = 0.25
+	panel.anchor_bottom = 0.75
+	bg.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.anchor_right = 1.0
+	vbox.anchor_bottom = 1.0
+	vbox.margin_left = 20
+	vbox.margin_right = -20
+	vbox.margin_top = 20
+	vbox.margin_bottom = -20
+	vbox.add_constant_override("separation", 24)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "PAUSED"
+	title.align = Label.ALIGN_CENTER
+	vbox.add_child(title)
+
+	_resume_btn = Button.new()
+	_resume_btn.text = "Resume"
+	_resume_btn.connect("pressed", self, "_on_pause_resume")
+	vbox.add_child(_resume_btn)
+
+	_quit_btn = Button.new()
+	_quit_btn.text = "Quit Game"
+	_quit_btn.connect("pressed", self, "_on_pause_quit")
+	vbox.add_child(_quit_btn)
+
+	var r_to_q: NodePath = _resume_btn.get_path_to(_quit_btn)
+	var q_to_r: NodePath = _quit_btn.get_path_to(_resume_btn)
+	_resume_btn.focus_neighbour_top = r_to_q
+	_resume_btn.focus_neighbour_bottom = r_to_q
+	_quit_btn.focus_neighbour_top = q_to_r
+	_quit_btn.focus_neighbour_bottom = q_to_r
+
+	_pause_menu.visible = false
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		if _is_paused:
+			_resume_game()
+		else:
+			_pause_game()
+
+
+func _pause_game() -> void:
+	_is_paused = true
+	_pause_menu.visible = true
+	_resume_btn.call_deferred("grab_focus")
+
+
+func _resume_game() -> void:
+	_is_paused = false
+	_pause_menu.visible = false
+	if _resume_btn.has_focus():
+		_resume_btn.release_focus()
+	elif _quit_btn.has_focus():
+		_quit_btn.release_focus()
+
+
+func _on_pause_resume() -> void:
+	_resume_game()
+
+
+func _on_pause_quit() -> void:
+	get_tree().quit()
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_paused:
+		if event.is_action_pressed("ui_cancel"):
+			if not event.is_action_pressed("pause"):
+				_resume_game()
+				get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("p1_left"):
 		if not p1_confirmed:
 			p1_index = (p1_index - 1 + CharacterDB.all_characters.size()) % CharacterDB.all_characters.size()

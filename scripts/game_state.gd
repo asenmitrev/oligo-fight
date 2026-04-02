@@ -9,6 +9,15 @@ var fight_background_index: int = 0
 
 func _ready() -> void:
 	pause_mode = Node.PAUSE_MODE_PROCESS
+	yield(get_tree(), "idle_frame")
+	# On Linux without a window manager (e.g. RetroPie via startx),
+	# EWMH fullscreen hints are ignored. Force fullscreen manually.
+	if OS.get_name() == "X11":
+		OS.window_borderless = true
+		OS.window_position = Vector2(0, 0)
+		OS.window_size = OS.get_screen_size()
+	else:
+		OS.window_fullscreen = true
 
 func _input(event: InputEvent) -> void:
 	if (event.is_action_pressed("start") and Input.is_action_pressed("pause")) or \

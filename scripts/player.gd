@@ -12,9 +12,9 @@ const PUNCH_DAMAGE := 10
 const KICK_DAMAGE := 18
 const HIT_COMBO_THRESHOLD := 3
 const HIT_WINDOW := 2.0
-const PUNCH_REACH := 140.0
-const KICK_REACH := 180.0
-
+const PUNCH_ARM_EXTENSION := 120.0  # px from player center to fist at full extension
+const KICK_LEG_EXTENSION := 150.0   # px from player center to foot at full extension
+const HIT_TARGET_RADIUS := 85.0
 # Gameplay Feel Constants
 const KNOCKBACK_FORCE := 500.0
 const BLOCK_DAMAGE_MODIFIER := 0.15
@@ -50,6 +50,7 @@ var _attacking := false
 var _opponent: KinematicBody2D
 var _health_bar: ProgressBar
 var frozen: bool = false
+var _punch_arm_extension: float = PUNCH_ARM_EXTENSION
 var _start_position: Vector2
 var velocity: Vector2 = Vector2.ZERO
 var _hitstop_timer := 0.0
@@ -73,6 +74,7 @@ func apply_character(def: CharacterDef) -> void:
 	display_name = def.display_name
 	anim.frames = def.sprite_frames
 	anim.modulate = def.modulate
+	_punch_arm_extension = def.punch_arm_extension
 	anim.play("idle")
 
 func reset_for_round() -> void:
@@ -220,24 +222,31 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		_find_opponent()
 	if _opponent == null:
 		return
-	
+
 	# Height check for air attacks
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
-	if y_diff > 100: return
+	if y_diff > 120: return
 
-	var dist := global_position.distance_to(_opponent.global_position)
-	var reach := KICK_REACH if is_kick else PUNCH_REACH
-	if dist > reach:
-		return
-		
+	var facing_dir := -1.0 if anim.flip_h else 1.0
 	var to_opponent := _opponent.global_position.x - global_position.x
-	var facing_right := not anim.flip_h
-	
-	if (facing_right and to_opponent > 0) or (not facing_right and to_opponent < 0):
-		var is_counter = _opponent._attacking
-		_opponent.take_hit(is_kick, global_position, is_counter)
-		_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
-		emit_signal("hit_landed", is_kick)
+
+	# Must be facing the opponent
+	if sign(to_opponent) != sign(facing_dir):
+		return
+
+	# Project where the fist/foot actually is at full extension
+	var extension := KICK_LEG_EXTENSION if is_kick else _punch_arm_extension
+	var hit_x := global_position.x + facing_dir * extension
+
+	# Hit registers when extended fist/foot overlaps the opponent's body
+	var fist_to_opp := abs(hit_x - _opponent.global_position.x)
+	if fist_to_opp > HIT_TARGET_RADIUS:
+		return
+
+	var is_counter = _opponent._attacking
+	_opponent.take_hit(is_kick, global_position, is_counter)
+	_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
+	emit_signal("hit_landed", is_kick)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if frozen or state != State.NORMAL or _hitstop_timer > 0:

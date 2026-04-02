@@ -9,7 +9,9 @@ var all_characters: Array = []
 
 
 func _init() -> void:
-	_register(_make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1)))
+	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
+	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Georgi's
+	_register(simonka)
 	_register(_make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1)))
 
 

@@ -5,6 +5,7 @@ export var display_name: String = ""
 export var sprite_frames: SpriteFrames
 export var modulate: Color = Color(1, 1, 1, 1)
 export var preview_frames: SpriteFrames
+export var punch_arm_extension: float = 120.0
 
 
 func get_preview_sprite_frames() -> SpriteFrames:
