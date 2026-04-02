@@ -14,7 +14,7 @@ dest_files=[ "res://.import/simonka-kick.png-2d73a8bea58e9ad67ceb456086e5368c.st
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/lossy_quality=0.7
 compress/hdr_mode=0
 compress/bptc_ldr=0
@@ -30,6 +30,6 @@ process/HDR_as_SRGB=false
 process/invert_color=false
 process/normal_map_invert_y=false
 stream=false
-size_limit=0
-detect_3d=true
+size_limit=512
+detect_3d=false
 svg/scale=1.0

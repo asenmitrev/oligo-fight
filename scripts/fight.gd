@@ -1,17 +1,19 @@
 extends Node2D
 
 const FIGHT_BACKGROUNDS := [
-	preload("res://assets/bg.png"),
-	preload("res://assets/bg2.png"),
-	preload("res://assets/bg3.png"),
-	preload("res://assets/bg4.png"),
+	"res://assets/bg.png",
+	"res://assets/bg2.png",
+	"res://assets/bg3.png",
+	"res://assets/bg4.png",
 ]
 
 onready var win_screen: ColorRect = $HUD/WinScreen
 onready var win_label: Label = $HUD/WinScreen/WinLabel
 onready var p1_wins_label: Label = $HUD/P1WinsLabel
 onready var p2_wins_label: Label = $HUD/P2WinsLabel
-onready var camera: Camera2D = $Camera2D
+onready var camera: Camera2D = $GameViewportContainer/GameViewport/Camera2D
+onready var _p1: KinematicBody2D = $GameViewportContainer/GameViewport/Player
+onready var _p2: KinematicBody2D = $GameViewportContainer/GameViewport/Player2
 
 var p1_wins: int = 0
 var p2_wins: int = 0
@@ -69,7 +71,7 @@ func _apply_fight_background() -> void:
 			GameState.fight_background_index,
 			0,
 			FIGHT_BACKGROUNDS.size() - 1))
-	$Background.texture = FIGHT_BACKGROUNDS[idx]
+	$GameViewportContainer/GameViewport/Background.texture = load(FIGHT_BACKGROUNDS[idx])
 
 func _build_pause_menu() -> void:
 	_pause_menu = CanvasLayer.new()
@@ -166,8 +168,8 @@ func _on_pause_quit() -> void:
 	get_tree().quit()
 
 func _apply_character_selections() -> void:
-	_configure_player($Player, GameState.p1_character, false)
-	_configure_player($Player2, GameState.p2_character, GameState.p2_is_mirror)
+	_configure_player(_p1, GameState.p1_character, false)
+	_configure_player(_p2, GameState.p2_character, GameState.p2_is_mirror)
 
 func _configure_player(player: KinematicBody2D, char_name: String, is_mirror: bool) -> void:
 	var def = CharacterDB.get_by_display_name(char_name)
@@ -206,7 +208,7 @@ func _on_player_defeated() -> void:
 	for player in get_tree().get_nodes_in_group("players"):
 		if not player.is_defeated:
 			winner_name = player.display_name
-			winner_is_p1 = (player == $Player)
+			winner_is_p1 = (player == _p1)
 			break
 
 	if winner_is_p1:
@@ -227,6 +229,6 @@ func _on_player_defeated() -> void:
 		yield(get_tree().create_timer(2.0), "timeout")
 		win_screen.visible = false
 		current_round += 1
-		$Player.reset_for_round()
-		$Player2.reset_for_round()
+		_p1.reset_for_round()
+		_p2.reset_for_round()
 		_start_round()

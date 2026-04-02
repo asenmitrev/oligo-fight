@@ -7,19 +7,16 @@ var p2_confirmed := false
 
 const UI_TEXT_SCALE := 1.55
 # 512× frames @ PREVIEW_SCALE; offset (0,-256) — sprite draws ~230px above/below center; need top margin so heads aren’t clipped
-const PREVIEW_SCALE := 0.9
+const PREVIEW_SCALE := 0.45
 const SLOT_WIDTH := int(512 * PREVIEW_SCALE)
-const PREVIEW_OFFSET := Vector2(0, -256)
-const SLOT_MARGIN_TOP := 290
-# Feet anchor: preview_y_in_slot places the sprite; +PREVIEW_Y_NUDGE lowers characters on the bg
-const FEET_BELOW_GRID_TOP := 204.0
-const SLOT_TOTAL_HEIGHT := 630
-# Selection frame ends at feet; +PREVIEW_Y_NUDGE lowers characters on the bg
-const PREVIEW_Y_NUDGE := 100
+const PREVIEW_OFFSET := Vector2(0, -128)
+const SLOT_MARGIN_TOP := 145
+const FEET_BELOW_GRID_TOP := 102.0
+const SLOT_TOTAL_HEIGHT := 315
 const SELECT_GRID_HEIGHT := SLOT_TOTAL_HEIGHT - SLOT_MARGIN_TOP
 # Design res 768p — nudge feet slightly below old 641 to line up with priest on bg
-const DESIGN_VIEWPORT_HEIGHT := 768.0
-const PREVIEW_SPRITE_Y_DESIGN := 668.0
+const DESIGN_VIEWPORT_HEIGHT := 384.0
+const PREVIEW_SPRITE_Y_DESIGN := 334.0
 
 const P1_COLOR := Color(1.0, 0.2, 0.2, 1.0)
 const P2_COLOR := Color(0.2, 0.5, 1.0, 1.0)
@@ -60,8 +57,7 @@ func _setup_select_grid() -> void:
 		vp.x * 0.25 - SLOT_WIDTH / 2.0,
 		vp.x * 0.75 - SLOT_WIDTH / 2.0,
 	]
-	var preview_y_in_slot := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP)
-	var preview_y := preview_y_in_slot + PREVIEW_Y_NUDGE
+	var preview_y := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP)
 	var selection_box_size := int(512 * PREVIEW_SCALE)
 
 	for i in range(num_chars):
