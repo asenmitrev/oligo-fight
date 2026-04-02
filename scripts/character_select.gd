@@ -6,19 +6,16 @@ var p1_confirmed := false
 var p2_confirmed := false
 
 const UI_TEXT_SCALE := 1.55
-const SLOT_WIDTH := 280
 # 512× frames @ PREVIEW_SCALE; offset (0,-256) — sprite draws ~230px above/below center; need top margin so heads aren’t clipped
 const PREVIEW_SCALE := 0.9
+const SLOT_WIDTH := int(512 * PREVIEW_SCALE)
 const PREVIEW_OFFSET := Vector2(0, -256)
 const SLOT_MARGIN_TOP := 290
 # Feet anchor: preview_y_in_slot places the sprite; +PREVIEW_Y_NUDGE lowers characters on the bg
 const FEET_BELOW_GRID_TOP := 204.0
 const SLOT_TOTAL_HEIGHT := 630
-# Selection frame ends at feet + pad, capped above the name label (not full slot height)
+# Selection frame ends at feet; +PREVIEW_Y_NUDGE lowers characters on the bg
 const PREVIEW_Y_NUDGE := 100
-const SELECTION_BOX_PAD_BELOW_FEET := 12
-# Pixels removed from the computed box height (tighter frame around the sprite)
-const SELECTION_BOX_HEIGHT_TRIM := 64
 const SELECT_GRID_HEIGHT := SLOT_TOTAL_HEIGHT - SLOT_MARGIN_TOP
 # Design res 768p — nudge feet slightly below old 641 to line up with priest on bg
 const DESIGN_VIEWPORT_HEIGHT := 768.0
@@ -65,10 +62,7 @@ func _setup_select_grid() -> void:
 	]
 	var preview_y_in_slot := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP)
 	var preview_y := preview_y_in_slot + PREVIEW_Y_NUDGE
-	var selection_box_height := int(
-		min(preview_y + SELECTION_BOX_PAD_BELOW_FEET, SLOT_TOTAL_HEIGHT - 34)
-	) - SELECTION_BOX_HEIGHT_TRIM
-	selection_box_height = max(selection_box_height, 380)
+	var selection_box_size := int(512 * PREVIEW_SCALE)
 
 	for i in range(num_chars):
 		var char_def = CharacterDB.all_characters[i]
@@ -82,8 +76,8 @@ func _setup_select_grid() -> void:
 
 		# P1 selection box (red) — behind sprite
 		var p1_b := Panel.new()
-		p1_b.rect_position = Vector2(0, 0)
-		p1_b.rect_size = Vector2(SLOT_WIDTH, selection_box_height)
+		p1_b.rect_position = Vector2(0, preview_y - selection_box_size)
+		p1_b.rect_size = Vector2(SLOT_WIDTH, selection_box_size)
 		p1_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var p1_sty := StyleBoxFlat.new()
 		p1_sty.bg_color = Color(0, 0, 0, 0)
@@ -99,8 +93,8 @@ func _setup_select_grid() -> void:
 
 		# P2 selection box (blue, inset)
 		var p2_b := Panel.new()
-		p2_b.rect_position = Vector2(7, 7)
-		p2_b.rect_size = Vector2(SLOT_WIDTH - 14, selection_box_height - 14)
+		p2_b.rect_position = Vector2(7, preview_y - selection_box_size + 7)
+		p2_b.rect_size = Vector2(SLOT_WIDTH - 14, selection_box_size - 14)
 		p2_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var p2_sty := StyleBoxFlat.new()
 		p2_sty.bg_color = Color(0, 0, 0, 0)
