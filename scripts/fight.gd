@@ -11,9 +11,9 @@ onready var win_screen: ColorRect = $HUD/WinScreen
 onready var win_label: Label = $HUD/WinScreen/WinLabel
 onready var p1_wins_label: Label = $HUD/P1WinsLabel
 onready var p2_wins_label: Label = $HUD/P2WinsLabel
-onready var camera: Camera2D = $GameViewportContainer/GameViewport/Camera2D
-onready var _p1: KinematicBody2D = $GameViewportContainer/GameViewport/Player
-onready var _p2: KinematicBody2D = $GameViewportContainer/GameViewport/Player2
+onready var camera: Camera2D = $Camera2D
+onready var _p1: KinematicBody2D = $Player
+onready var _p2: KinematicBody2D = $Player2
 
 var p1_wins: int = 0
 var p2_wins: int = 0
@@ -71,7 +71,7 @@ func _apply_fight_background() -> void:
 			GameState.fight_background_index,
 			0,
 			FIGHT_BACKGROUNDS.size() - 1))
-	$GameViewportContainer/GameViewport/Background.texture = load(FIGHT_BACKGROUNDS[idx])
+	$Background.texture = load(FIGHT_BACKGROUNDS[idx])
 
 func _build_pause_menu() -> void:
 	_pause_menu = CanvasLayer.new()

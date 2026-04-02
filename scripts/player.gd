@@ -56,6 +56,7 @@ var velocity: Vector2 = Vector2.ZERO
 var _hitstop_timer := 0.0
 var _knockback_velocity := Vector2.ZERO
 var _block_stun_timer := 0.0
+var _current_anim: String = ""
 
 func _ready() -> void:
 	_start_position = global_position
@@ -89,10 +90,16 @@ func reset_for_round() -> void:
 	_knockback_velocity = Vector2.ZERO
 	_hitstop_timer = 0.0
 	_block_stun_timer = 0.0
+	_current_anim = ""
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
-	anim.play("idle")
+	_play_anim("idle")
+
+func _play_anim(anim_name: String) -> void:
+	if _current_anim != anim_name:
+		_current_anim = anim_name
+		anim.play(anim_name)
 
 func _find_opponent() -> void:
 	for p in get_tree().get_nodes_in_group("players"):
@@ -116,7 +123,7 @@ func _on_animation_finished() -> void:
 				pass
 			else:
 				state = State.GETUP
-				anim.play("getup")
+				_play_anim("getup")
 		State.GETUP:
 			state = State.NORMAL
 			hit_count = 0
@@ -124,7 +131,7 @@ func _on_animation_finished() -> void:
 			if _attacking:
 				_attacking = false
 				if state == State.NORMAL:
-					anim.play("idle")
+					_play_anim("idle")
 
 func _on_frame_changed() -> void:
 	if not _attacking: return
@@ -201,20 +208,20 @@ func _enter_hit() -> void:
 	state = State.HIT
 	_attacking = false
 	velocity.x = 0.0
-	anim.play("gets_hit")
+	_play_anim("gets_hit")
 
 func _enter_fallen() -> void:
 	state = State.FALLEN
 	_attacking = false
 	velocity = Vector2.ZERO
-	anim.play("falls")
+	_play_anim("falls")
 
 func _enter_defeated() -> void:
 	is_defeated = true
 	state = State.FALLEN
 	_attacking = false
 	velocity = Vector2.ZERO
-	anim.play("falls")
+	_play_anim("falls")
 	emit_signal("defeated")
 
 func _try_hit_opponent(is_kick: bool) -> void:
@@ -248,31 +255,24 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
 	emit_signal("hit_landed", is_kick)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if frozen or state != State.NORMAL or _hitstop_timer > 0:
-		return
-		
-	if not _attacking:
-		if event.is_action_pressed(action_punch):
-			_attacking = true
-			if not is_on_floor():
-				anim.play("flypunch")
-			else:
-				anim.play("punch")
-		elif event.is_action_pressed(action_kick):
-			_attacking = true
-			if not is_on_floor():
-				anim.play("flykick")
-			else:
-				anim.play("kick")
-				
-	if event.is_action_pressed(action_jump) and is_on_floor() and not _attacking:
-		velocity.y = JUMP_VELOCITY
 
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
-		
+
+	# Poll attack/jump inputs each physics tick — more responsive than _unhandled_input
+	# on slow hardware since it doesn't wait for event propagation through the scene tree
+	if state == State.NORMAL and _hitstop_timer <= 0:
+		if not _attacking:
+			if Input.is_action_just_pressed(action_punch):
+				_attacking = true
+				_play_anim("flypunch" if not is_on_floor() else "punch")
+			elif Input.is_action_just_pressed(action_kick):
+				_attacking = true
+				_play_anim("flykick" if not is_on_floor() else "kick")
+		if Input.is_action_just_pressed(action_jump) and is_on_floor() and not _attacking:
+			velocity.y = JUMP_VELOCITY
+
 	if _hitstop_timer > 0:
 		_hitstop_timer -= delta
 		return # Freeze all movement and animation processing
@@ -341,21 +341,21 @@ func _physics_process(delta: float) -> void:
 	# Animation updates
 	if state == State.NORMAL and not _attacking:
 		if should_block_visually and is_on_floor():
-			anim.play("block")
+			_play_anim("block")
 			# Freeze on frame index 1 (the second frame) to hold the block pose
 			if anim.frame >= 1:
 				anim.frame = 1
 				anim.stop()
 		elif not is_on_floor():
-			anim.play("jump")
+			_play_anim("jump")
 		elif direction != 0:
-			anim.play("walk")
+			_play_anim("walk")
 		else:
-			anim.play("idle")
-	
+			_play_anim("idle")
+
 	# Block animation during stun
 	if state == State.BLOCKING:
-		anim.play("block")
+		_play_anim("block")
 		if anim.frame >= 1:
 			anim.frame = 1
 			anim.stop()

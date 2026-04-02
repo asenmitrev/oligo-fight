@@ -7,8 +7,8 @@ var p2_confirmed := false
 
 const UI_TEXT_SCALE := 1.55
 # 512× frames @ PREVIEW_SCALE; offset (0,-256) — sprite draws ~230px above/below center; need top margin so heads aren’t clipped
-const PREVIEW_SCALE := 0.45
-const SLOT_WIDTH := int(512 * PREVIEW_SCALE)
+const PREVIEW_SCALE := 0.90
+const SLOT_WIDTH := 256
 const PREVIEW_OFFSET := Vector2(0, -128)
 const SLOT_MARGIN_TOP := 145
 const FEET_BELOW_GRID_TOP := 102.0
@@ -63,8 +63,8 @@ func _setup_select_grid() -> void:
 		vp.x * 0.25 - SLOT_WIDTH / 2.0,
 		vp.x * 0.75 - SLOT_WIDTH / 2.0,
 	]
-	var preview_y := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP)
-	var selection_box_size := int(512 * PREVIEW_SCALE)
+	var preview_y := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP) + 50
+	var selection_box_size := 256
 
 	for i in range(num_chars):
 		var char_def = CharacterDB.all_characters[i]

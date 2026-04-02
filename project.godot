@@ -23,6 +23,7 @@ CharacterDB="*res://scripts/character_db.gd"
 
 window/size/width=640
 window/size/height=360
+window/vsync/use_vsync=false
 window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 window/fullscreen=true

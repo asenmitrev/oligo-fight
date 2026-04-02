@@ -2,15 +2,17 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.stex"
+path.s3tc="res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.s3tc.stex"
+path.etc="res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.etc.stex"
 metadata={
-"vram_texture": false
+"imported_formats": [ "s3tc", "etc" ],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/bg2.png"
-dest_files=[ "res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.stex" ]
+dest_files=[ "res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.s3tc.stex", "res://.import/bg2.png-7e0fd5896bf6fbd065fac06948d48d0e.etc.stex" ]
 
 [params]
 
@@ -20,7 +22,7 @@ compress/hdr_mode=0
 compress/bptc_ldr=0
 compress/normal_map=0
 flags/repeat=0
-flags/filter=true
+flags/filter=false
 flags/mipmaps=false
 flags/anisotropic=false
 flags/srgb=2
@@ -30,6 +32,6 @@ process/HDR_as_SRGB=false
 process/invert_color=false
 process/normal_map_invert_y=false
 stream=false
-size_limit=512
+size_limit=0
 detect_3d=false
 svg/scale=1.0
