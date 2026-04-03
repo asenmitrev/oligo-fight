@@ -10,7 +10,7 @@ const FLOOR_SNAP := Vector2(0, 24)
 
 const PUNCH_DAMAGE := 10
 const KICK_DAMAGE := 15
-const HIT_COMBO_THRESHOLD := 3
+const HIT_COMBO_THRESHOLD := 2
 const HIT_WINDOW := 2.0
 const PUNCH_ARM_EXTENSION := 120.0  # px from player center to fist at full extension
 const KICK_LEG_EXTENSION := 150.0   # px from player center to foot at full extension
@@ -23,6 +23,9 @@ const COUNTER_HIT_BONUS := 1.5
 const PROXIMITY_BLOCK_RANGE := 500.0
 const BLOCK_STUN_DURATION := 0.2
 const WALK_BACK_SPEED_MULT := 0.65
+const COMBO_INPUT_WINDOW := 0.5
+const SPECIAL_COMBO_DAMAGE := 35
+const SPECIAL_COMBO_SEQUENCE := ["punch", "punch", "kick"]
 
 export var action_left: String = "p1_left"
 # ... (rest of the exports)
@@ -39,7 +42,8 @@ onready var anim: AnimatedSprite = $AnimatedSprite
 enum State { NORMAL, HIT, FALLEN, GETUP, BLOCKING }
 
 signal defeated
-signal hit_landed(is_heavy)
+signal hit_landed(is_heavy, combo_count)
+signal special_combo_triggered
 
 var state = State.NORMAL
 var health := 100
@@ -59,6 +63,10 @@ var _block_stun_timer := 0.0
 var _current_anim: String = ""
 var stay_down: bool = false
 var input_disabled: bool = false
+var _input_buffer: Array = []
+var _input_buffer_timer: float = 0.0
+var _current_combo_count: int = 0
+var _pending_special: bool = false
 
 func _ready() -> void:
 	_start_position = global_position
@@ -95,6 +103,10 @@ func reset_for_round() -> void:
 	_current_anim = ""
 	stay_down = false
 	input_disabled = false
+	_input_buffer.clear()
+	_input_buffer_timer = 0.0
+	_current_combo_count = 0
+	_pending_special = false
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -150,6 +162,8 @@ func _on_animation_finished() -> void:
 		State.GETUP:
 			state = State.NORMAL
 			hit_count = 0
+			if _opponent:
+				_opponent._current_combo_count = 0
 		_:
 			if _attacking:
 				_attacking = false
@@ -181,9 +195,11 @@ func _on_frame_changed() -> void:
 	     (anim_name == "flykick" and frame == 2):
 		_try_hit_opponent(true)
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) -> void:
-	if is_defeated or state == State.FALLEN or state == State.GETUP:
-		return
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) -> bool:
+	if is_defeated or state == State.GETUP:
+		return false
+	if state == State.FALLEN and is_on_floor():
+		return false
 
 	# Blocking Logic
 	var is_blocking = _check_blocking()
@@ -202,6 +218,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 		_apply_impact(attacker_pos, 1.0)
 		hit_count += 1
 		hit_timer = HIT_WINDOW
+		_current_combo_count = 0
 	
 	health = max(0, health - damage)
 	if _health_bar:
@@ -209,18 +226,24 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 	
 	if health <= 0:
 		_enter_defeated()
-		return
+		return true
 
 	if not is_blocking:
-		if not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
+		if state == State.FALLEN:
+			pass # Air juggle — already falling, just apply the impact
+		elif not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
+			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD
 			hit_count = 0
 			hit_timer = 0.0
 			_enter_fallen()
+			if launch:
+				velocity.y = -900.0
 		else:
 			_enter_hit()
-	
+
 	# Trigger hitstop (freeze)
 	_hitstop_timer = HITSTOP_DURATION
+	return true
 
 func _check_blocking() -> bool:
 	if _opponent == null: _find_opponent()
@@ -267,9 +290,10 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if _opponent == null:
 		return
 
-	# Height check for air attacks
+	# Height check — more lenient when opponent is airborne (juggle window)
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
-	if y_diff > 120: return
+	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
+	if y_diff > y_threshold: return
 
 	var facing_dir := -1.0 if anim.flip_h else 1.0
 	var to_opponent := _opponent.global_position.x - global_position.x
@@ -288,10 +312,43 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		return
 
 	var is_counter = _opponent._attacking
-	_opponent.take_hit(is_kick, global_position, is_counter)
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter)
+	if not hit_registered:
+		return
 	_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
-	emit_signal("hit_landed", is_kick)
 
+	if _pending_special:
+		_pending_special = false
+		var bonus = SPECIAL_COMBO_DAMAGE - (KICK_DAMAGE if is_kick else PUNCH_DAMAGE)
+		_opponent.health = max(0, _opponent.health - bonus)
+		if _opponent._health_bar:
+			_opponent._health_bar.value = _opponent.health
+		if _opponent.health <= 0 and not _opponent.is_defeated:
+			_opponent._enter_defeated()
+
+	_current_combo_count += 1
+	var show_combo = (_opponent.state == State.FALLEN)
+	emit_signal("hit_landed", is_kick, _current_combo_count if show_combo else 0)
+
+
+func _record_input(input_type: String) -> void:
+	_input_buffer_timer = COMBO_INPUT_WINDOW
+	_input_buffer.append(input_type)
+	var seq_len = SPECIAL_COMBO_SEQUENCE.size()
+	if _input_buffer.size() > seq_len:
+		_input_buffer = _input_buffer.slice(_input_buffer.size() - seq_len, _input_buffer.size() - 1)
+	_check_special_combo()
+
+func _check_special_combo() -> void:
+	if _input_buffer.size() < SPECIAL_COMBO_SEQUENCE.size():
+		return
+	for i in range(SPECIAL_COMBO_SEQUENCE.size()):
+		if _input_buffer[i] != SPECIAL_COMBO_SEQUENCE[i]:
+			return
+	_input_buffer.clear()
+	_input_buffer_timer = 0.0
+	_pending_special = true
+	emit_signal("special_combo_triggered")
 
 func _physics_process(delta: float) -> void:
 	if frozen:
@@ -304,11 +361,18 @@ func _physics_process(delta: float) -> void:
 			if Input.is_action_just_pressed(action_punch):
 				_attacking = true
 				_play_anim("flypunch" if not is_on_floor() else "punch")
+				_record_input("punch")
 			elif Input.is_action_just_pressed(action_kick):
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor() else "kick")
+				_record_input("kick")
 		if Input.is_action_just_pressed(action_jump) and is_on_floor() and not _attacking:
 			velocity.y = JUMP_VELOCITY
+
+	if _input_buffer_timer > 0.0:
+		_input_buffer_timer -= delta
+		if _input_buffer_timer <= 0.0:
+			_input_buffer.clear()
 
 	if _hitstop_timer > 0:
 		_hitstop_timer -= delta
@@ -318,6 +382,8 @@ func _physics_process(delta: float) -> void:
 		hit_timer -= delta
 		if hit_timer <= 0.0:
 			hit_count = 0
+			if _opponent:
+				_opponent._current_combo_count = 0
 
 	# Friction for knockback
 	_knockback_velocity.x = lerp(_knockback_velocity.x, 0, delta * 10.0)

@@ -31,6 +31,16 @@ var _shake_intensity: float = 0.0
 var _shake_duration: float = 0.0
 var _camera_origin: Vector2
 
+# Combo HUD
+var _p1_combo_root: Control = null
+var _p2_combo_root: Control = null
+var _p1_combo_label: Label = null
+var _p2_combo_label: Label = null
+var _p1_combo_timer: float = 0.0
+var _p2_combo_timer: float = 0.0
+const COMBO_DISPLAY_DURATION := 2.5
+const COMBO_FADE_START := 1.0
+
 func _ready() -> void:
 	assert(FIGHT_BACKGROUNDS.size() == GameState.FIGHT_BACKGROUND_COUNT)
 	_apply_fight_background()
@@ -39,10 +49,14 @@ func _ready() -> void:
 	_apply_character_selections()
 	_camera_origin = camera.position
 	
-	for player in get_tree().get_nodes_in_group("players"):
-		player.connect("defeated", self, "_on_player_defeated")
-		player.connect("hit_landed", self, "_on_player_hit_landed")
-		
+	_p1.connect("defeated", self, "_on_player_defeated")
+	_p1.connect("hit_landed", self, "_on_p1_hit_landed")
+	_p1.connect("special_combo_triggered", self, "_on_special_combo")
+	_p2.connect("defeated", self, "_on_player_defeated")
+	_p2.connect("hit_landed", self, "_on_p2_hit_landed")
+	_p2.connect("special_combo_triggered", self, "_on_special_combo")
+
+	_setup_combo_labels()
 	_update_wins_display()
 	_start_round()
 
@@ -128,15 +142,112 @@ func _process(delta: float) -> void:
 		if _shake_duration <= 0:
 			camera.position = _camera_origin
 
+	_p1_combo_timer = max(0.0, _p1_combo_timer - delta)
+	_p2_combo_timer = max(0.0, _p2_combo_timer - delta)
+	if _p1_combo_root:
+		_tick_combo_label(_p1_combo_root, _p1_combo_timer, delta)
+		if _p1_combo_timer > 0.0:
+			_update_combo_pos(_p1_combo_root, _p1, _p2)
+	if _p2_combo_root:
+		_tick_combo_label(_p2_combo_root, _p2_combo_timer, delta)
+		if _p2_combo_timer > 0.0:
+			_update_combo_pos(_p2_combo_root, _p2, _p1)
+
 func shake_camera(intensity: float, duration: float) -> void:
 	_shake_intensity = intensity
 	_shake_duration = duration
 
-func _on_player_hit_landed(is_heavy: bool) -> void:
+func _on_p1_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	if is_heavy:
 		shake_camera(8.0, 0.15)
 	else:
 		shake_camera(3.0, 0.1)
+	if combo_count >= 2:
+		_show_combo(_p1_combo_root, _p1_combo_label, combo_count)
+		_p1_combo_timer = COMBO_DISPLAY_DURATION
+
+func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
+	if is_heavy:
+		shake_camera(8.0, 0.15)
+	else:
+		shake_camera(3.0, 0.1)
+	if combo_count >= 2:
+		_show_combo(_p2_combo_root, _p2_combo_label, combo_count)
+		_p2_combo_timer = COMBO_DISPLAY_DURATION
+
+func _on_special_combo() -> void:
+	shake_camera(12.0, 0.3)
+
+func _setup_combo_labels() -> void:
+	var font_data = DynamicFontData.new()
+	font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	var font = DynamicFont.new()
+	font.font_data = font_data
+	font.size = 28
+	font.outline_size = 4
+	font.outline_color = Color(0, 0, 0, 1)
+
+	var combo_tex = load("res://assets/combo.png")
+
+	_p1_combo_root = _make_combo_widget(combo_tex, font)
+	_p1_combo_label = _p1_combo_root.get_child(1)
+	$HUD.add_child(_p1_combo_root)
+
+	_p2_combo_root = _make_combo_widget(combo_tex, font)
+	_p2_combo_label = _p2_combo_root.get_child(1)
+	$HUD.add_child(_p2_combo_root)
+
+func _make_combo_widget(tex: Texture, font: DynamicFont) -> Control:
+	var root = Control.new()
+	root.rect_position = Vector2(0, 0)
+	root.rect_size = Vector2(150, 90)
+	root.modulate.a = 0.0
+
+	var img = TextureRect.new()
+	img.texture = tex
+	img.expand = true
+	img.rect_position = Vector2(0, 0)
+	img.rect_size = Vector2(90, 90)
+	root.add_child(img)
+
+	var lbl = Label.new()
+	lbl.add_font_override("font", font)
+	lbl.rect_position = Vector2(95, 0)
+	lbl.rect_size = Vector2(55, 90)
+	lbl.valign = Label.VALIGN_CENTER
+	lbl.align = Label.ALIGN_LEFT
+	lbl.modulate = Color(1, 1, 1, 1)
+	root.add_child(lbl)
+
+	return root
+
+func _update_combo_pos(root: Control, attacker: KinematicBody2D, opponent: KinematicBody2D) -> void:
+	var screen_pos = get_viewport().get_canvas_transform().xform(attacker.global_position)
+	var to_opponent = opponent.global_position.x - attacker.global_position.x
+	var x: float
+	if to_opponent > 0:
+		# Opponent is to the right — place widget to the left of attacker
+		x = screen_pos.x - 160
+	else:
+		# Opponent is to the left — place widget to the right of attacker
+		x = screen_pos.x + 10
+	var y = screen_pos.y - 80
+	root.rect_position = Vector2(clamp(x, 0, 490), clamp(y, 0, 270))
+
+func _show_combo(root: Control, label: Label, count: int) -> void:
+	label.text = str(count)
+	root.modulate.a = 1.0
+	root.rect_scale = Vector2(1.3, 1.3)
+
+func _tick_combo_label(root: Control, t: float, delta: float) -> void:
+	if t <= 0.0:
+		root.modulate.a = 0.0
+		return
+	root.rect_scale = root.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * 12.0)
+	if t < COMBO_FADE_START:
+		root.modulate.a = t / COMBO_FADE_START
+	else:
+		root.modulate.a = 1.0
 
 func _apply_fight_background() -> void:
 	var idx: int = int(clamp(
@@ -279,6 +390,8 @@ func _on_player_defeated() -> void:
 	_set_players_frozen(true)
 	_set_players_input_disabled(true)
 	shake_camera(15.0, 0.5) # Heavy shake on KO
+	_p1_combo_timer = 0.0
+	_p2_combo_timer = 0.0
 
 	var winner_name: String = ""
 	var loser_name: String = ""
