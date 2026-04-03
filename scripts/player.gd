@@ -230,7 +230,9 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 
 	if not is_blocking:
 		if state == State.FALLEN:
-			pass # Air juggle — already falling, just apply the impact
+			anim.stop()
+			anim.frame = 2
+			velocity.y = -500.0
 		elif not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
 			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD
 			hit_count = 0
@@ -377,6 +379,10 @@ func _physics_process(delta: float) -> void:
 	if _hitstop_timer > 0:
 		_hitstop_timer -= delta
 		return # Freeze all movement and animation processing
+
+	if state == State.FALLEN and not is_on_floor() and not anim.is_playing():
+		_current_anim = ""
+		_play_anim("falls")
 
 	if hit_timer > 0.0:
 		hit_timer -= delta
