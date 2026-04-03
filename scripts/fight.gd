@@ -264,6 +264,10 @@ func _set_players_frozen(frozen: bool) -> void:
 	for player in get_tree().get_nodes_in_group("players"):
 		player.frozen = frozen
 
+func _set_players_input_disabled(disabled: bool) -> void:
+	for player in get_tree().get_nodes_in_group("players"):
+		player.input_disabled = disabled
+
 func _start_round() -> void:
 	round_in_progress = true
 	_set_players_frozen(false)
@@ -273,16 +277,22 @@ func _on_player_defeated() -> void:
 		return
 	round_in_progress = false
 	_set_players_frozen(true)
+	_set_players_input_disabled(true)
 	shake_camera(15.0, 0.5) # Heavy shake on KO
 
 	var winner_name: String = ""
 	var loser_name: String = ""
 	var winner_is_p1: bool = false
+	var winner = null
+	var loser = null
+	
 	for player in get_tree().get_nodes_in_group("players"):
 		if not player.is_defeated:
+			winner = player
 			winner_name = player.display_name
 			winner_is_p1 = (player == _p1)
 		else:
+			loser = player
 			loser_name = player.display_name
 
 	if winner_is_p1:
@@ -296,15 +306,44 @@ func _on_player_defeated() -> void:
 	var win_text: String = "Georgi thinks he's won!" if georgi_beat_simonka else winner_name + " Wins!"
 	var round_text: String = "Georgi thinks he's won Round %d!" % current_round if georgi_beat_simonka else winner_name + " wins Round %d!" % current_round
 
-	if p1_wins >= 2 or p2_wins >= 2:
+	if georgi_beat_simonka:
+		# Special sequence for Georgi's "fake" win
 		win_label.text = win_text
 		win_screen.visible = true
-		yield(get_tree().create_timer(2.0), "timeout")
+		
+		yield(get_tree().create_timer(1.0), "timeout")
+		
+		# Simonka stands back up
+		loser.frozen = false
+		loser.anim.flip_h = winner.global_position.x < loser.global_position.x
+		loser.force_getup()
+		yield(get_tree().create_timer(0.8), "timeout")
+		
+		# If they are close, she hits him
+		var dist = winner.global_position.distance_to(loser.global_position)
+		winner.frozen = false # Unfreeze winner too so he can fall
+		winner.stay_down = true # Ensure he stays on the ground
+		if dist < 220:
+			loser.force_punch()
+			yield(get_tree().create_timer(0.3), "timeout")
+			winner.force_fall()
+		else:
+			winner.force_fall()
+			
+		yield(get_tree().create_timer(1.0), "timeout")
+	else:
+		if p1_wins >= 2 or p2_wins >= 2:
+			win_label.text = win_text
+			win_screen.visible = true
+			yield(get_tree().create_timer(2.0), "timeout")
+		else:
+			win_label.text = round_text
+			win_screen.visible = true
+			yield(get_tree().create_timer(2.0), "timeout")
+
+	if p1_wins >= 2 or p2_wins >= 2:
 		get_tree().change_scene("res://scenes/CharacterSelect.tscn")
 	else:
-		win_label.text = round_text
-		win_screen.visible = true
-		yield(get_tree().create_timer(2.0), "timeout")
 		win_screen.visible = false
 		current_round += 1
 		_p1.reset_for_round()

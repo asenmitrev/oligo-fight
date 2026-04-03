@@ -57,6 +57,8 @@ var _hitstop_timer := 0.0
 var _knockback_velocity := Vector2.ZERO
 var _block_stun_timer := 0.0
 var _current_anim: String = ""
+var stay_down: bool = false
+var input_disabled: bool = false
 
 func _ready() -> void:
 	_start_position = global_position
@@ -91,6 +93,8 @@ func reset_for_round() -> void:
 	_hitstop_timer = 0.0
 	_block_stun_timer = 0.0
 	_current_anim = ""
+	stay_down = false
+	input_disabled = false
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -133,7 +137,12 @@ func _on_animation_finished() -> void:
 		State.HIT:
 			state = State.NORMAL
 		State.FALLEN:
-			if is_defeated:
+			if stay_down:
+				# Freeze on the last frame of the falls animation
+				anim.frame = anim.frames.get_frame_count("falls") - 1
+				anim.stop()
+				return
+			if is_defeated and not state == State.GETUP: # Added check to allow forced getup
 				pass
 			else:
 				state = State.GETUP
@@ -146,6 +155,18 @@ func _on_animation_finished() -> void:
 				_attacking = false
 				if state == State.NORMAL:
 					_play_anim("idle")
+
+func force_getup() -> void:
+	state = State.GETUP
+	_play_anim("getup")
+
+func force_punch() -> void:
+	if _opponent == null: _find_opponent()
+	_attacking = true
+	_play_anim("punch")
+
+func force_fall() -> void:
+	_enter_fallen()
 
 func _on_frame_changed() -> void:
 	if not _attacking: return
@@ -175,6 +196,8 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 		_apply_impact(attacker_pos, 0.5) # Reduced knockback when blocking
 		state = State.BLOCKING
 		_block_stun_timer = BLOCK_STUN_DURATION
+		if _opponent:
+			_opponent._current_combo_count = 0
 	else:
 		_apply_impact(attacker_pos, 1.0)
 		hit_count += 1
@@ -276,7 +299,7 @@ func _physics_process(delta: float) -> void:
 
 	# Poll attack/jump inputs each physics tick — more responsive than _unhandled_input
 	# on slow hardware since it doesn't wait for event propagation through the scene tree
-	if state == State.NORMAL and _hitstop_timer <= 0:
+	if state == State.NORMAL and _hitstop_timer <= 0 and not input_disabled:
 		if not _attacking:
 			if Input.is_action_just_pressed(action_punch):
 				_attacking = true
@@ -315,12 +338,12 @@ func _physics_process(delta: float) -> void:
 			velocity.y = 0.0
 		return
 
-	var left := Input.is_action_pressed(action_left)
-	var right := Input.is_action_pressed(action_right)
+	var left := Input.is_action_pressed(action_left) if not input_disabled else false
+	var right := Input.is_action_pressed(action_right) if not input_disabled else false
 	var direction := float(right) - float(left)
 
 	if _opponent == null: _find_opponent()
-	var is_blocking_input = _check_blocking()
+	var is_blocking_input = _check_blocking() if not input_disabled else false
 	var is_opponent_attacking = _opponent != null and _opponent._attacking
 	var dist_to_opp = 0.0
 	var is_walking_back = false
