@@ -9,7 +9,7 @@ const GRAVITY := 4800.0
 const FLOOR_SNAP := Vector2(0, 24)
 
 const PUNCH_DAMAGE := 10
-const KICK_DAMAGE := 18
+const KICK_DAMAGE := 15
 const HIT_COMBO_THRESHOLD := 3
 const HIT_WINDOW := 2.0
 const PUNCH_ARM_EXTENSION := 120.0  # px from player center to fist at full extension

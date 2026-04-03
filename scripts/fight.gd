@@ -276,12 +276,14 @@ func _on_player_defeated() -> void:
 	shake_camera(15.0, 0.5) # Heavy shake on KO
 
 	var winner_name: String = ""
+	var loser_name: String = ""
 	var winner_is_p1: bool = false
 	for player in get_tree().get_nodes_in_group("players"):
 		if not player.is_defeated:
 			winner_name = player.display_name
 			winner_is_p1 = (player == _p1)
-			break
+		else:
+			loser_name = player.display_name
 
 	if winner_is_p1:
 		p1_wins += 1
@@ -290,13 +292,17 @@ func _on_player_defeated() -> void:
 
 	_update_wins_display()
 
+	var georgi_beat_simonka: bool = winner_name == "Georgi" and loser_name == "Simonka"
+	var win_text: String = "Georgi thinks he's won!" if georgi_beat_simonka else winner_name + " Wins!"
+	var round_text: String = "Georgi thinks he's won Round %d!" % current_round if georgi_beat_simonka else winner_name + " wins Round %d!" % current_round
+
 	if p1_wins >= 2 or p2_wins >= 2:
-		win_label.text = winner_name + " Wins!"
+		win_label.text = win_text
 		win_screen.visible = true
 		yield(get_tree().create_timer(2.0), "timeout")
 		get_tree().change_scene("res://scenes/CharacterSelect.tscn")
 	else:
-		win_label.text = winner_name + " wins Round %d!" % current_round
+		win_label.text = round_text
 		win_screen.visible = true
 		yield(get_tree().create_timer(2.0), "timeout")
 		win_screen.visible = false
