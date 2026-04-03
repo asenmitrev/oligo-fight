@@ -7,6 +7,9 @@ var p2_is_mirror: bool = false
 const FIGHT_BACKGROUND_COUNT := 4
 var fight_background_index: int = 0
 
+const P1_COLOR := Color(0.2, 0.6, 1.0, 1.0) # Blue
+const P2_COLOR := Color(0.0, 0.9, 0.4, 1.0) # Green
+
 func _ready() -> void:
 	pause_mode = Node.PAUSE_MODE_PROCESS
 	yield(get_tree(), "idle_frame")

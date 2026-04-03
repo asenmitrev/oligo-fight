@@ -4,8 +4,8 @@ const CharacterDef = preload("res://scripts/character_def.gd")
 
 # Tighter, snappier movement constants
 const SPEED := 350.0
-const JUMP_VELOCITY := -850.0
-const GRAVITY := 2400.0
+const JUMP_VELOCITY := -1700.0
+const GRAVITY := 4800.0
 const FLOOR_SNAP := Vector2(0, 24)
 
 const PUNCH_DAMAGE := 10
@@ -113,6 +113,20 @@ func _move_with_floor_snap() -> Vector2:
 		snap = FLOOR_SNAP
 	# move_and_slide handles player-to-player pushing automatically if collision mask is set
 	return move_and_slide_with_snap(velocity + _knockback_velocity, snap, Vector2.UP)
+
+func _separate_from_opponent() -> void:
+	if _opponent == null:
+		return
+	for i in range(get_slide_count()):
+		var col = get_slide_collision(i)
+		if col.collider == _opponent:
+			# normal.y < -0.5 means opponent surface is below us — we're riding on top
+			if col.normal.y < -0.5:
+				var push_dir = sign(global_position.x - _opponent.global_position.x)
+				if push_dir == 0:
+					push_dir = -1.0 if face_left else 1.0
+				velocity.x = push_dir * SPEED
+				global_position.x += push_dir * 6.0
 
 func _on_animation_finished() -> void:
 	match state:
@@ -296,6 +310,7 @@ func _physics_process(delta: float) -> void:
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
+		_separate_from_opponent()
 		if is_on_floor():
 			velocity.y = 0.0
 		return
@@ -335,6 +350,7 @@ func _physics_process(delta: float) -> void:
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
+	_separate_from_opponent()
 	if is_on_floor():
 		velocity.y = 0.0
 

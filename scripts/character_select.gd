@@ -6,22 +6,16 @@ var p1_confirmed := false
 var p2_confirmed := false
 
 const UI_TEXT_SCALE := 1.55
-# 512× frames @ PREVIEW_SCALE; offset (0,-256) — sprite draws ~230px above/below center; need top margin so heads aren’t clipped
-const PREVIEW_SCALE := 0.90
+const PREVIEW_SCALE := 1.80
 const SLOT_WIDTH := 256
-const PREVIEW_OFFSET := Vector2(0, -128)
-const SLOT_MARGIN_TOP := 145
-const FEET_BELOW_GRID_TOP := 102.0
-const SLOT_TOTAL_HEIGHT := 315
-const SELECT_GRID_HEIGHT := SLOT_TOTAL_HEIGHT - SLOT_MARGIN_TOP
-# Design res 768p — nudge feet slightly below old 641 to line up with priest on bg
-const DESIGN_VIEWPORT_HEIGHT := 384.0
-const PREVIEW_SPRITE_Y_DESIGN := 334.0
-
-const P1_COLOR := Color(1.0, 0.2, 0.2, 1.0)
-const P2_COLOR := Color(0.2, 0.5, 1.0, 1.0)
+const PREVIEW_OFFSET := Vector2(0, -25)
+const FEET_FROM_BOTTOM := 50  # px from bottom of screen where character feet sit
 const BORDER_WIDTH_NORMAL := 5
 const BORDER_WIDTH_CONFIRMED := 12
+const P2_BORDER_INSET := 7  # P2 border is drawn inset inside P1's border
+
+onready var P1_COLOR := GameState.P1_COLOR
+onready var P2_COLOR := GameState.P2_COLOR
 
 var char_slots: Array = []
 var char_previews: Array = []
@@ -33,7 +27,6 @@ var _resume_btn: Button
 var _quit_btn: Button
 var _is_paused: bool = false
 
-onready var fight_label: Label = $FightLabel
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
 onready var p2_tween: Tween = Tween.new()
@@ -48,70 +41,44 @@ func _ready() -> void:
 	_update_ui()
 
 
+func _make_lobster_font(size: int) -> DynamicFont:
+	var data := DynamicFontData.new()
+	data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	var font := DynamicFont.new()
+	font.font_data = data
+	font.size = size
+	font.outline_size = 4
+	font.outline_color = Color(0, 0, 0, 1)
+	return font
+
+
 func _setup_select_grid() -> void:
 	var vp := get_viewport().size
-	var num_chars := CharacterDB.all_characters.size()
+	var sprite_y := vp.y - FEET_FROM_BOTTOM
+	# one center-x per character — add an entry here if you add a character
+	var centers_x := [vp.x * 0.25, vp.x * 0.75]
+	assert(CharacterDB.all_characters.size() == centers_x.size(), "centers_x needs one entry per character")
 
-	select_grid.rect_position = Vector2(
-		0,
-		vp.y * (PREVIEW_SPRITE_Y_DESIGN / DESIGN_VIEWPORT_HEIGHT) - FEET_BELOW_GRID_TOP
-	)
-	select_grid.rect_size = Vector2(vp.x, SELECT_GRID_HEIGHT)
-
-	# Two side positions matching where the old big sprites were
-	var slot_x := [
-		vp.x * 0.25 - SLOT_WIDTH / 2.0,
-		vp.x * 0.75 - SLOT_WIDTH / 2.0,
-	]
-	var preview_y := SLOT_MARGIN_TOP + int(FEET_BELOW_GRID_TOP) + 50
-	var selection_box_size := 256
-
-	for i in range(num_chars):
+	for i in range(CharacterDB.all_characters.size()):
 		var char_def = CharacterDB.all_characters[i]
 
-		# Slot sits partly above select_grid so tall sprites + borders share one rect (no floating box)
 		var slot := Control.new()
-		slot.rect_position = Vector2(slot_x[i], -SLOT_MARGIN_TOP)
-		slot.rect_size = Vector2(SLOT_WIDTH, SLOT_TOTAL_HEIGHT)
+		slot.rect_position = Vector2(centers_x[i] - SLOT_WIDTH / 2.0, sprite_y - SLOT_WIDTH)
+		slot.rect_size = Vector2(SLOT_WIDTH, SLOT_WIDTH + 34)
 		select_grid.add_child(slot)
 		char_slots.append(slot)
 
-		# P1 selection box (red) — behind sprite
-		var p1_b := Panel.new()
-		p1_b.rect_position = Vector2(0, preview_y - selection_box_size)
-		p1_b.rect_size = Vector2(SLOT_WIDTH, selection_box_size)
-		p1_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var p1_sty := StyleBoxFlat.new()
-		p1_sty.bg_color = Color(0, 0, 0, 0)
-		p1_sty.border_color = P1_COLOR
-		p1_sty.border_width_left = BORDER_WIDTH_NORMAL
-		p1_sty.border_width_right = BORDER_WIDTH_NORMAL
-		p1_sty.border_width_top = BORDER_WIDTH_NORMAL
-		p1_sty.border_width_bottom = BORDER_WIDTH_NORMAL
-		p1_b.add_stylebox_override("panel", p1_sty)
-		p1_b.visible = false
+		var p1_b := _make_border_panel(P1_COLOR, Vector2.ZERO, Vector2(SLOT_WIDTH, SLOT_WIDTH))
 		slot.add_child(p1_b)
 		p1_borders.append(p1_b)
 
-		# P2 selection box (blue, inset)
-		var p2_b := Panel.new()
-		p2_b.rect_position = Vector2(7, preview_y - selection_box_size + 7)
-		p2_b.rect_size = Vector2(SLOT_WIDTH - 14, selection_box_size - 14)
-		p2_b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var p2_sty := StyleBoxFlat.new()
-		p2_sty.bg_color = Color(0, 0, 0, 0)
-		p2_sty.border_color = P2_COLOR
-		p2_sty.border_width_left = BORDER_WIDTH_NORMAL
-		p2_sty.border_width_right = BORDER_WIDTH_NORMAL
-		p2_sty.border_width_top = BORDER_WIDTH_NORMAL
-		p2_sty.border_width_bottom = BORDER_WIDTH_NORMAL
-		p2_b.add_stylebox_override("panel", p2_sty)
-		p2_b.visible = false
+		var ins := P2_BORDER_INSET
+		var p2_b := _make_border_panel(P2_COLOR, Vector2(ins, ins), Vector2(SLOT_WIDTH - ins * 2, SLOT_WIDTH - ins * 2))
 		slot.add_child(p2_b)
 		p2_borders.append(p2_b)
 
 		var preview := AnimatedSprite.new()
-		preview.position = Vector2(SLOT_WIDTH / 2.0, preview_y)
+		preview.position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH)
 		preview.offset = PREVIEW_OFFSET
 		preview.scale = Vector2(PREVIEW_SCALE, PREVIEW_SCALE)
 		preview.flip_h = (i == 1)
@@ -120,25 +87,50 @@ func _setup_select_grid() -> void:
 		slot.add_child(preview)
 		char_previews.append(preview)
 
-		# Character name label at bottom of slot
 		var name_lbl := Label.new()
-		name_lbl.rect_position = Vector2(0, SLOT_TOTAL_HEIGHT - 34)
-		name_lbl.rect_size = Vector2(SLOT_WIDTH, 28)
+		name_lbl.rect_position = Vector2(0, SLOT_WIDTH + 4)
+		name_lbl.rect_size = Vector2(SLOT_WIDTH, 30)
 		name_lbl.align = Label.ALIGN_CENTER
 		name_lbl.text = char_def.display_name
+		name_lbl.add_font_override("font", _make_lobster_font(16))
+		name_lbl.add_color_override("font_color", Color.white)
 		slot.add_child(name_lbl)
 
 
+func _make_border_panel(color: Color, pos: Vector2, size: Vector2) -> Panel:
+	var panel := Panel.new()
+	panel.rect_position = pos
+	panel.rect_size = size
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	style.border_color = color
+	_set_border_width(style, BORDER_WIDTH_NORMAL)
+	panel.add_stylebox_override("panel", style)
+	panel.visible = false
+	return panel
+
+
+func _set_border_width(style: StyleBoxFlat, width: int) -> void:
+	style.border_width_left = width
+	style.border_width_right = width
+	style.border_width_top = width
+	style.border_width_bottom = width
+
+
 func _apply_ui_text_scale() -> void:
-	var labels: Array = [
-		$Title,
-		$VSLabel,
-		$FightLabel,
-	]
-	for n in labels:
-		var lbl: Label = n as Label
-		lbl.rect_pivot_offset = lbl.rect_size / 2.0
-		lbl.rect_scale = Vector2(UI_TEXT_SCALE, UI_TEXT_SCALE)
+	var title: Label = $Title
+	title.add_font_override("font", _make_lobster_font(16))
+	title.add_color_override("font_color", Color.white)
+	title.rect_pivot_offset = title.rect_size / 2.0
+	title.rect_scale = Vector2(UI_TEXT_SCALE, UI_TEXT_SCALE)
+
+	var vs: Label = $VSLabel
+	vs.modulate = Color.white  # clear scene modulate; font_color handles the tint
+	vs.add_font_override("font", _make_lobster_font(28))
+	vs.add_color_override("font_color", Color(1, 0.85, 0.1, 1))
+	vs.rect_pivot_offset = vs.rect_size / 2.0
+	vs.rect_scale = Vector2(UI_TEXT_SCALE, UI_TEXT_SCALE)
 
 
 func _build_pause_menu() -> void:
@@ -178,7 +170,7 @@ func _build_pause_menu() -> void:
 
 	_resume_btn = Button.new()
 	_resume_btn.text = "Resume"
-	_resume_btn.connect("pressed", self, "_on_pause_resume")
+	_resume_btn.connect("pressed", self, "_resume_game")
 	vbox.add_child(_resume_btn)
 
 	_quit_btn = Button.new()
@@ -186,12 +178,10 @@ func _build_pause_menu() -> void:
 	_quit_btn.connect("pressed", self, "_on_pause_quit")
 	vbox.add_child(_quit_btn)
 
-	var r_to_q: NodePath = _resume_btn.get_path_to(_quit_btn)
-	var q_to_r: NodePath = _quit_btn.get_path_to(_resume_btn)
-	_resume_btn.focus_neighbour_top = r_to_q
-	_resume_btn.focus_neighbour_bottom = r_to_q
-	_quit_btn.focus_neighbour_top = q_to_r
-	_quit_btn.focus_neighbour_bottom = q_to_r
+	_resume_btn.focus_neighbour_bottom = _resume_btn.get_path_to(_quit_btn)
+	_resume_btn.focus_neighbour_top = _resume_btn.get_path_to(_quit_btn)
+	_quit_btn.focus_neighbour_bottom = _quit_btn.get_path_to(_resume_btn)
+	_quit_btn.focus_neighbour_top = _quit_btn.get_path_to(_resume_btn)
 
 	_pause_menu.visible = false
 
@@ -213,14 +203,9 @@ func _pause_game() -> void:
 func _resume_game() -> void:
 	_is_paused = false
 	_pause_menu.visible = false
-	if _resume_btn.has_focus():
-		_resume_btn.release_focus()
-	elif _quit_btn.has_focus():
-		_quit_btn.release_focus()
-
-
-func _on_pause_resume() -> void:
-	_resume_game()
+	var focused = get_viewport().gui_get_focus_owner()
+	if focused:
+		focused.release_focus()
 
 
 func _on_pause_quit() -> void:
@@ -229,83 +214,70 @@ func _on_pause_quit() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_paused:
-		if event.is_action_pressed("ui_cancel"):
-			if not event.is_action_pressed("pause"):
-				_resume_game()
-				get_viewport().set_input_as_handled()
+		if event.is_action_pressed("ui_cancel") and not event.is_action_pressed("pause"):
+			_resume_game()
+			get_viewport().set_input_as_handled()
 		return
-	if event.is_action_pressed("p1_left"):
-		if not p1_confirmed:
-			p1_index = (p1_index - 1 + CharacterDB.all_characters.size()) % CharacterDB.all_characters.size()
+
+	var num := CharacterDB.all_characters.size()
+
+	if not p1_confirmed:
+		if event.is_action_pressed("p1_left"):
+			p1_index = (p1_index - 1 + num) % num
 			_update_ui()
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
-	elif event.is_action_pressed("p1_right"):
-		if not p1_confirmed:
-			p1_index = (p1_index + 1) % CharacterDB.all_characters.size()
+		elif event.is_action_pressed("p1_right"):
+			p1_index = (p1_index + 1) % num
 			_update_ui()
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
-	elif event.is_action_pressed("p1_confirm"):
-		if not p1_confirmed:
+		elif event.is_action_pressed("p1_confirm"):
 			p1_confirmed = true
 			_update_ui()
+			_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween, true)
 			_check_start()
-	elif event.is_action_pressed("p2_left"):
-		if not p2_confirmed:
-			p2_index = (p2_index - 1 + CharacterDB.all_characters.size()) % CharacterDB.all_characters.size()
+	elif event.is_action_pressed("p1_confirm") and not p2_confirmed:
+		p1_confirmed = false
+		_update_ui()
+		_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
+
+	if not p2_confirmed:
+		if event.is_action_pressed("p2_left"):
+			p2_index = (p2_index - 1 + num) % num
 			_update_ui()
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
-	elif event.is_action_pressed("p2_right"):
-		if not p2_confirmed:
-			p2_index = (p2_index + 1) % CharacterDB.all_characters.size()
+		elif event.is_action_pressed("p2_right"):
+			p2_index = (p2_index + 1) % num
 			_update_ui()
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
-	elif event.is_action_pressed("p2_confirm"):
-		if not p2_confirmed:
+		elif event.is_action_pressed("p2_confirm"):
 			p2_confirmed = true
 			_update_ui()
+			_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
 			_check_start()
+	elif event.is_action_pressed("p2_confirm") and not p1_confirmed:
+		p2_confirmed = false
+		_update_ui()
+		_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
 
 
 func _update_ui() -> void:
 	for i in range(char_slots.size()):
-		var p1_b : Panel = p1_borders[i]
-		var p2_b : Panel = p2_borders[i]
-		
-		p1_b.visible = (p1_index == i)
-		p2_b.visible = (p2_index == i)
-		
-		var p1_sty : StyleBoxFlat = p1_b.get_stylebox("panel")
-		var p2_sty : StyleBoxFlat = p2_b.get_stylebox("panel")
-		
-		var p1_w := BORDER_WIDTH_CONFIRMED if p1_confirmed else BORDER_WIDTH_NORMAL
-		p1_sty.border_width_left = p1_w
-		p1_sty.border_width_right = p1_w
-		p1_sty.border_width_top = p1_w
-		p1_sty.border_width_bottom = p1_w
-		
-		var p2_w := BORDER_WIDTH_CONFIRMED if p2_confirmed else BORDER_WIDTH_NORMAL
-		p2_sty.border_width_left = p2_w
-		p2_sty.border_width_right = p2_w
-		p2_sty.border_width_top = p2_w
-		p2_sty.border_width_bottom = p2_w
+		p1_borders[i].visible = (p1_index == i)
+		p2_borders[i].visible = (p2_index == i)
 
 
 func _flash_selection(panel: Panel, color: Color, tween: Tween, is_confirm: bool = false) -> void:
-	var style : StyleBoxFlat = panel.get_stylebox("panel")
+	var style: StyleBoxFlat = panel.get_stylebox("panel")
 	tween.stop_all()
-	
-	var flash_color = color
+	var flash_color := color
 	flash_color.a = 0.7 if is_confirm else 0.3
-	var duration = 0.5 if is_confirm else 0.2
-	
-	# Flash background
+	var duration := 0.5 if is_confirm else 0.2
 	tween.interpolate_property(style, "bg_color", flash_color, Color(0, 0, 0, 0), duration, Tween.TRANS_SINE, Tween.EASE_OUT)
-	# Flash border to white then back to player color
 	tween.interpolate_property(style, "border_color", Color.white, color, duration, Tween.TRANS_SINE, Tween.EASE_OUT)
-	
 	tween.start()
+
 
 func _check_start() -> void:
 	if p1_confirmed and p2_confirmed:
@@ -314,11 +286,60 @@ func _check_start() -> void:
 		GameState.p1_character = p1_def.display_name
 		GameState.p2_character = p2_def.display_name
 		GameState.p2_is_mirror = (p1_index == p2_index)
-		fight_label.visible = true
-		for i in range(3, 0, -1):
-			fight_label.text = str(i)
-			yield(get_tree().create_timer(1.0), "timeout")
-		fight_label.text = "FIGHT!"
-		yield(get_tree().create_timer(0.5), "timeout")
-		GameState.fight_background_index = randi() % GameState.FIGHT_BACKGROUND_COUNT
-		get_tree().change_scene("res://scenes/Fight.tscn")
+		_show_fight_sequence()
+
+
+func _show_fight_sequence() -> void:
+	var overlay := CanvasLayer.new()
+	overlay.layer = 10
+	add_child(overlay)
+
+	# Full-screen Control for anchor-based child positioning
+	var root := Control.new()
+	root.anchor_right = 1.0
+	root.anchor_bottom = 1.0
+	overlay.add_child(root)
+
+	# Dim backdrop
+	var dim := ColorRect.new()
+	dim.anchor_right = 1.0
+	dim.anchor_bottom = 1.0
+	dim.color = Color(0, 0, 0, 0.82)
+	root.add_child(dim)
+
+	# fight-text.png — 320px wide (50% of 640), centered, upper-center of screen.
+	# Box is 320x110; STRETCH_KEEP_ASPECT_CENTERED fills it without distortion.
+	var fight_tex := TextureRect.new()
+	fight_tex.texture = load("res://assets/fight-text.png")
+	fight_tex.expand = true
+	fight_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	fight_tex.anchor_left = 0.5
+	fight_tex.anchor_right = 0.5
+	fight_tex.anchor_top = 0.5
+	fight_tex.anchor_bottom = 0.5
+	fight_tex.rect_size = Vector2(320, 110)
+	fight_tex.margin_left = -160.0
+	fight_tex.margin_right = 160.0
+	fight_tex.margin_top = -105.0
+	fight_tex.margin_bottom = 5.0
+	root.add_child(fight_tex)
+
+	# Countdown — Lobster font, golden yellow with thick black outline
+	var countdown := Label.new()
+	countdown.add_font_override("font", _make_lobster_font(64))
+	countdown.add_color_override("font_color", Color(1, 0.88, 0.1, 1))
+	countdown.anchor_left = 0.0
+	countdown.anchor_right = 1.0
+	countdown.anchor_top = 0.5
+	countdown.anchor_bottom = 0.5
+	countdown.margin_top = 20.0
+	countdown.margin_bottom = 100.0
+	countdown.align = Label.ALIGN_CENTER
+	root.add_child(countdown)
+
+	for i in range(3, 0, -1):
+		countdown.text = str(i)
+		yield(get_tree().create_timer(1.0), "timeout")
+
+	GameState.fight_background_index = randi() % GameState.FIGHT_BACKGROUND_COUNT
+	get_tree().change_scene("res://scenes/Fight.tscn")

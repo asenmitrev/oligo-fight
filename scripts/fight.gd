@@ -34,6 +34,7 @@ var _camera_origin: Vector2
 func _ready() -> void:
 	assert(FIGHT_BACKGROUNDS.size() == GameState.FIGHT_BACKGROUND_COUNT)
 	_apply_fight_background()
+	_setup_health_bars()
 	_build_pause_menu()
 	_apply_character_selections()
 	_camera_origin = camera.position
@@ -44,6 +45,77 @@ func _ready() -> void:
 		
 	_update_wins_display()
 	_start_round()
+
+func _setup_health_bars() -> void:
+	var p1_bar = $HUD/P1HealthBar
+	var p2_bar = $HUD/P2HealthBar
+	
+	# Common styles
+	var bg_style = StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.1, 0.1, 0.1, 0.8)
+	bg_style.border_width_left = 3
+	bg_style.border_width_right = 3
+	bg_style.border_width_top = 3
+	bg_style.border_width_bottom = 3
+	bg_style.border_color = Color(0.2, 0.2, 0.2)
+	bg_style.expand_margin_left = 2
+	bg_style.expand_margin_right = 2
+	bg_style.expand_margin_top = 2
+	bg_style.expand_margin_bottom = 2
+	
+	# P1 Fill Style
+	var p1_fg = StyleBoxFlat.new()
+	p1_fg.bg_color = GameState.P1_COLOR
+	p1_fg.border_width_left = 2
+	p1_fg.border_width_right = 2
+	p1_fg.border_width_top = 2
+	p1_fg.border_width_bottom = 2
+	p1_fg.border_color = Color(1, 1, 1, 0.5) # Slight highlight
+	
+	# P2 Fill Style
+	var p2_fg = StyleBoxFlat.new()
+	p2_fg.bg_color = GameState.P2_COLOR
+	p2_fg.border_width_left = 2
+	p2_fg.border_width_right = 2
+	p2_fg.border_width_top = 2
+	p2_fg.border_width_bottom = 2
+	p2_fg.border_color = Color(1, 1, 1, 0.5) # Slight highlight
+	
+	p1_bar.add_stylebox_override("bg", bg_style)
+	p1_bar.add_stylebox_override("fg", p1_fg)
+	p2_bar.add_stylebox_override("bg", bg_style)
+	p2_bar.add_stylebox_override("fg", p2_fg)
+	
+	# Make them taller and add shadow
+	p1_bar.margin_bottom = p1_bar.margin_top + 44
+	p2_bar.margin_bottom = p2_bar.margin_top + 44
+	
+	bg_style.shadow_color = Color(0, 0, 0, 0.5)
+	bg_style.shadow_size = 4
+	bg_style.shadow_offset = Vector2(2, 2)
+	
+	# Add name labels above bars
+	var p1_name = Label.new()
+	p1_name.text = GameState.p1_character
+	p1_name.rect_position = Vector2(p1_bar.rect_position.x, p1_bar.rect_position.y - 25)
+	$HUD.add_child(p1_name)
+	
+	var p2_name = Label.new()
+	p2_name.text = GameState.p2_character
+	p2_name.align = Label.ALIGN_RIGHT
+	p2_name.rect_position = Vector2(p2_bar.rect_position.x, p2_bar.rect_position.y - 25)
+	p2_name.rect_size.x = p2_bar.rect_size.x
+	$HUD.add_child(p2_name)
+	
+	# Style the wins labels to match player colors
+	p1_wins_label.modulate = GameState.P1_COLOR
+	p2_wins_label.modulate = GameState.P2_COLOR
+	
+	# Make wins labels larger
+	p1_wins_label.rect_scale = Vector2(1.5, 1.5)
+	p2_wins_label.rect_scale = Vector2(1.5, 1.5)
+	# Since scale changes pivot-point behavior, nudge them slightly if needed
+	# but rect_position is usually enough for simple HUDs.
 
 func _process(delta: float) -> void:
 	if _shake_duration > 0:
