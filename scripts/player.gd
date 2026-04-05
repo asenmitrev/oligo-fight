@@ -8,8 +8,8 @@ const JUMP_VELOCITY := -1700.0
 const GRAVITY := 4800.0
 const FLOOR_SNAP := Vector2(0, 24)
 
-const PUNCH_DAMAGE := 10
-const KICK_DAMAGE := 15
+const PUNCH_DAMAGE := 15
+const KICK_DAMAGE := 8
 const HIT_COMBO_THRESHOLD := 2
 const HIT_WINDOW := 2.0
 const PUNCH_ARM_EXTENSION := 120.0  # px from player center to fist at full extension
@@ -60,6 +60,7 @@ var velocity: Vector2 = Vector2.ZERO
 var _hitstop_timer := 0.0
 var _knockback_velocity := Vector2.ZERO
 var _block_stun_timer := 0.0
+var _blocked_punch: bool = false
 var _current_anim: String = ""
 var stay_down: bool = false
 var input_disabled: bool = false
@@ -107,6 +108,7 @@ func reset_for_round() -> void:
 	_input_buffer_timer = 0.0
 	_current_combo_count = 0
 	_pending_special = false
+	_blocked_punch = false
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -205,36 +207,44 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 	var is_blocking = _check_blocking()
 	var damage := KICK_DAMAGE if is_kick else PUNCH_DAMAGE
 	if is_counter: damage *= COUNTER_HIT_BONUS
-	
+
+	var block_broken := false
+
 	if is_blocking:
-		damage = int(damage * BLOCK_DAMAGE_MODIFIER)
-		# Blocking prevents hitstun and combo buildup
-		_apply_impact(attacker_pos, 0.5) # Reduced knockback when blocking
-		state = State.BLOCKING
-		_block_stun_timer = BLOCK_STUN_DURATION
-		if _opponent:
-			_opponent._current_combo_count = 0
+		if is_kick:
+			# Kick breaks block — defender falls regardless
+			block_broken = true
+			_apply_impact(attacker_pos, 1.0)
+		else:
+			# Punch is blocked normally — jump can escape this stun
+			damage = int(damage * BLOCK_DAMAGE_MODIFIER)
+			_apply_impact(attacker_pos, 0.5)
+			state = State.BLOCKING
+			_block_stun_timer = BLOCK_STUN_DURATION
+			_blocked_punch = true
+			if _opponent:
+				_opponent._current_combo_count = 0
 	else:
 		_apply_impact(attacker_pos, 1.0)
 		hit_count += 1
 		hit_timer = HIT_WINDOW
 		_current_combo_count = 0
-	
+
 	health = max(0, health - damage)
 	if _health_bar:
 		_health_bar.value = health
-	
+
 	if health <= 0:
 		_enter_defeated()
 		return true
 
-	if not is_blocking:
+	if not is_blocking or block_broken:
 		if state == State.FALLEN:
 			anim.stop()
 			anim.frame = 2
 			velocity.y = -500.0
-		elif not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
-			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD
+		elif block_broken or not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
+			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD and not block_broken
 			hit_count = 0
 			hit_timer = 0.0
 			_enter_fallen()
@@ -358,8 +368,16 @@ func _physics_process(delta: float) -> void:
 
 	# Poll attack/jump inputs each physics tick — more responsive than _unhandled_input
 	# on slow hardware since it doesn't wait for event propagation through the scene tree
+	if state == State.BLOCKING and _blocked_punch and not input_disabled:
+		if Input.is_action_just_pressed(action_jump) and is_on_floor():
+			# Jump escapes punch block stun
+			_block_stun_timer = 0.0
+			_blocked_punch = false
+			state = State.NORMAL
+			velocity.y = JUMP_VELOCITY
+
 	if state == State.NORMAL and _hitstop_timer <= 0 and not input_disabled:
-		if not _attacking:
+		if not _attacking and not _check_blocking():
 			if Input.is_action_just_pressed(action_punch):
 				_attacking = true
 				_play_anim("flypunch" if not is_on_floor() else "punch")
@@ -398,6 +416,7 @@ func _physics_process(delta: float) -> void:
 		_block_stun_timer -= delta
 		if _block_stun_timer <= 0:
 			state = State.NORMAL
+			_blocked_punch = false
 
 	if not is_on_floor():
 		velocity.y += GRAVITY * delta

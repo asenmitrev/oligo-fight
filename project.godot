@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 
 GameState="*res://scripts/game_state.gd"
 CharacterDB="*res://scripts/character_db.gd"
+ControllerMapper="*res://scripts/controller_mapper.gd"
 
 [display]
 
