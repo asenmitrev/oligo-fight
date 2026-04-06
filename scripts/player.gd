@@ -3,13 +3,13 @@ extends KinematicBody2D
 const CharacterDef = preload("res://scripts/character_def.gd")
 
 # Tighter, snappier movement constants
-const SPEED := 350.0
-const JUMP_VELOCITY := -1700.0
+var speed := 350.0
+var jump_velocity := -1700.0
 const GRAVITY := 4800.0
 const FLOOR_SNAP := Vector2(0, 24)
 
-const PUNCH_DAMAGE := 15
-const KICK_DAMAGE := 8
+var punch_damage := 15
+var kick_damage := 8
 const HIT_COMBO_THRESHOLD := 2
 const HIT_WINDOW := 2.0
 const PUNCH_ARM_EXTENSION := 120.0  # px from player center to fist at full extension
@@ -17,7 +17,7 @@ const KICK_LEG_EXTENSION := 150.0   # px from player center to foot at full exte
 const HIT_TARGET_RADIUS := 85.0
 # Gameplay Feel Constants
 const KNOCKBACK_FORCE := 500.0
-const BLOCK_DAMAGE_MODIFIER := 0.15
+var block_damage_modifier := 0.15
 const HITSTOP_DURATION := 0.1
 const COUNTER_HIT_BONUS := 1.5
 const PROXIMITY_BLOCK_RANGE := 500.0
@@ -31,6 +31,7 @@ export var action_left: String = "p1_left"
 # ... (rest of the exports)
 export var action_right: String = "p1_right"
 export var action_jump: String = "p1_jump"
+export var action_down: String = "p1_down"
 export var action_punch: String = "p1_punch"
 export var action_kick: String = "p1_kick"
 export var face_left: bool = false
@@ -46,6 +47,7 @@ signal hit_landed(is_heavy, combo_count)
 signal special_combo_triggered
 
 var state = State.NORMAL
+var max_health := 100
 var health := 100
 var is_defeated := false
 var hit_count := 0
@@ -87,10 +89,17 @@ func apply_character(def: CharacterDef) -> void:
 	anim.frames = def.sprite_frames
 	anim.modulate = def.modulate
 	_punch_arm_extension = def.punch_arm_extension
+	speed = def.speed
+	jump_velocity = def.jump_velocity
+	punch_damage = def.punch_damage
+	kick_damage = def.kick_damage
+	block_damage_modifier = def.block_damage_modifier
+	max_health = def.max_health
+	health = max_health
 	anim.play("idle")
 
 func reset_for_round() -> void:
-	health = 100
+	health = max_health
 	is_defeated = false
 	state = State.NORMAL
 	hit_count = 0
@@ -143,7 +152,7 @@ func _separate_from_opponent() -> void:
 				var push_dir = sign(global_position.x - _opponent.global_position.x)
 				if push_dir == 0:
 					push_dir = -1.0 if face_left else 1.0
-				velocity.x = push_dir * SPEED
+				velocity.x = push_dir * speed
 				global_position.x += push_dir * 6.0
 
 func _on_animation_finished() -> void:
@@ -205,7 +214,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 
 	# Blocking Logic
 	var is_blocking = _check_blocking()
-	var damage := KICK_DAMAGE if is_kick else PUNCH_DAMAGE
+	var damage := kick_damage if is_kick else punch_damage
 	if is_counter: damage *= COUNTER_HIT_BONUS
 
 	var block_broken := false
@@ -217,7 +226,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 			_apply_impact(attacker_pos, 1.0)
 		else:
 			# Punch is blocked normally — jump can escape this stun
-			damage = int(damage * BLOCK_DAMAGE_MODIFIER)
+			damage = int(damage * block_damage_modifier)
 			_apply_impact(attacker_pos, 0.5)
 			state = State.BLOCKING
 			_block_stun_timer = BLOCK_STUN_DURATION
@@ -331,7 +340,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 
 	if _pending_special:
 		_pending_special = false
-		var bonus = SPECIAL_COMBO_DAMAGE - (KICK_DAMAGE if is_kick else PUNCH_DAMAGE)
+		var bonus = SPECIAL_COMBO_DAMAGE - (kick_damage if is_kick else punch_damage)
 		_opponent.health = max(0, _opponent.health - bonus)
 		if _opponent._health_bar:
 			_opponent._health_bar.value = _opponent.health
@@ -374,7 +383,7 @@ func _physics_process(delta: float) -> void:
 			_block_stun_timer = 0.0
 			_blocked_punch = false
 			state = State.NORMAL
-			velocity.y = JUMP_VELOCITY
+			velocity.y = jump_velocity
 
 	if state == State.NORMAL and _hitstop_timer <= 0 and not input_disabled:
 		if not _attacking and not _check_blocking():
@@ -387,7 +396,7 @@ func _physics_process(delta: float) -> void:
 				_play_anim("flykick" if not is_on_floor() else "kick")
 				_record_input("kick")
 		if Input.is_action_just_pressed(action_jump) and is_on_floor() and not _attacking:
-			velocity.y = JUMP_VELOCITY
+			velocity.y = jump_velocity
 
 	if _input_buffer_timer > 0.0:
 		_input_buffer_timer -= delta
@@ -419,7 +428,8 @@ func _physics_process(delta: float) -> void:
 			_blocked_punch = false
 
 	if not is_on_floor():
-		velocity.y += GRAVITY * delta
+		var fast_fall = not input_disabled and Input.is_action_pressed(action_down)
+		velocity.y += GRAVITY * (3.0 if fast_fall else 1.0) * delta
 
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
@@ -452,15 +462,15 @@ func _physics_process(delta: float) -> void:
 		# Small forward lunge when attacking on ground
 		if is_on_floor():
 			var lunge = 1.0 if not anim.flip_h else -1.0
-			velocity.x = lunge * (SPEED * 0.3)
+			velocity.x = lunge * (speed * 0.3)
 	elif should_block_visually and is_on_floor():
 		# Stick in place like SF2 during proximity block
 		velocity.x = 0.0
 	else:
 		# Slower back-walk for SF feel
-		var current_speed = SPEED
+		var current_speed = speed
 		if is_walking_back:
-			current_speed = SPEED * WALK_BACK_SPEED_MULT
+			current_speed = speed * WALK_BACK_SPEED_MULT
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()

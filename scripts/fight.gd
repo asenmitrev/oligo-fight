@@ -20,6 +20,15 @@ var p2_wins: int = 0
 var current_round: int = 1
 var round_in_progress: bool = false
 
+# Win circles HUD
+var _p1_circles: Array = []       # Panel nodes
+var _p2_circles: Array = []
+var _p1_circle_styles: Array = [] # StyleBoxFlat refs
+var _p2_circle_styles: Array = []
+var _win_tween: Tween
+const CIRCLE_SIZE := 26
+const CIRCLE_GAP := 10
+
 var _pause_menu: CanvasLayer
 var _pause_char_btn: Button
 var _pause_quit_btn: Button
@@ -57,6 +66,7 @@ func _ready() -> void:
 	_p2.connect("special_combo_triggered", self, "_on_special_combo")
 
 	_setup_combo_labels()
+	_setup_win_circles()
 	_update_wins_display()
 	_start_round()
 
@@ -121,15 +131,9 @@ func _setup_health_bars() -> void:
 	p2_name.rect_size.x = p2_bar.rect_size.x
 	$HUD.add_child(p2_name)
 	
-	# Style the wins labels to match player colors
-	p1_wins_label.modulate = GameState.P1_COLOR
-	p2_wins_label.modulate = GameState.P2_COLOR
-	
-	# Make wins labels larger
-	p1_wins_label.rect_scale = Vector2(1.5, 1.5)
-	p2_wins_label.rect_scale = Vector2(1.5, 1.5)
-	# Since scale changes pivot-point behavior, nudge them slightly if needed
-	# but rect_position is usually enough for simple HUDs.
+	# Wins display is handled by circle nodes built in _setup_win_circles()
+	p1_wins_label.visible = false
+	p2_wins_label.visible = false
 
 func _process(delta: float) -> void:
 	if _shake_duration > 0:
@@ -362,14 +366,94 @@ func _configure_player(player: KinematicBody2D, char_name: String, is_mirror: bo
 	if is_mirror:
 		player.anim.modulate = Color(1, 0.75, 0.85, 1)
 
-func _update_wins_display() -> void:
-	p1_wins_label.text = _wins_dots(p1_wins)
-	p2_wins_label.text = _wins_dots(p2_wins)
+func _setup_win_circles() -> void:
+	# P1 circles – anchored to left side under health bar
+	var p1_hbox := HBoxContainer.new()
+	p1_hbox.anchor_left = 0.0
+	p1_hbox.anchor_right = 0.0
+	p1_hbox.anchor_top = 0.0
+	p1_hbox.anchor_bottom = 0.0
+	p1_hbox.margin_left = 20
+	p1_hbox.margin_top = 62
+	p1_hbox.margin_right = 20 + 2 * CIRCLE_SIZE + CIRCLE_GAP
+	p1_hbox.margin_bottom = 62 + CIRCLE_SIZE
+	p1_hbox.add_constant_override("separation", CIRCLE_GAP)
+	$HUD.add_child(p1_hbox)
 
-func _wins_dots(wins: int) -> String:
-	var filled := "●".repeat(wins)
-	var empty := "○".repeat(2 - wins)
-	return filled + empty
+	for _i in range(2):
+		var style := _make_circle_style(false)
+		var panel := Panel.new()
+		panel.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
+		panel.add_stylebox_override("panel", style)
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p1_hbox.add_child(panel)
+		_p1_circles.append(panel)
+		_p1_circle_styles.append(style)
+
+	# P2 circles – anchored to right side
+	var p2_hbox := HBoxContainer.new()
+	p2_hbox.anchor_left = 1.0
+	p2_hbox.anchor_right = 1.0
+	p2_hbox.anchor_top = 0.0
+	p2_hbox.anchor_bottom = 0.0
+	p2_hbox.margin_right = -20
+	p2_hbox.margin_left = -(20 + 2 * CIRCLE_SIZE + CIRCLE_GAP)
+	p2_hbox.margin_top = 62
+	p2_hbox.margin_bottom = 62 + CIRCLE_SIZE
+	p2_hbox.add_constant_override("separation", CIRCLE_GAP)
+	p2_hbox.alignment = BoxContainer.ALIGN_END
+	$HUD.add_child(p2_hbox)
+
+	for _i in range(2):
+		var style := _make_circle_style(false)
+		var panel := Panel.new()
+		panel.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
+		panel.add_stylebox_override("panel", style)
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p2_hbox.add_child(panel)
+		_p2_circles.append(panel)
+		_p2_circle_styles.append(style)
+
+	_win_tween = Tween.new()
+	add_child(_win_tween)
+
+func _make_circle_style(filled: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	var r := CIRCLE_SIZE / 2
+	style.corner_radius_top_left = r
+	style.corner_radius_top_right = r
+	style.corner_radius_bottom_left = r
+	style.corner_radius_bottom_right = r
+	if filled:
+		style.bg_color = Color(1, 1, 1, 1)
+	else:
+		style.bg_color = Color(0, 0, 0, 0)
+		style.border_width_left = 2
+		style.border_width_right = 2
+		style.border_width_top = 2
+		style.border_width_bottom = 2
+		style.border_color = Color(1, 1, 1, 0.55)
+	return style
+
+func _set_circle_filled(style: StyleBoxFlat, filled: bool) -> void:
+	style.bg_color = Color(1, 1, 1, 1) if filled else Color(0, 0, 0, 0)
+	var bw := 0 if filled else 2
+	style.border_width_left = bw
+	style.border_width_right = bw
+	style.border_width_top = bw
+	style.border_width_bottom = bw
+
+func _flash_circle(panel: Panel) -> void:
+	panel.modulate = Color(3.0, 3.0, 3.0, 1.0)
+	_win_tween.interpolate_property(panel, "modulate",
+		Color(3.0, 3.0, 3.0, 1.0), Color(1.0, 1.0, 1.0, 1.0),
+		0.9, Tween.TRANS_SINE, Tween.EASE_OUT)
+	_win_tween.start()
+
+func _update_wins_display() -> void:
+	for i in range(2):
+		_set_circle_filled(_p1_circle_styles[i], i < p1_wins)
+		_set_circle_filled(_p2_circle_styles[i], i < p2_wins)
 
 func _set_players_frozen(frozen: bool) -> void:
 	for player in get_tree().get_nodes_in_group("players"):
@@ -414,6 +498,10 @@ func _on_player_defeated() -> void:
 		p2_wins += 1
 
 	_update_wins_display()
+	if winner_is_p1:
+		_flash_circle(_p1_circles[p1_wins - 1])
+	else:
+		_flash_circle(_p2_circles[p2_wins - 1])
 
 	var georgi_beat_simonka: bool = winner_name == "Georgi" and loser_name == "Simonka"
 	var win_text: String = "Georgi thinks he's won!" if georgi_beat_simonka else winner_name + " Wins!"

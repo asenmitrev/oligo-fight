@@ -8,7 +8,7 @@ const FIGHT_BACKGROUND_COUNT := 4
 var fight_background_index: int = 0
 
 const P1_COLOR := Color(0.2, 0.6, 1.0, 1.0) # Blue
-const P2_COLOR := Color(0.0, 0.9, 0.4, 1.0) # Green
+const P2_COLOR := Color(0.9, 0.15, 0.15, 1.0) # Red
 
 func _ready() -> void:
 	pause_mode = Node.PAUSE_MODE_PROCESS
