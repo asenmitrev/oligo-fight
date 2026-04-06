@@ -30,6 +30,7 @@ var _is_paused: bool = false
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
 onready var p2_tween: Tween = Tween.new()
+onready var _music: AudioStreamPlayer = $Music
 
 
 func _ready() -> void:
@@ -39,6 +40,11 @@ func _ready() -> void:
 	_build_pause_menu()
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
+
+	var stream := load("res://assets/music/character-select.mp3") as AudioStreamMP3
+	stream.loop = true
+	_music.stream = stream
+	_music.play()
 
 
 func _make_lobster_font(size: int) -> DynamicFont:
@@ -198,6 +204,7 @@ func _pause_game() -> void:
 	_is_paused = true
 	_pause_menu.visible = true
 	_resume_btn.call_deferred("grab_focus")
+	_music.stream_paused = true
 
 
 func _resume_game() -> void:
@@ -206,9 +213,11 @@ func _resume_game() -> void:
 	var focused = get_viewport().gui_get_focus_owner()
 	if focused:
 		focused.release_focus()
+	_music.stream_paused = false
 
 
 func _on_pause_quit() -> void:
+	_music.stop()
 	get_tree().quit()
 
 
@@ -342,4 +351,5 @@ func _show_fight_sequence() -> void:
 		yield(get_tree().create_timer(1.0), "timeout")
 
 	GameState.fight_background_index = randi() % GameState.FIGHT_BACKGROUND_COUNT
+	_music.stop()
 	get_tree().change_scene("res://scenes/Fight.tscn")

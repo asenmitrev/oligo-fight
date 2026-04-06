@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/bar.mp3-7a2445ed3c62ca065330d3a1c2389532.mp3str"
+
+[deps]
+
+source_file="res://assets/music/bar.mp3"
+dest_files=[ "res://.import/bar.mp3-7a2445ed3c62ca065330d3a1c2389532.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

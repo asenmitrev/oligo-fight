@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/picnic.mp3-ecacfae5c4a2b259c2e4a30f19f54834.mp3str"
+
+[deps]
+
+source_file="res://assets/music/picnic.mp3"
+dest_files=[ "res://.import/picnic.mp3-ecacfae5c4a2b259c2e4a30f19f54834.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

@@ -7,6 +7,14 @@ const FIGHT_BACKGROUNDS := [
 	"res://assets/bg4.png",
 ]
 
+const FIGHT_MUSIC := [
+	"res://assets/music/thrift-shop.mp3",
+	"res://assets/music/cinema.mp3",
+	"res://assets/music/picnic.mp3",
+	"res://assets/music/bar.mp3",
+]
+
+onready var _music: AudioStreamPlayer = $Music
 onready var win_screen: ColorRect = $HUD/WinScreen
 onready var win_label: Label = $HUD/WinScreen/WinLabel
 onready var p1_wins_label: Label = $HUD/P1WinsLabel
@@ -69,6 +77,12 @@ func _ready() -> void:
 	_setup_win_circles()
 	_update_wins_display()
 	_start_round()
+
+	var music_idx: int = int(clamp(GameState.fight_background_index, 0, FIGHT_MUSIC.size() - 1))
+	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamMP3
+	stream.loop = true
+	_music.stream = stream
+	_music.play()
 
 func _setup_health_bars() -> void:
 	var p1_bar = $HUD/P1HealthBar
@@ -336,6 +350,7 @@ func _pause_game() -> void:
 	_set_players_frozen(true)
 	_pause_menu.visible = true
 	_pause_char_btn.call_deferred("grab_focus")
+	_music.stream_paused = true
 
 func _resume_game() -> void:
 	_is_paused = false
@@ -346,12 +361,15 @@ func _resume_game() -> void:
 		_pause_quit_btn.release_focus()
 	if _was_round_in_progress:
 		_set_players_frozen(false)
+	_music.stream_paused = false
 
 func _on_pause_character_select() -> void:
 	_is_paused = false
+	_music.stop()
 	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
 
 func _on_pause_quit() -> void:
+	_music.stop()
 	get_tree().quit()
 
 func _apply_character_selections() -> void:
