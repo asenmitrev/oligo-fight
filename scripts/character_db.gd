@@ -31,13 +31,15 @@ func _init() -> void:
 	_register(georgi)
 
 	var boekov = _make_def("boekov", "Boekov", _boekov_frames, Color(1, 1, 1, 1))
-	boekov.sprite_offset = Vector2(0, 7)  # sprites sit ~7px higher than other chars
+	boekov.sprite_offset = Vector2(0, 4)  # sprites sit ~7px higher than other chars
 	boekov.speed = 320.0
 	boekov.jump_velocity = -1600.0
 	boekov.punch_damage = 18
 	boekov.kick_damage = 10
 	boekov.block_damage_modifier = 0.18
 	boekov.max_health = 120
+	boekov.launch_punch = true
+	boekov.combos_enabled = false
 	_register(boekov)
 
 

@@ -64,6 +64,8 @@ var _knockback_velocity := Vector2.ZERO
 var _block_stun_timer := 0.0
 var _blocked_punch: bool = false
 var _current_anim: String = ""
+var launch_punch: bool = false
+var combos_enabled: bool = true
 var stay_down: bool = false
 var input_disabled: bool = false
 var _input_buffer: Array = []
@@ -96,6 +98,8 @@ func apply_character(def: CharacterDef) -> void:
 	block_damage_modifier = def.block_damage_modifier
 	max_health = def.max_health
 	health = max_health
+	launch_punch = def.launch_punch
+	combos_enabled = def.combos_enabled
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -299,6 +303,14 @@ func _enter_fallen() -> void:
 	velocity = Vector2.ZERO
 	_play_anim("falls")
 
+func _enter_launched(attacker_pos: Vector2) -> void:
+	state = State.FALLEN
+	_attacking = false
+	_apply_impact(attacker_pos, 1.5)
+	velocity.y = -1100.0
+	_current_anim = ""
+	_play_anim("jump")
+
 func _enter_defeated() -> void:
 	is_defeated = true
 	state = State.FALLEN
@@ -340,6 +352,10 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		return
 	_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
 
+	# Boekov's launch punch: blast the opponent into the air with the jump animation
+	if launch_punch and not is_kick and not _opponent.is_defeated:
+		_opponent._enter_launched(global_position)
+
 	if _pending_special:
 		_pending_special = false
 		var bonus = SPECIAL_COMBO_DAMAGE - (kick_damage if is_kick else punch_damage)
@@ -349,8 +365,9 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		if _opponent.health <= 0 and not _opponent.is_defeated:
 			_opponent._enter_defeated()
 
-	_current_combo_count += 1
-	var show_combo = (_opponent.state == State.FALLEN)
+	if combos_enabled:
+		_current_combo_count += 1
+	var show_combo = combos_enabled and (_opponent.state == State.FALLEN)
 	emit_signal("hit_landed", is_kick, _current_combo_count if show_combo else 0)
 
 
@@ -392,11 +409,13 @@ func _physics_process(delta: float) -> void:
 			if Input.is_action_just_pressed(action_punch):
 				_attacking = true
 				_play_anim("flypunch" if not is_on_floor() else "punch")
-				_record_input("punch")
+				if combos_enabled:
+					_record_input("punch")
 			elif Input.is_action_just_pressed(action_kick):
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor() else "kick")
-				_record_input("kick")
+				if combos_enabled:
+					_record_input("kick")
 		if Input.is_action_just_pressed(action_jump) and is_on_floor() and not _attacking:
 			velocity.y = jump_velocity
 

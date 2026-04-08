@@ -14,6 +14,8 @@ export var block_damage_modifier: float = 0.15
 export var max_health: int = 100
 export var sprite_scale: float = 1.0
 export var sprite_offset: Vector2 = Vector2.ZERO
+export var launch_punch: bool = false
+export var combos_enabled: bool = true
 
 
 func get_preview_sprite_frames() -> SpriteFrames:
