@@ -96,6 +96,8 @@ func apply_character(def: CharacterDef) -> void:
 	block_damage_modifier = def.block_damage_modifier
 	max_health = def.max_health
 	health = max_health
+	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
+	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
 
 func reset_for_round() -> void:

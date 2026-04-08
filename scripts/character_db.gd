@@ -3,6 +3,7 @@ extends Node
 const CharacterDef = preload("res://scripts/character_def.gd")
 const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
 const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
+const _boekov_frames: SpriteFrames = preload("res://resources/boekov_sprite_frames.tres")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -17,6 +18,7 @@ func _init() -> void:
 	simonka.kick_damage = 8
 	simonka.block_damage_modifier = 0.12
 	simonka.max_health = 100
+	simonka.sprite_scale = 0.9
 	_register(simonka)
 
 	var georgi = _make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1))
@@ -27,6 +29,16 @@ func _init() -> void:
 	georgi.block_damage_modifier = 0.18
 	georgi.max_health = 120
 	_register(georgi)
+
+	var boekov = _make_def("boekov", "Boekov", _boekov_frames, Color(1, 1, 1, 1))
+	boekov.sprite_offset = Vector2(0, 7)  # sprites sit ~7px higher than other chars
+	boekov.speed = 320.0
+	boekov.jump_velocity = -1600.0
+	boekov.punch_damage = 18
+	boekov.kick_damage = 10
+	boekov.block_damage_modifier = 0.18
+	boekov.max_health = 120
+	_register(boekov)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
