@@ -38,6 +38,7 @@ func _init() -> void:
 	boekov.kick_damage = 10
 	boekov.block_damage_modifier = 0.18
 	boekov.max_health = 120
+	boekov.sprite_scale = 1.05
 	boekov.launch_punch = true
 	boekov.combos_enabled = false
 	_register(boekov)
