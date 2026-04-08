@@ -86,7 +86,7 @@ func _setup_select_grid() -> void:
 		var preview := AnimatedSprite.new()
 		preview.position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH)
 		preview.offset = PREVIEW_OFFSET
-		var ps := PREVIEW_SCALE * char_def.sprite_scale
+		var ps: float = PREVIEW_SCALE * (char_def.sprite_scale as float)
 		preview.scale = Vector2(ps, ps)
 		preview.flip_h = (i == 1)
 		preview.frames = char_def.get_preview_sprite_frames()
