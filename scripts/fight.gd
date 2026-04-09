@@ -493,8 +493,8 @@ func _start_round() -> void:
 	_set_players_frozen(false)
 
 func _get_boekov_player() -> KinematicBody2D:
-	if _p1.display_name == "Boekov": return _p1
-	if _p2.display_name == "Boekov": return _p2
+	if _p1.display_name == "Georgiy": return _p1
+	if _p2.display_name == "Georgiy": return _p2
 	return null
 
 func _on_player_defeated() -> void:

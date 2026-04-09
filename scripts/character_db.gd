@@ -31,7 +31,7 @@ func _init() -> void:
 	georgi.max_health = 120
 	_register(georgi)
 
-	var boekov = _make_def("boekov", "Boekov", _boekov_frames, Color(1, 1, 1, 1))
+	var boekov = _make_def("boekov", "Georgiy", _boekov_frames, Color(1, 1, 1, 1))
 	boekov.sprite_offset = Vector2(0, 4)  # sprites sit ~7px higher than other chars
 	boekov.speed = 320.0
 	boekov.jump_velocity = -1600.0
