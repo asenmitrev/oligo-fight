@@ -62,7 +62,7 @@ func _setup_select_grid() -> void:
 	var vp := get_viewport().size
 	var sprite_y := vp.y - FEET_FROM_BOTTOM
 	# one center-x per character — add an entry here if you add a character
-	var centers_x := [vp.x * 0.2, vp.x * 0.5, vp.x * 0.8]
+	var centers_x := [vp.x * 0.35, vp.x * 0.65, vp.x * 0.85]
 	assert(CharacterDB.all_characters.size() == centers_x.size(), "centers_x needs one entry per character")
 
 	for i in range(CharacterDB.all_characters.size()):
@@ -74,21 +74,27 @@ func _setup_select_grid() -> void:
 		select_grid.add_child(slot)
 		char_slots.append(slot)
 
-		var p1_b := _make_border_panel(P1_COLOR, Vector2.ZERO, Vector2(SLOT_WIDTH, SLOT_WIDTH))
+		var ps: float = PREVIEW_SCALE * (char_def.sprite_scale as float)
+		var tex: Texture = char_def.get_preview_sprite_frames().get_frame("idle", 0)
+		var sprite_rendered_size := tex.get_size() * ps
+		var border_size := Vector2(sprite_rendered_size.x * 0.7, sprite_rendered_size.y)
+		var sprite_center := Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH) + PREVIEW_OFFSET
+		var border_pos := sprite_center - border_size / 2.0
+
+		var p1_b := _make_border_panel(P1_COLOR, border_pos, border_size)
 		slot.add_child(p1_b)
 		p1_borders.append(p1_b)
 
 		var ins := P2_BORDER_INSET
-		var p2_b := _make_border_panel(P2_COLOR, Vector2(ins, ins), Vector2(SLOT_WIDTH - ins * 2, SLOT_WIDTH - ins * 2))
+		var p2_b := _make_border_panel(P2_COLOR, border_pos + Vector2(ins, ins), border_size - Vector2(ins * 2, ins * 2))
 		slot.add_child(p2_b)
 		p2_borders.append(p2_b)
 
 		var preview := AnimatedSprite.new()
 		preview.position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH)
 		preview.offset = PREVIEW_OFFSET
-		var ps: float = PREVIEW_SCALE * (char_def.sprite_scale as float)
 		preview.scale = Vector2(ps, ps)
-		preview.flip_h = (i == 1)
+		preview.flip_h = (i == 1 or i == 2)
 		preview.frames = char_def.get_preview_sprite_frames()
 		preview.play("idle")
 		slot.add_child(preview)

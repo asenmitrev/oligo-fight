@@ -4,6 +4,7 @@ const CharacterDef = preload("res://scripts/character_def.gd")
 const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
 const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
 const _boekov_frames: SpriteFrames = preload("res://resources/boekov_sprite_frames.tres")
+const _boekov_preview_frames: SpriteFrames = preload("res://resources/boekov_preview_sprite_frames.tres")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -41,6 +42,7 @@ func _init() -> void:
 	boekov.sprite_scale = 1.05
 	boekov.launch_punch = true
 	boekov.combos_enabled = false
+	boekov.preview_frames = _boekov_preview_frames
 	_register(boekov)
 
 
