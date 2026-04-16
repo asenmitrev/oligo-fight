@@ -5,12 +5,22 @@ const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_fr
 const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
 const _boekov_frames: SpriteFrames = preload("res://resources/boekov_sprite_frames.tres")
 const _boekov_preview_frames: SpriteFrames = preload("res://resources/boekov_preview_sprite_frames.tres")
+const _kraska_frames: SpriteFrames = preload("res://resources/kraska_sprite_frames.tres")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
 
 
 func _init() -> void:
+	var kraska = _make_def("kraska", "Kraska", _kraska_frames, Color(1, 1, 1, 1))
+	kraska.speed = 350.0
+	kraska.jump_velocity = -1680.0
+	kraska.punch_damage = 16
+	kraska.kick_damage = 9
+	kraska.block_damage_modifier = 0.15
+	kraska.max_health = 110
+	_register(kraska)
+
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
 	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Georgi's
 	simonka.speed = 380.0
