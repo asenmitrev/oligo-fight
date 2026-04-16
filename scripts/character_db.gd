@@ -20,6 +20,7 @@ func _init() -> void:
 	kraska.block_damage_modifier = 0.15
 	kraska.max_health = 110
 	kraska.body_punch_enabled = true
+	kraska.kick_speed_scale = 1.3
 	_register(kraska)
 
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))

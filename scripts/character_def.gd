@@ -17,6 +17,7 @@ export var sprite_offset: Vector2 = Vector2.ZERO
 export var launch_punch: bool = false
 export var combos_enabled: bool = true
 export var body_punch_enabled: bool = false
+export var kick_speed_scale: float = 1.0
 
 
 func get_preview_sprite_frames() -> SpriteFrames:

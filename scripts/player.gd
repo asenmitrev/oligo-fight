@@ -67,6 +67,7 @@ var _current_anim: String = ""
 var launch_punch: bool = false
 var combos_enabled: bool = true
 var body_punch_enabled: bool = false
+var kick_speed_scale: float = 1.0
 var stay_down: bool = false
 var input_disabled: bool = false
 var _input_buffer: Array = []
@@ -102,6 +103,7 @@ func apply_character(def: CharacterDef) -> void:
 	launch_punch = def.launch_punch
 	combos_enabled = def.combos_enabled
 	body_punch_enabled = def.body_punch_enabled
+	kick_speed_scale = def.kick_speed_scale
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -134,6 +136,7 @@ func reset_for_round() -> void:
 func _play_anim(anim_name: String) -> void:
 	if _current_anim != anim_name:
 		_current_anim = anim_name
+		anim.speed_scale = kick_speed_scale if anim_name in ["kick", "flykick"] else 1.0
 		anim.play(anim_name)
 
 func _find_opponent() -> void:
