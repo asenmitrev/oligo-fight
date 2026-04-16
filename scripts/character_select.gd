@@ -5,6 +5,12 @@ var p2_index := 1
 var p1_confirmed := false
 var p2_confirmed := false
 
+# Online mode
+var _is_online := false
+var _local_confirmed := false  # Have WE confirmed our character?
+var _online_status_label: Label = null
+var _waiting_for_start := false
+
 const UI_TEXT_SCALE := 1.55
 const PREVIEW_SCALE := 1.80
 const SLOT_WIDTH := 256
@@ -46,6 +52,13 @@ func _ready() -> void:
 	_music.stream = stream
 	_music.play()
 
+	_is_online = GameState.is_online
+	if _is_online:
+		_build_online_status_label()
+		NetworkManager.connect("opponent_char_selected", self, "_on_opponent_char_selected")
+		NetworkManager.connect("game_start", self, "_on_game_start")
+		_set_online_status("Select your character")
+
 
 func _make_lobster_font(size: int) -> DynamicFont:
 	var data := DynamicFontData.new()
@@ -56,6 +69,64 @@ func _make_lobster_font(size: int) -> DynamicFont:
 	font.outline_size = 4
 	font.outline_color = Color(0, 0, 0, 1)
 	return font
+
+
+func _build_online_status_label() -> void:
+	var font_data := DynamicFontData.new()
+	font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	var font := DynamicFont.new()
+	font.font_data = font_data
+	font.size = 14
+	font.outline_size = 2
+	font.outline_color = Color(0, 0, 0, 1)
+
+	_online_status_label = Label.new()
+	_online_status_label.add_font_override("font", font)
+	_online_status_label.add_color_override("font_color", Color(0.8, 1.0, 0.8, 1))
+	_online_status_label.anchor_right = 1.0
+	_online_status_label.anchor_bottom = 0.0
+	_online_status_label.margin_top = 4
+	_online_status_label.margin_bottom = 22
+	_online_status_label.align = Label.ALIGN_CENTER
+	add_child(_online_status_label)
+
+
+func _set_online_status(text: String) -> void:
+	if _online_status_label:
+		_online_status_label.text = "[ONLINE] " + text
+
+
+func _on_opponent_char_selected(character: String, _bg_index: int) -> void:
+	# Find the character index by display name and mark opponent as confirmed
+	var opponent_is_p2 := (NetworkManager.local_role == "p1")
+	for i in range(CharacterDB.all_characters.size()):
+		if CharacterDB.all_characters[i].display_name == character:
+			if opponent_is_p2:
+				p2_index = i
+				p2_confirmed = true
+				_set_border_width(p2_borders[i].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
+				_flash_selection(p2_borders[i], P2_COLOR, p2_tween, true)
+			else:
+				p1_index = i
+				p1_confirmed = true
+				_set_border_width(p1_borders[i].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
+				_flash_selection(p1_borders[i], P1_COLOR, p1_tween, true)
+			_update_ui()
+			break
+	_set_online_status("Waiting for both players...")
+
+
+func _on_game_start(p1_char: String, p2_char: String, bg_index: int) -> void:
+	if _waiting_for_start:
+		return
+	_waiting_for_start = true
+	# Use canonical character names from server
+	GameState.p1_character = p1_char
+	GameState.p2_character = p2_char
+	GameState.p2_is_mirror = (p1_char == p2_char)
+	GameState.fight_background_index = bg_index
+	_music.stop()
+	get_tree().change_scene("res://scenes/Fight.tscn")
 
 
 func _setup_select_grid() -> void:
@@ -241,45 +312,51 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	var num := CharacterDB.all_characters.size()
 
-	if not p1_confirmed:
-		if event.is_action_pressed("p1_left"):
-			p1_index = (p1_index - 1 + num) % num
-			_update_ui()
-			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
-		elif event.is_action_pressed("p1_right"):
-			p1_index = (p1_index + 1) % num
-			_update_ui()
-			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
-		elif event.is_action_pressed("p1_confirm"):
-			p1_confirmed = true
-			_update_ui()
-			_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
-			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween, true)
-			_check_start()
-	elif event.is_action_pressed("p1_confirm") and not p2_confirmed:
-		p1_confirmed = false
-		_update_ui()
-		_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
+	# In online mode: only control your own cursor; opponent cursor is driven by server messages
+	var handle_p1 := not _is_online or NetworkManager.local_role == "p1"
+	var handle_p2 := not _is_online or NetworkManager.local_role == "p2"
 
-	if not p2_confirmed:
-		if event.is_action_pressed("p2_left"):
-			p2_index = (p2_index - 1 + num) % num
+	if handle_p1:
+		if not p1_confirmed:
+			if event.is_action_pressed("p1_left"):
+				p1_index = (p1_index - 1 + num) % num
+				_update_ui()
+				_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
+			elif event.is_action_pressed("p1_right"):
+				p1_index = (p1_index + 1) % num
+				_update_ui()
+				_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
+			elif event.is_action_pressed("p1_confirm"):
+				p1_confirmed = true
+				_update_ui()
+				_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
+				_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween, true)
+				_check_start()
+		elif event.is_action_pressed("p1_confirm") and not p2_confirmed and not _is_online:
+			p1_confirmed = false
 			_update_ui()
-			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
-		elif event.is_action_pressed("p2_right"):
-			p2_index = (p2_index + 1) % num
+			_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
+
+	if handle_p2:
+		if not p2_confirmed:
+			if event.is_action_pressed("p2_left"):
+				p2_index = (p2_index - 1 + num) % num
+				_update_ui()
+				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
+			elif event.is_action_pressed("p2_right"):
+				p2_index = (p2_index + 1) % num
+				_update_ui()
+				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
+			elif event.is_action_pressed("p2_confirm"):
+				p2_confirmed = true
+				_update_ui()
+				_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
+				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
+				_check_start()
+		elif event.is_action_pressed("p2_confirm") and not p1_confirmed and not _is_online:
+			p2_confirmed = false
 			_update_ui()
-			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
-		elif event.is_action_pressed("p2_confirm"):
-			p2_confirmed = true
-			_update_ui()
-			_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
-			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
-			_check_start()
-	elif event.is_action_pressed("p2_confirm") and not p1_confirmed:
-		p2_confirmed = false
-		_update_ui()
-		_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
+			_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
 
 
 func _update_ui() -> void:
@@ -300,6 +377,16 @@ func _flash_selection(panel: Panel, color: Color, tween: Tween, is_confirm: bool
 
 
 func _check_start() -> void:
+	if _is_online:
+		# In online mode: send our selection to the server and wait for game_start
+		var local_is_p1 := NetworkManager.local_role == "p1"
+		var my_idx := p1_index if local_is_p1 else p2_index
+		var my_def = CharacterDB.all_characters[my_idx]
+		var bg_idx := randi() % GameState.FIGHT_BACKGROUND_COUNT if local_is_p1 else 0
+		NetworkManager.send_char_select(my_def.display_name, bg_idx)
+		_set_online_status("Waiting for opponent's selection...")
+		return
+
 	if p1_confirmed and p2_confirmed:
 		var p1_def = CharacterDB.all_characters[p1_index]
 		var p2_def = CharacterDB.all_characters[p2_index]

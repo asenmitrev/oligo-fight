@@ -11,7 +11,7 @@ config_version=4
 [application]
 
 config/name="Simonka Boi"
-run/main_scene="res://scenes/CharacterSelect.tscn"
+run/main_scene="res://scenes/MainMenu.tscn"
 boot_splash/image="res://assets/bg_character-select.png"
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 GameState="*res://scripts/game_state.gd"
 CharacterDB="*res://scripts/character_db.gd"
 ControllerMapper="*res://scripts/controller_mapper.gd"
+NetworkManager="*res://scripts/network_manager.gd"
 
 [display]
 

@@ -75,6 +75,12 @@ var _input_buffer_timer: float = 0.0
 var _current_combo_count: int = 0
 var _pending_special: bool = false
 
+# Networked input — set by fight.gd each frame in online mode.
+# When is_networked = true, all Input.* calls use these keys instead.
+var is_networked: bool = false
+var _committed_keys: int = 0
+var _prev_committed_keys: int = 0
+
 func _ready() -> void:
 	_start_position = global_position
 	add_to_group("players")
@@ -128,6 +134,8 @@ func reset_for_round() -> void:
 	_current_combo_count = 0
 	_pending_special = false
 	_blocked_punch = false
+	_committed_keys = 0
+	_prev_committed_keys = 0
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -283,9 +291,9 @@ func _check_blocking() -> bool:
 	if _opponent == null: return false
 	
 	var to_opp = _opponent.global_position.x - global_position.x
-	var input_left = Input.is_action_pressed(action_left)
-	var input_right = Input.is_action_pressed(action_right)
-	
+	var input_left = _action_pressed(action_left)
+	var input_right = _action_pressed(action_right)
+
 	# Block by holding away from opponent
 	if to_opp > 0 and input_left: return true
 	if to_opp < 0 and input_right: return true
@@ -397,23 +405,63 @@ func _check_special_combo() -> void:
 	_pending_special = true
 	emit_signal("special_combo_triggered")
 
+func set_committed_keys(keys: int) -> void:
+	_committed_keys = keys
+
+
+func _get_bit(keys: int, bit: int) -> bool:
+	return bool(keys & bit)
+
+
+func _action_pressed(action: String) -> bool:
+	if is_networked:
+		match action:
+			action_left:  return _get_bit(_committed_keys, 1)
+			action_right: return _get_bit(_committed_keys, 2)
+			action_jump:  return _get_bit(_committed_keys, 4)
+			action_down:  return _get_bit(_committed_keys, 8)
+			action_punch: return _get_bit(_committed_keys, 16)
+			action_kick:  return _get_bit(_committed_keys, 32)
+		return false
+	if input_disabled:
+		return false
+	return Input.is_action_pressed(action)
+
+
+func _action_just_pressed(action: String) -> bool:
+	if is_networked:
+		var cur := false
+		var prev := false
+		match action:
+			action_left:  cur = _get_bit(_committed_keys, 1);  prev = _get_bit(_prev_committed_keys, 1)
+			action_right: cur = _get_bit(_committed_keys, 2);  prev = _get_bit(_prev_committed_keys, 2)
+			action_jump:  cur = _get_bit(_committed_keys, 4);  prev = _get_bit(_prev_committed_keys, 4)
+			action_down:  cur = _get_bit(_committed_keys, 8);  prev = _get_bit(_prev_committed_keys, 8)
+			action_punch: cur = _get_bit(_committed_keys, 16); prev = _get_bit(_prev_committed_keys, 16)
+			action_kick:  cur = _get_bit(_committed_keys, 32); prev = _get_bit(_prev_committed_keys, 32)
+		return cur and not prev
+	if input_disabled:
+		return false
+	return Input.is_action_just_pressed(action)
+
+
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
 
 	# Poll attack/jump inputs each physics tick — more responsive than _unhandled_input
 	# on slow hardware since it doesn't wait for event propagation through the scene tree
-	if state == State.BLOCKING and _blocked_punch and not input_disabled:
-		if Input.is_action_just_pressed(action_jump) and is_on_floor():
+	if state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
+		if _action_just_pressed(action_jump) and is_on_floor():
 			# Jump escapes punch block stun
 			_block_stun_timer = 0.0
 			_blocked_punch = false
 			state = State.NORMAL
 			velocity.y = jump_velocity
 
-	if state == State.NORMAL and _hitstop_timer <= 0 and not input_disabled:
+	if state == State.NORMAL and _hitstop_timer <= 0 and (not input_disabled or is_networked):
 		if not _attacking and not _check_blocking():
-			if Input.is_action_just_pressed(action_punch):
+			if _action_just_pressed(action_punch):
 				_attacking = true
 				if not is_on_floor():
 					_play_anim("flypunch")
@@ -423,12 +471,12 @@ func _physics_process(delta: float) -> void:
 					_play_anim("punch")
 				if combos_enabled:
 					_record_input("punch")
-			elif Input.is_action_just_pressed(action_kick):
+			elif _action_just_pressed(action_kick):
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor() else "kick")
 				if combos_enabled:
 					_record_input("kick")
-		if Input.is_action_just_pressed(action_jump) and is_on_floor() and not _attacking:
+		if _action_just_pressed(action_jump) and is_on_floor() and not _attacking:
 			velocity.y = jump_velocity
 
 	if _input_buffer_timer > 0.0:
@@ -461,7 +509,7 @@ func _physics_process(delta: float) -> void:
 			_blocked_punch = false
 
 	if not is_on_floor():
-		var fast_fall = not input_disabled and Input.is_action_pressed(action_down)
+		var fast_fall = _action_pressed(action_down)
 		velocity.y += GRAVITY * (3.0 if fast_fall else 1.0) * delta
 
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
@@ -472,12 +520,12 @@ func _physics_process(delta: float) -> void:
 			velocity.y = 0.0
 		return
 
-	var left := Input.is_action_pressed(action_left) if not input_disabled else false
-	var right := Input.is_action_pressed(action_right) if not input_disabled else false
+	var left := _action_pressed(action_left)
+	var right := _action_pressed(action_right)
 	var direction := float(right) - float(left)
 
 	if _opponent == null: _find_opponent()
-	var is_blocking_input = _check_blocking() if not input_disabled else false
+	var is_blocking_input = _check_blocking()
 	var is_opponent_attacking = _opponent != null and _opponent._attacking
 	var dist_to_opp = 0.0
 	var is_walking_back = false
@@ -540,3 +588,6 @@ func _physics_process(delta: float) -> void:
 			var to_opp = _opponent.global_position.x - global_position.x
 			if abs(to_opp) > 50:
 				anim.flip_h = to_opp < 0
+
+	# Track previous committed keys for just_pressed simulation in networked mode
+	_prev_committed_keys = _committed_keys

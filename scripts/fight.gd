@@ -28,6 +28,15 @@ var p2_wins: int = 0
 var current_round: int = 1
 var round_in_progress: bool = false
 
+# Online mode
+var is_online: bool = false
+var _local_role: String = ""
+var _local_player: KinematicBody2D = null
+var _remote_player: KinematicBody2D = null
+var _real_frame: int = 0   # Increments every physics tick (always advances)
+var _exec_frame: int = 0   # Next game frame to execute (advances only when both inputs available)
+var _is_stalled: bool = false
+
 # Win circles HUD
 var _p1_circles: Array = []       # Panel nodes
 var _p2_circles: Array = []
@@ -76,6 +85,10 @@ func _ready() -> void:
 	_setup_combo_labels()
 	_setup_win_circles()
 	_update_wins_display()
+
+	if GameState.is_online:
+		_setup_online()
+
 	_start_round()
 
 	var music_idx: int = int(clamp(GameState.fight_background_index, 0, FIGHT_MUSIC.size() - 1))
@@ -148,6 +161,11 @@ func _setup_health_bars() -> void:
 	# Wins display is handled by circle nodes built in _setup_win_circles()
 	p1_wins_label.visible = false
 	p2_wins_label.visible = false
+
+func _physics_process(_delta: float) -> void:
+	if is_online:
+		_process_online_frame()
+
 
 func _process(delta: float) -> void:
 	if _shake_duration > 0:
@@ -267,6 +285,77 @@ func _tick_combo_label(root: Control, t: float, delta: float) -> void:
 	else:
 		root.modulate.a = 1.0
 
+func _setup_online() -> void:
+	is_online = true
+	_local_role = NetworkManager.local_role
+	_local_player = _p1 if _local_role == "p1" else _p2
+	_remote_player = _p2 if _local_role == "p1" else _p1
+	_local_player.is_networked = true
+	_remote_player.is_networked = true
+	NetworkManager.remote_input_buffer.clear()
+	NetworkManager.local_input_buffer.clear()
+	_real_frame = 0
+	_exec_frame = 0
+	_is_stalled = false
+	NetworkManager.connect("opponent_disconnected", self, "_on_opponent_disconnected")
+
+
+func _process_online_frame() -> void:
+	var delay := NetworkManager.input_delay_frames
+
+	# Always sample and send local input for this real-time frame
+	var local_keys := _sample_local_input(_local_player)
+	NetworkManager.local_input_buffer[_real_frame] = local_keys
+	NetworkManager.send_input_frame(_real_frame, local_keys)
+	_real_frame += 1
+
+	# Wait until we have buffered enough frames to start executing
+	if _real_frame <= delay:
+		return
+
+	# Check if remote input for the next execute frame has arrived
+	if not NetworkManager.remote_input_buffer.has(_exec_frame):
+		if not _is_stalled and round_in_progress:
+			_is_stalled = true
+			_set_players_frozen(true)
+		return
+
+	# Remote input arrived — unstall if needed
+	if _is_stalled:
+		_is_stalled = false
+		if round_in_progress:
+			_set_players_frozen(false)
+
+	# Apply both players' committed inputs for this game frame
+	var local_exec: int = NetworkManager.local_input_buffer.get(_exec_frame, 0)
+	var remote_exec: int = NetworkManager.remote_input_buffer[_exec_frame]
+	_local_player.set_committed_keys(local_exec)
+	_remote_player.set_committed_keys(remote_exec)
+
+	_exec_frame += 1
+
+
+func _sample_local_input(player: KinematicBody2D) -> int:
+	var keys := 0
+	if Input.is_action_pressed(player.action_left):       keys |= 1
+	if Input.is_action_pressed(player.action_right):      keys |= 2
+	if Input.is_action_just_pressed(player.action_jump):  keys |= 4
+	if Input.is_action_pressed(player.action_down):       keys |= 8
+	if Input.is_action_just_pressed(player.action_punch): keys |= 16
+	if Input.is_action_just_pressed(player.action_kick):  keys |= 32
+	return keys
+
+
+func _on_opponent_disconnected() -> void:
+	_set_players_frozen(true)
+	round_in_progress = false
+	win_label.text = "Opponent disconnected"
+	win_screen.visible = true
+	yield(get_tree().create_timer(3.0), "timeout")
+	_music.stop()
+	get_tree().change_scene("res://scenes/MainMenu.tscn")
+
+
 func _apply_fight_background() -> void:
 	var idx: int = int(clamp(
 			GameState.fight_background_index,
@@ -366,7 +455,12 @@ func _resume_game() -> void:
 func _on_pause_character_select() -> void:
 	_is_paused = false
 	_music.stop()
-	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
+	if is_online:
+		NetworkManager.disconnect_from_server()
+		GameState.is_online = false
+		get_tree().change_scene("res://scenes/MainMenu.tscn")
+	else:
+		get_tree().change_scene("res://scenes/CharacterSelect.tscn")
 
 func _on_pause_quit() -> void:
 	_music.stop()
