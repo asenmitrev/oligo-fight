@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=53 format=2]
+[gd_resource type="SpriteFrames" load_steps=58 format=2]
 
 [ext_resource path="res://assets/kraska/kraska-block.png" type="Texture" id=1]
 [ext_resource path="res://assets/kraska/kraska-fall.png" type="Texture" id=2]
@@ -9,6 +9,7 @@
 [ext_resource path="res://assets/kraska/kraska-jump.png" type="Texture" id=7]
 [ext_resource path="res://assets/kraska/kraska-kick.png" type="Texture" id=8]
 [ext_resource path="res://assets/kraska/kraska-walk.png" type="Texture" id=9]
+[ext_resource path="res://assets/kraska/kraska-bodypunch.png" type="Texture" id=10]
 
 [sub_resource type="AtlasTexture" id=1]
 flags = 4
@@ -225,12 +226,37 @@ flags = 4
 atlas = ExtResource( 8 )
 region = Rect2( 128, 128, 128, 128 )
 
+[sub_resource type="AtlasTexture" id=44]
+flags = 4
+atlas = ExtResource( 10 )
+region = Rect2( 0, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=45]
+flags = 4
+atlas = ExtResource( 10 )
+region = Rect2( 128, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=46]
+flags = 4
+atlas = ExtResource( 10 )
+region = Rect2( 0, 128, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=47]
+flags = 4
+atlas = ExtResource( 10 )
+region = Rect2( 128, 128, 128, 128 )
+
 [resource]
 animations = [ {
 "frames": [ SubResource( 1 ), SubResource( 2 ), SubResource( 3 ), SubResource( 4 ) ],
 "loop": true,
 "name": "block",
 "speed": 8.0
+}, {
+"frames": [ SubResource( 44 ), SubResource( 45 ), SubResource( 46 ), SubResource( 47 ) ],
+"loop": false,
+"name": "bodypunch",
+"speed": 6.0
 }, {
 "frames": [ SubResource( 5 ), SubResource( 6 ), SubResource( 7 ), SubResource( 8 ) ],
 "loop": false,

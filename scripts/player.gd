@@ -66,6 +66,7 @@ var _blocked_punch: bool = false
 var _current_anim: String = ""
 var launch_punch: bool = false
 var combos_enabled: bool = true
+var body_punch_enabled: bool = false
 var stay_down: bool = false
 var input_disabled: bool = false
 var _input_buffer: Array = []
@@ -100,6 +101,7 @@ func apply_character(def: CharacterDef) -> void:
 	health = max_health
 	launch_punch = def.launch_punch
 	combos_enabled = def.combos_enabled
+	body_punch_enabled = def.body_punch_enabled
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -206,13 +208,14 @@ func _on_frame_changed() -> void:
 	var anim_name = anim.animation
 	
 	if (anim_name == "punch" and frame == 1) or \
-	   (anim_name == "flypunch" and frame == 1):
+	   (anim_name == "flypunch" and frame == 1) or \
+	   (anim_name == "bodypunch" and frame == 2):
 		_try_hit_opponent(false)
 	elif (anim_name == "kick" and frame == 2) or \
 	     (anim_name == "flykick" and frame == 2):
 		_try_hit_opponent(true)
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) -> bool:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage_mult: float = 1.0) -> bool:
 	if is_defeated or state == State.GETUP:
 		return false
 	if state == State.FALLEN and is_on_floor():
@@ -220,8 +223,8 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false) ->
 
 	# Blocking Logic
 	var is_blocking = _check_blocking()
-	var damage := kick_damage if is_kick else punch_damage
-	if is_counter: damage *= COUNTER_HIT_BONUS
+	var damage := int((kick_damage if is_kick else punch_damage) * damage_mult)
+	if is_counter: damage = int(damage * COUNTER_HIT_BONUS)
 
 	var block_broken := false
 
@@ -347,7 +350,8 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		return
 
 	var is_counter = _opponent._attacking
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter)
+	var damage_mult := 2.0 if anim.animation == "bodypunch" else 1.0
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, damage_mult)
 	if not hit_registered:
 		return
 	_hitstop_timer = HITSTOP_DURATION # Attacker also freezes
@@ -408,7 +412,12 @@ func _physics_process(delta: float) -> void:
 		if not _attacking and not _check_blocking():
 			if Input.is_action_just_pressed(action_punch):
 				_attacking = true
-				_play_anim("flypunch" if not is_on_floor() else "punch")
+				if not is_on_floor():
+					_play_anim("flypunch")
+				elif body_punch_enabled:
+					_play_anim("bodypunch")
+				else:
+					_play_anim("punch")
 				if combos_enabled:
 					_record_input("punch")
 			elif Input.is_action_just_pressed(action_kick):
