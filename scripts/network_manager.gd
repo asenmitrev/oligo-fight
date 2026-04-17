@@ -109,10 +109,10 @@ func _on_connected(_proto: String) -> void:
 
 func _on_closed(was_clean: bool) -> void:
 	_connected = false
-	_state = "disconnected"
 	print("[NetworkManager] Disconnected (clean=%s)" % was_clean)
 	if _state == "in_game":
 		emit_signal("opponent_disconnected")
+	_state = "disconnected"
 
 
 func _on_error() -> void:
@@ -172,3 +172,4 @@ func _calibrate_delay() -> void:
 	var one_way_frames := int(ceil(avg_rtt_ms / 2.0 / frame_ms))
 	input_delay_frames = max(3, one_way_frames + 1)
 	print("[NetworkManager] RTT=%dms → input_delay=%d frames" % [avg_rtt_ms, input_delay_frames])
+	send_join_queue()

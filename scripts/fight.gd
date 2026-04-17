@@ -304,7 +304,7 @@ func _process_online_frame() -> void:
 	var delay := NetworkManager.input_delay_frames
 
 	# Always sample and send local input for this real-time frame
-	var local_keys := _sample_local_input(_local_player)
+	var local_keys := _sample_local_input()
 	NetworkManager.local_input_buffer[_real_frame] = local_keys
 	NetworkManager.send_input_frame(_real_frame, local_keys)
 	_real_frame += 1
@@ -335,14 +335,15 @@ func _process_online_frame() -> void:
 	_exec_frame += 1
 
 
-func _sample_local_input(player: KinematicBody2D) -> int:
+func _sample_local_input() -> int:
+	var prefix := "p1_" if _local_role == "p1" else "p2_"
 	var keys := 0
-	if Input.is_action_pressed(player.action_left):       keys |= 1
-	if Input.is_action_pressed(player.action_right):      keys |= 2
-	if Input.is_action_just_pressed(player.action_jump):  keys |= 4
-	if Input.is_action_pressed(player.action_down):       keys |= 8
-	if Input.is_action_just_pressed(player.action_punch): keys |= 16
-	if Input.is_action_just_pressed(player.action_kick):  keys |= 32
+	if Input.is_action_pressed(prefix + "left"):       keys |= 1
+	if Input.is_action_pressed(prefix + "right"):      keys |= 2
+	if Input.is_action_just_pressed(prefix + "jump"):  keys |= 4
+	if Input.is_action_pressed(prefix + "down"):       keys |= 8
+	if Input.is_action_just_pressed(prefix + "punch"): keys |= 16
+	if Input.is_action_just_pressed(prefix + "kick"):  keys |= 32
 	return keys
 
 

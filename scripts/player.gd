@@ -415,13 +415,12 @@ func _get_bit(keys: int, bit: int) -> bool:
 
 func _action_pressed(action: String) -> bool:
 	if is_networked:
-		match action:
-			action_left:  return _get_bit(_committed_keys, 1)
-			action_right: return _get_bit(_committed_keys, 2)
-			action_jump:  return _get_bit(_committed_keys, 4)
-			action_down:  return _get_bit(_committed_keys, 8)
-			action_punch: return _get_bit(_committed_keys, 16)
-			action_kick:  return _get_bit(_committed_keys, 32)
+		if action == action_left:   return _get_bit(_committed_keys, 1)
+		elif action == action_right: return _get_bit(_committed_keys, 2)
+		elif action == action_jump:  return _get_bit(_committed_keys, 4)
+		elif action == action_down:  return _get_bit(_committed_keys, 8)
+		elif action == action_punch: return _get_bit(_committed_keys, 16)
+		elif action == action_kick:  return _get_bit(_committed_keys, 32)
 		return false
 	if input_disabled:
 		return false
@@ -432,13 +431,24 @@ func _action_just_pressed(action: String) -> bool:
 	if is_networked:
 		var cur := false
 		var prev := false
-		match action:
-			action_left:  cur = _get_bit(_committed_keys, 1);  prev = _get_bit(_prev_committed_keys, 1)
-			action_right: cur = _get_bit(_committed_keys, 2);  prev = _get_bit(_prev_committed_keys, 2)
-			action_jump:  cur = _get_bit(_committed_keys, 4);  prev = _get_bit(_prev_committed_keys, 4)
-			action_down:  cur = _get_bit(_committed_keys, 8);  prev = _get_bit(_prev_committed_keys, 8)
-			action_punch: cur = _get_bit(_committed_keys, 16); prev = _get_bit(_prev_committed_keys, 16)
-			action_kick:  cur = _get_bit(_committed_keys, 32); prev = _get_bit(_prev_committed_keys, 32)
+		if action == action_left:
+			cur = _get_bit(_committed_keys, 1)
+			prev = _get_bit(_prev_committed_keys, 1)
+		elif action == action_right:
+			cur = _get_bit(_committed_keys, 2)
+			prev = _get_bit(_prev_committed_keys, 2)
+		elif action == action_jump:
+			cur = _get_bit(_committed_keys, 4)
+			prev = _get_bit(_prev_committed_keys, 4)
+		elif action == action_down:
+			cur = _get_bit(_committed_keys, 8)
+			prev = _get_bit(_prev_committed_keys, 8)
+		elif action == action_punch:
+			cur = _get_bit(_committed_keys, 16)
+			prev = _get_bit(_prev_committed_keys, 16)
+		elif action == action_kick:
+			cur = _get_bit(_committed_keys, 32)
+			prev = _get_bit(_prev_committed_keys, 32)
 		return cur and not prev
 	if input_disabled:
 		return false
