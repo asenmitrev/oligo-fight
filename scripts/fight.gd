@@ -36,6 +36,7 @@ var _remote_player: KinematicBody2D = null
 var _real_frame: int = 0   # Increments every physics tick (always advances)
 var _exec_frame: int = 0   # Next game frame to execute (advances only when both inputs available)
 var _is_stalled: bool = false
+var _stall_frames: int = 0  # Counts consecutive frames stalled; triggers disconnect after timeout
 
 # Win circles HUD
 var _p1_circles: Array = []       # Panel nodes
@@ -292,12 +293,16 @@ func _setup_online() -> void:
 	_remote_player = _p2 if _local_role == "p1" else _p1
 	_local_player.is_networked = true
 	_remote_player.is_networked = true
+	_reset_online_state()
+	NetworkManager.connect("opponent_disconnected", self, "_on_opponent_disconnected")
+
+func _reset_online_state() -> void:
 	NetworkManager.remote_input_buffer.clear()
 	NetworkManager.local_input_buffer.clear()
 	_real_frame = 0
 	_exec_frame = 0
 	_is_stalled = false
-	NetworkManager.connect("opponent_disconnected", self, "_on_opponent_disconnected")
+	_stall_frames = 0
 
 
 func _process_online_frame() -> void:
@@ -315,14 +320,21 @@ func _process_online_frame() -> void:
 
 	# Check if remote input for the next execute frame has arrived
 	if not NetworkManager.remote_input_buffer.has(_exec_frame):
-		if not _is_stalled and round_in_progress:
-			_is_stalled = true
-			_set_players_frozen(true)
+		if round_in_progress:
+			if not _is_stalled:
+				_is_stalled = true
+				_set_players_frozen(true)
+			_stall_frames += 1
+			# 5 seconds at 60 fps — silent disconnect fallback
+			if _stall_frames >= 300:
+				_on_opponent_disconnected()
+				return
 		return
 
 	# Remote input arrived — unstall if needed
 	if _is_stalled:
 		_is_stalled = false
+		_stall_frames = 0
 		if round_in_progress:
 			_set_players_frozen(false)
 
@@ -674,4 +686,6 @@ func _on_player_defeated() -> void:
 		current_round += 1
 		_p1.reset_for_round()
 		_p2.reset_for_round()
+		if is_online:
+			_reset_online_state()
 		_start_round()
