@@ -7,8 +7,13 @@ var _online_btn: Button
 
 
 func _ready() -> void:
-	_build_ui()
 	GameState.is_online = false
+
+	if OS.get_name() == "X11":
+		_on_local_play()
+		return
+
+	_build_ui()
 
 	var stream := load("res://assets/music/character-select.mp3") as AudioStreamMP3
 	stream.loop = true

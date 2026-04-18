@@ -96,6 +96,17 @@ function handleMessage(ws: WebSocket, msg: ClientMessage): void {
       break;
     }
 
+    case 'char_hover': {
+      const info = socketToRoom.get(ws);
+      if (!info) return;
+      const room = rooms.get(info.roomId);
+      if (!room || !room.p2) return;
+
+      const partner = info.role === 'p1' ? room.p2 : room.p1;
+      send(partner.ws, { type: 'opponent_char_hover', index: msg.index });
+      break;
+    }
+
     case 'input_frame': {
       const info = socketToRoom.get(ws);
       if (!info) return;

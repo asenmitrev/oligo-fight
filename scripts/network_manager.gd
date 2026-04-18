@@ -4,6 +4,8 @@ extends Node
 signal matched(role)
 # Emitted when opponent picks their character on char select
 signal opponent_char_selected(character, bg_index)
+# Emitted when opponent moves their cursor on char select (before confirming)
+signal opponent_char_hovered(index)
 # Emitted when server confirms both players are ready — fight starts
 signal game_start(p1_char, p2_char, bg_index)
 # Emitted each time we receive opponent's input for a given frame
@@ -84,6 +86,10 @@ func send_char_select(character: String, bg_index: int) -> void:
 	_send_json({"type": "char_select", "character": character, "background_index": bg_index})
 
 
+func send_char_hover(index: int) -> void:
+	_send_json({"type": "char_hover", "index": index})
+
+
 func send_input_frame(frame: int, keys: int, state_hash: int = 0) -> void:
 	_send_json({"type": "input_frame", "frame": frame, "keys": keys, "sh": state_hash})
 
@@ -144,6 +150,9 @@ func _handle_message(msg: Dictionary) -> void:
 
 		"opponent_char":
 			emit_signal("opponent_char_selected", msg["character"], msg["background_index"])
+
+		"opponent_char_hover":
+			emit_signal("opponent_char_hovered", int(msg["index"]))
 
 		"game_start":
 			_state = "in_game"

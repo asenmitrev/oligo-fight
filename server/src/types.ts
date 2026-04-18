@@ -2,6 +2,7 @@
 export type ClientMessage =
   | { type: 'join_queue'; name: string }
   | { type: 'char_select'; character: string; background_index: number }
+  | { type: 'char_hover'; index: number }
   | { type: 'input_frame'; frame: number; keys: number }
   | { type: 'ping'; ts: number };
 
@@ -9,6 +10,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: 'matched'; role: 'p1' | 'p2'; room_id: string }
   | { type: 'opponent_char'; character: string; background_index: number }
+  | { type: 'opponent_char_hover'; index: number }
   | { type: 'game_start'; p1_char: string; p2_char: string; bg_index: number }
   | { type: 'input_relay'; frame: number; keys: number }
   | { type: 'pong'; ts: number }

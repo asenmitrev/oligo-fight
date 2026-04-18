@@ -56,6 +56,7 @@ func _ready() -> void:
 	if _is_online:
 		_build_online_status_label()
 		NetworkManager.connect("opponent_char_selected", self, "_on_opponent_char_selected")
+		NetworkManager.connect("opponent_char_hovered", self, "_on_opponent_char_hovered")
 		NetworkManager.connect("game_start", self, "_on_game_start")
 		_set_online_status("Select your character")
 
@@ -94,6 +95,17 @@ func _build_online_status_label() -> void:
 func _set_online_status(text: String) -> void:
 	if _online_status_label:
 		_online_status_label.text = "[ONLINE] " + text
+
+
+func _on_opponent_char_hovered(index: int) -> void:
+	var opponent_is_p2 := (NetworkManager.local_role == "p1")
+	if opponent_is_p2:
+		p2_index = index
+		_flash_selection(p2_borders[index], P2_COLOR, p2_tween)
+	else:
+		p1_index = index
+		_flash_selection(p1_borders[index], P1_COLOR, p1_tween)
+	_update_ui()
 
 
 func _on_opponent_char_selected(character: String, _bg_index: int) -> void:
@@ -322,10 +334,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				p1_index = (p1_index - 1 + num) % num
 				_update_ui()
 				_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
+				if _is_online:
+					NetworkManager.send_char_hover(p1_index)
 			elif event.is_action_pressed("p1_right"):
 				p1_index = (p1_index + 1) % num
 				_update_ui()
 				_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
+				if _is_online:
+					NetworkManager.send_char_hover(p1_index)
 			elif event.is_action_pressed("p1_confirm"):
 				p1_confirmed = true
 				_update_ui()
@@ -343,10 +359,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				p2_index = (p2_index - 1 + num) % num
 				_update_ui()
 				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
+				if _is_online:
+					NetworkManager.send_char_hover(p2_index)
 			elif event.is_action_pressed("p2_right"):
 				p2_index = (p2_index + 1) % num
 				_update_ui()
 				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
+				if _is_online:
+					NetworkManager.send_char_hover(p2_index)
 			elif event.is_action_pressed("p2_confirm"):
 				p2_confirmed = true
 				_update_ui()
