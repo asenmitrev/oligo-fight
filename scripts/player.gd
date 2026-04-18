@@ -134,7 +134,6 @@ func reset_for_round() -> void:
 	hit_count = 0
 	_hit_ticks = 0
 	_attacking = false
-	_opponent = null
 	velocity = Vector2.ZERO
 	_knockback_x = 0
 	_hitstop_ticks = 0
@@ -336,9 +335,6 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 
 
 func _check_blocking() -> bool:
-	if _opponent == null: _find_opponent()
-	if _opponent == null: return false
-
 	var to_opp    = _opponent.global_position.x - global_position.x
 	var input_left  = _action_pressed(action_left)
 	var input_right = _action_pressed(action_right)
@@ -374,7 +370,7 @@ func _enter_launched(attacker_pos: Vector2) -> void:
 	_attacking = false
 	_block_stun_ticks = 0
 	_blocked_punch = false
-	_apply_impact(attacker_pos, 1.5)
+	_apply_impact(attacker_pos, 3)
 	velocity.y = -1100.0
 	_current_anim = ""
 	_play_anim("jump")
@@ -510,6 +506,9 @@ func _action_just_pressed(action: String) -> bool:
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
+	if _opponent == null:
+		_find_opponent()
+	var is_on_floor_t = is_on_floor();
 
 	if state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
 		if _action_just_pressed(action_jump) and is_on_floor():
@@ -522,7 +521,7 @@ func _physics_process(delta: float) -> void:
 		if not _attacking and not _check_blocking():
 			if _action_just_pressed(action_punch):
 				_attacking = true
-				if not is_on_floor():
+				if not is_on_floor_t:
 					_play_anim("flypunch")
 				elif body_punch_enabled:
 					_play_anim("bodypunch")
@@ -532,10 +531,10 @@ func _physics_process(delta: float) -> void:
 					_record_input("punch")
 			elif _action_just_pressed(action_kick):
 				_attacking = true
-				_play_anim("flykick" if not is_on_floor() else "kick")
+				_play_anim("flykick" if not is_on_floor_t else "kick")
 				if combos_enabled:
 					_record_input("kick")
-		if _action_just_pressed(action_jump) and is_on_floor() and not _attacking:
+		if _action_just_pressed(action_jump) and is_on_floor_t and not _attacking:
 			velocity.y = jump_velocity
 
 	if _input_buffer_ticks > 0:
@@ -577,7 +576,7 @@ func _physics_process(delta: float) -> void:
 			state = State.NORMAL
 			_blocked_punch = false
 
-	if not is_on_floor():
+	if not is_on_floor_t:
 		var fast_fall = _action_pressed(action_down)
 		# Round gravity accumulation to prevent float drift between clients.
 		velocity.y = round(velocity.y + GRAVITY * (3.0 if fast_fall else 1.0) * delta)
@@ -590,9 +589,6 @@ func _physics_process(delta: float) -> void:
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
-		_separate_from_opponent()
-		if is_on_floor():
-			velocity.y = 0.0
 		global_position.x = round(global_position.x)
 		global_position.y = round(global_position.y)
 		return
@@ -601,27 +597,23 @@ func _physics_process(delta: float) -> void:
 	var right     := _action_pressed(action_right)
 	var direction := float(right) - float(left)
 
-	if _opponent == null: _find_opponent()
 	var is_blocking_input     = _check_blocking()
-	var is_opponent_attacking = _opponent != null and _opponent._attacking
+	var is_opponent_attacking = _opponent._attacking
 	var dist_to_opp  = 0.0
 	var is_walking_back = false
-	if _opponent:
-		var to_opp = _opponent.global_position.x - global_position.x
-		dist_to_opp = abs(to_opp)
-		if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
-			is_walking_back = true
+
+	var to_opp = _opponent.global_position.x - global_position.x
+	dist_to_opp = abs(to_opp)
+	if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
+		is_walking_back = true
 
 	var should_block_visually = is_blocking_input and is_opponent_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
 
-	if state == State.HIT:
+	if state == State.HIT and should_block_visually and is_on_floor_t:
 		velocity.x = 0.0
-	elif _attacking:
-		if is_on_floor():
-			var lunge = 1.0 if not anim.flip_h else -1.0
-			velocity.x = lunge * (speed * 0.3)
-	elif should_block_visually and is_on_floor():
-		velocity.x = 0.0
+	elif _attacking and is_on_floor_t:
+		var lunge = 1.0 if not anim.flip_h else -1.0
+		velocity.x = lunge * (speed * 0.3)
 	else:
 		var current_speed = speed
 		if is_walking_back:
@@ -631,37 +623,34 @@ func _physics_process(delta: float) -> void:
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
-	_separate_from_opponent()
-	if is_on_floor():
-		velocity.y = 0.0
+
+
 	global_position.x = round(global_position.x)
 	global_position.y = round(global_position.y)
 
 	# Animation updates
 	if state == State.NORMAL and not _attacking:
-		if should_block_visually and is_on_floor():
+		if should_block_visually and is_on_floor_t:
 			_play_anim("block")
 			if anim.frame >= 1:
 				anim.frame = 1
 				anim.stop()
-		elif not is_on_floor():
+		elif not is_on_floor_t:
 			_play_anim("jump")
 		elif direction != 0:
 			_play_anim("walk")
 		else:
 			_play_anim("idle")
 
-	if state == State.BLOCKING:
+	if state == State.BLOCKING and _current_anim != "block":
 		_play_anim("block")
 		if anim.frame >= 1:
 			anim.frame = 1
 			anim.stop()
 
 	# Auto-face opponent when idle, walking, or blocking
-	if not _attacking and is_on_floor() and (state == State.NORMAL or state == State.BLOCKING):
-		if _opponent == null: _find_opponent()
+	if not _attacking and is_on_floor_t and (state == State.NORMAL or state == State.BLOCKING):
 		if _opponent:
-			var to_opp = _opponent.global_position.x - global_position.x
 			if abs(to_opp) > 50:
 				anim.flip_h = to_opp < 0
 
