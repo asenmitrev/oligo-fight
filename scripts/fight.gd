@@ -325,8 +325,9 @@ func _process_online_frame() -> void:
 				_is_stalled = true
 				_set_players_frozen(true)
 			_stall_frames += 1
-			# 5 seconds at 60 fps — silent disconnect fallback
-			if _stall_frames >= 300:
+			# 10 seconds at 60 fps — silent disconnect fallback
+			if _stall_frames >= 600:
+				print("[Fight] Stall timeout: no remote input for exec_frame=%d after 10s, treating as disconnect" % _exec_frame)
 				_on_opponent_disconnected()
 				return
 		return
@@ -687,5 +688,6 @@ func _on_player_defeated() -> void:
 		_p1.reset_for_round()
 		_p2.reset_for_round()
 		if is_online:
-			_reset_online_state()
+			_is_stalled = false
+			_stall_frames = 0
 		_start_round()
