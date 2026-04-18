@@ -77,6 +77,7 @@ var _pending_special: bool = false
 var is_networked: bool = false
 var _committed_keys: int = 0
 var _prev_committed_keys: int = 0
+var _action_bits: Dictionary = {}
 
 # Physics-tick hit detection: fires after a fixed tick count from animation FPS.
 # Both clients compute the same integer and start from the same exec_frame.
@@ -102,6 +103,14 @@ func _ready() -> void:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.max_value = max_health
 		_health_bar.value = health
+	_action_bits = {
+		action_left: 1,
+		action_right: 2,
+		action_jump: 4,
+		action_down: 8,
+		action_punch: 16,
+		action_kick: 32,
+	}
 
 
 func apply_character(def: CharacterDef) -> void:
@@ -284,7 +293,10 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 	if state == State.FALLEN and is_on_floor():
 		return false
 
-	var is_blocking = _check_blocking()
+	var to_opp_block := 0.0
+	if _opponent:
+		to_opp_block = _opponent.global_position.x - global_position.x
+	var is_blocking = _check_blocking(to_opp_block)
 	if is_counter: damage = int(damage * COUNTER_HIT_BONUS)
 
 	var block_broken := false
@@ -334,8 +346,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 	return true
 
 
-func _check_blocking() -> bool:
-	var to_opp    = _opponent.global_position.x - global_position.x
+func _check_blocking(to_opp: float) -> bool:
 	var input_left  = _action_pressed(action_left)
 	var input_right = _action_pressed(action_right)
 
@@ -463,13 +474,7 @@ func _get_bit(keys: int, bit: int) -> bool:
 
 func _action_pressed(action: String) -> bool:
 	if is_networked:
-		if action == action_left:    return _get_bit(_committed_keys, 1)
-		elif action == action_right: return _get_bit(_committed_keys, 2)
-		elif action == action_jump:  return _get_bit(_committed_keys, 4)
-		elif action == action_down:  return _get_bit(_committed_keys, 8)
-		elif action == action_punch: return _get_bit(_committed_keys, 16)
-		elif action == action_kick:  return _get_bit(_committed_keys, 32)
-		return false
+		return bool(_committed_keys & int(_action_bits.get(action, 0)))
 	if input_disabled:
 		return false
 	return Input.is_action_pressed(action)
@@ -477,27 +482,8 @@ func _action_pressed(action: String) -> bool:
 
 func _action_just_pressed(action: String) -> bool:
 	if is_networked:
-		var cur  := false
-		var prev := false
-		if action == action_left:
-			cur  = _get_bit(_committed_keys,      1)
-			prev = _get_bit(_prev_committed_keys, 1)
-		elif action == action_right:
-			cur  = _get_bit(_committed_keys,      2)
-			prev = _get_bit(_prev_committed_keys, 2)
-		elif action == action_jump:
-			cur  = _get_bit(_committed_keys,      4)
-			prev = _get_bit(_prev_committed_keys, 4)
-		elif action == action_down:
-			cur  = _get_bit(_committed_keys,      8)
-			prev = _get_bit(_prev_committed_keys, 8)
-		elif action == action_punch:
-			cur  = _get_bit(_committed_keys,      16)
-			prev = _get_bit(_prev_committed_keys, 16)
-		elif action == action_kick:
-			cur  = _get_bit(_committed_keys,      32)
-			prev = _get_bit(_prev_committed_keys, 32)
-		return cur and not prev
+		var bit := int(_action_bits.get(action, 0))
+		return bool(_committed_keys & bit) and not bool(_prev_committed_keys & bit)
 	if input_disabled:
 		return false
 	return Input.is_action_just_pressed(action)
@@ -510,15 +496,21 @@ func _physics_process(delta: float) -> void:
 		_find_opponent()
 	var is_on_floor_t = is_on_floor();
 
+	var to_opp := 0.0
+	var is_blocking_input := false
+	if _opponent:
+		to_opp = _opponent.global_position.x - global_position.x
+		is_blocking_input = _check_blocking(to_opp)
+
 	if state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
-		if _action_just_pressed(action_jump) and is_on_floor():
+		if _action_just_pressed(action_jump) and is_on_floor_t:
 			_block_stun_ticks = 0
 			_blocked_punch = false
 			state = State.NORMAL
 			velocity.y = jump_velocity
 
 	if state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
-		if not _attacking and not _check_blocking():
+		if not _attacking and not is_blocking_input:
 			if _action_just_pressed(action_punch):
 				_attacking = true
 				if not is_on_floor_t:
@@ -597,13 +589,10 @@ func _physics_process(delta: float) -> void:
 	var right     := _action_pressed(action_right)
 	var direction := float(right) - float(left)
 
-	var is_blocking_input     = _check_blocking()
 	var is_opponent_attacking = _opponent._attacking
-	var dist_to_opp  = 0.0
 	var is_walking_back = false
 
-	var to_opp = _opponent.global_position.x - global_position.x
-	dist_to_opp = abs(to_opp)
+	var dist_to_opp = abs(to_opp)
 	if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
 		is_walking_back = true
 
