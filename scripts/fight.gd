@@ -633,19 +633,7 @@ func _set_players_input_disabled(disabled: bool) -> void:
 
 func _start_round() -> void:
 	round_in_progress = true
-	if current_round == 1:
-		var boekov = _get_boekov_player()
-		if boekov != null and boekov.anim.frames.has_animation("rip_shirt"):
-			_set_players_frozen(true)
-			boekov.anim.play("rip_shirt")
-			yield(boekov.anim, "animation_finished")
-			boekov.anim.play("idle")
 	_set_players_frozen(false)
-
-func _get_boekov_player() -> KinematicBody2D:
-	if _p1.display_name == "Georgiy": return _p1
-	if _p2.display_name == "Georgiy": return _p2
-	return null
 
 func _on_player_defeated() -> void:
 	if not round_in_progress:

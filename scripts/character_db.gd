@@ -3,8 +3,7 @@ extends Node
 const CharacterDef = preload("res://scripts/character_def.gd")
 const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
 const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
-const _boekov_frames: SpriteFrames = preload("res://resources/boekov_sprite_frames.tres")
-const _boekov_preview_frames: SpriteFrames = preload("res://resources/boekov_preview_sprite_frames.tres")
+const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _kraska_frames: SpriteFrames = preload("res://resources/kraska_sprite_frames.tres")
 
 var _by_display_name: Dictionary = {}
@@ -45,19 +44,14 @@ func _init() -> void:
 	georgi.max_health = 120
 	_register(georgi)
 
-	var boekov = _make_def("boekov", "Georgiy", _boekov_frames, Color(1, 1, 1, 1))
-	boekov.sprite_offset = Vector2(0, 4)  # sprites sit ~7px higher than other chars
-	boekov.speed = 320.0
-	boekov.jump_velocity = JUMP_VELOCITY
-	boekov.punch_damage = 15
-	boekov.kick_damage = 10
-	boekov.block_damage_modifier = 0.18
-	boekov.max_health = 120
-	boekov.sprite_scale = 1.05
-	boekov.launch_punch = true
-	boekov.combos_enabled = false
-	boekov.preview_frames = _boekov_preview_frames
-	_register(boekov)
+	var bobe = _make_def("bobe", "Bobe", _bobe_frames, Color(1, 1, 1, 1))
+	bobe.speed = 330.0
+	bobe.jump_velocity = JUMP_VELOCITY
+	bobe.punch_damage = 15
+	bobe.kick_damage = 10
+	bobe.block_damage_modifier = 0.18
+	bobe.max_health = 115
+	_register(bobe)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
