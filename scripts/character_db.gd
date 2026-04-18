@@ -15,6 +15,7 @@ func _init() -> void:
 	var ipman = _make_def("ipman", "IpMan", _ipman_frames, Color(1, 1, 1, 1))
 	ipman.punch_arm_extension = 200.0
 	ipman.speed = 360.0
+	ipman.punch_speed_scale = 0.5
 	ipman.jump_velocity = JUMP_VELOCITY
 	ipman.punch_damage = 12
 	ipman.kick_damage = 9
