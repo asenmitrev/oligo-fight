@@ -318,20 +318,27 @@ func _state_hash() -> int:
 			1 if p._anim_hit_fired else 0,
 			p._attack_tick_count, p._attack_hit_tick
 		]
+		s += "%d,%d,%d,%d,%d,%d,%d;" % [
+			1 if p._proj_active else 0,
+			p._proj_x, p._proj_y, p._proj_lifetime,
+			1 if p._proj_launch_fired else 0,
+			p._proj_launch_tick, p._proj_launch_count
+		]
 	return s.hash()
 
 
 func _print_state_detail(label: String) -> void:
 	print("[%s exec=%d]" % [label, _exec_frame])
 	for p in [_p1, _p2]:
-		print("  %s pos=(%d,%d) hp=%d st=%d kb=%d hs=%d ht=%d bs=%d rem=%d atk=%s fired=%s cnt=%d htick=%d" % [
+		print("  %s pos=(%d,%d) hp=%d st=%d kb=%d hs=%d ht=%d bs=%d rem=%d atk=%s fired=%s cnt=%d htick=%d proj=%s(%d,%d)" % [
 			p.display_name,
 			int(round(p.global_position.x)), int(round(p.global_position.y)),
 			p.health, p.state as int,
 			p._knockback_x, p._hitstop_ticks, p._hit_ticks, p._block_stun_ticks,
 			p._anim_ticks_remaining,
 			str(p._attacking), str(p._anim_hit_fired),
-			p._attack_tick_count, p._attack_hit_tick
+			p._attack_tick_count, p._attack_hit_tick,
+			str(p._proj_active), p._proj_x, p._proj_y
 		])
 
 

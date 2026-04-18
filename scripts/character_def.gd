@@ -19,6 +19,7 @@ export var combos_enabled: bool = true
 export var body_punch_enabled: bool = false
 export var kick_speed_scale: float = 1.0
 export var kick_heals_self: int = 0
+export var fires_projectile: bool = false
 
 
 func get_preview_sprite_frames() -> SpriteFrames:

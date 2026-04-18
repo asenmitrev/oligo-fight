@@ -22,6 +22,7 @@ func _init() -> void:
 	ipman.max_health = 105
 	ipman.body_punch_enabled = false
 	ipman.kick_speed_scale = 1.2
+	ipman.fires_projectile = true
 	_register(ipman)
 
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
