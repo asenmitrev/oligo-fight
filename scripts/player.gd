@@ -53,7 +53,7 @@ var _hit_ticks: int = 0
 var _attacking := false
 var _opponent: KinematicBody2D
 var _health_bar: ProgressBar
-var frozen: bool = false
+var frozen: bool = false setget _set_frozen
 var _punch_arm_extension: float = PUNCH_ARM_EXTENSION
 var _start_position: Vector2
 var velocity: Vector2 = Vector2.ZERO
@@ -202,6 +202,12 @@ func _find_opponent() -> void:
 		if p != self:
 			_opponent = p as KinematicBody2D
 			return
+
+
+func _set_frozen(value: bool) -> void:
+	frozen = value
+	if anim:
+		anim.playing = not value
 
 
 func _move_with_floor_snap() -> Vector2:
@@ -367,6 +373,8 @@ func _enter_fallen() -> void:
 func _enter_launched(attacker_pos: Vector2) -> void:
 	state = State.FALLEN
 	_attacking = false
+	_block_stun_ticks = 0
+	_blocked_punch = false
 	_apply_impact(attacker_pos, 1.5)
 	velocity.y = -1100.0
 	_current_anim = ""
@@ -574,6 +582,11 @@ func _physics_process(delta: float) -> void:
 		var fast_fall = _action_pressed(action_down)
 		# Round gravity accumulation to prevent float drift between clients.
 		velocity.y = round(velocity.y + GRAVITY * (3.0 if fast_fall else 1.0) * delta)
+
+	# Launched players play looping "jump"; switch to non-looping "falls" once descending.
+	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
+		_current_anim = ""
+		_play_anim("falls")
 
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
