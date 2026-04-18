@@ -16,7 +16,7 @@ func _init() -> void:
 	ipman.punch_arm_extension = 200.0
 	ipman.speed = 360.0
 	ipman.jump_velocity = JUMP_VELOCITY
-	ipman.punch_damage = 30
+	ipman.punch_damage = 12
 	ipman.kick_damage = 9
 	ipman.block_damage_modifier = 0.12
 	ipman.max_health = 105

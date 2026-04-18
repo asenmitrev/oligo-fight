@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=31 format=2]
+[gd_resource type="SpriteFrames" load_steps=41 format=2]
 
 [ext_resource path="res://assets/ipman/ipman-block.png" type="Texture" id=1]
 [ext_resource path="res://assets/ipman/ipman-fall.png" type="Texture" id=2]
@@ -6,6 +6,8 @@
 [ext_resource path="res://assets/ipman/ipman-getting-up.png" type="Texture" id=4]
 [ext_resource path="res://assets/ipman/ipman-jump.png" type="Texture" id=5]
 [ext_resource path="res://assets/ipman/ipman-walk.png" type="Texture" id=6]
+[ext_resource path="res://assets/ipman/ipman-idle.png" type="Texture" id=7]
+[ext_resource path="res://assets/ipman/ipman-punch.png" type="Texture" id=8]
 
 [sub_resource type="AtlasTexture" id=1]
 flags = 4
@@ -107,6 +109,46 @@ flags = 4
 atlas = ExtResource( 4 )
 region = Rect2( 128, 128, 128, 128 )
 
+[sub_resource type="AtlasTexture" id=25]
+flags = 4
+atlas = ExtResource( 7 )
+region = Rect2( 0, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=26]
+flags = 4
+atlas = ExtResource( 7 )
+region = Rect2( 128, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=27]
+flags = 4
+atlas = ExtResource( 7 )
+region = Rect2( 0, 128, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=28]
+flags = 4
+atlas = ExtResource( 7 )
+region = Rect2( 128, 128, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=29]
+flags = 4
+atlas = ExtResource( 8 )
+region = Rect2( 0, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=30]
+flags = 4
+atlas = ExtResource( 8 )
+region = Rect2( 128, 0, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=31]
+flags = 4
+atlas = ExtResource( 8 )
+region = Rect2( 0, 128, 128, 128 )
+
+[sub_resource type="AtlasTexture" id=32]
+flags = 4
+atlas = ExtResource( 8 )
+region = Rect2( 128, 128, 128, 128 )
+
 [sub_resource type="AtlasTexture" id=21]
 flags = 4
 atlas = ExtResource( 6 )
@@ -159,7 +201,7 @@ animations = [ {
 "name": "getup",
 "speed": 5.0
 }, {
-"frames": [ SubResource( 1 ) ],
+"frames": [ SubResource( 25 ), SubResource( 26 ), SubResource( 27 ), SubResource( 28 ) ],
 "loop": true,
 "name": "idle",
 "speed": 5.0
@@ -174,7 +216,7 @@ animations = [ {
 "name": "kick",
 "speed": 10.0
 }, {
-"frames": [ SubResource( 1 ), SubResource( 2 ), SubResource( 3 ), SubResource( 4 ) ],
+"frames": [ SubResource( 29 ), SubResource( 30 ), SubResource( 31 ), SubResource( 32 ) ],
 "loop": false,
 "name": "punch",
 "speed": 10.0
