@@ -27,7 +27,7 @@ func _init() -> void:
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
 	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Georgi's
 	simonka.speed = 380.0
-	simonka.jump_velocity = -2750.0
+	simonka.jump_velocity = -2550.0
 	simonka.punch_damage = 12
 	simonka.kick_damage = 8
 	simonka.block_damage_modifier = 0.12
@@ -38,7 +38,7 @@ func _init() -> void:
 	var georgi = _make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1))
 	georgi.speed = 320.0
 	georgi.jump_velocity = -1600.0
-	georgi.punch_damage = 18
+	georgi.punch_damage = 15
 	georgi.kick_damage = 10
 	georgi.block_damage_modifier = 0.18
 	georgi.max_health = 120
@@ -48,7 +48,7 @@ func _init() -> void:
 	boekov.sprite_offset = Vector2(0, 4)  # sprites sit ~7px higher than other chars
 	boekov.speed = 320.0
 	boekov.jump_velocity = -1600.0
-	boekov.punch_damage = 18
+	boekov.punch_damage = 15
 	boekov.kick_damage = 10
 	boekov.block_damage_modifier = 0.18
 	boekov.max_health = 120

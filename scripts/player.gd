@@ -626,6 +626,8 @@ func _physics_process(delta: float) -> void:
 		var current_speed = speed
 		if is_walking_back:
 			current_speed = speed * WALK_BACK_SPEED_MULT
+		if velocity.y != 0:
+			current_speed = speed * 2
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
