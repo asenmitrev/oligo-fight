@@ -559,7 +559,7 @@ func _update_projectile() -> void:
 
 		var dx := abs(_proj_x[i] - int(_opponent.global_position.x))
 		var dy := abs(_proj_y[i] - int(_opponent.global_position.y))
-		if dx < PROJ_HIT_RADIUS and dy < PROJ_Y_TOLERANCE:
+		if dx < PROJ_HIT_RADIUS and dy < PROJ_Y_TOLERANCE and int(_opponent.global_position.y) >= _proj_y[i]:
 			_proj_active[i] = false
 			var hit_pos := Vector2(_proj_x[i], _proj_y[i])
 			var registered: bool = _opponent.take_hit(false, hit_pos, false, punch_damage)
