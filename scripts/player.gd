@@ -28,6 +28,7 @@ const PROJ_SPEED: int = 13             # px per physics tick (~780 px/s at 60 Hz
 const PROJ_HIT_RADIUS: int = 75        # horizontal proximity to opponent center
 const PROJ_Y_TOLERANCE: int = 220      # opponent physics origin is ~200px below projectile flight height
 const PROJ_LIFETIME_TICKS: int = 300   # auto-despawn after 5 s
+const PROJ_POOL: int = 6  # max simultaneous projectiles in flight
 
 export var action_left: String = "p1_left"
 # ... (rest of the exports)
@@ -78,14 +79,15 @@ var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
 var _pending_special: bool = false
 
-# Projectile state (integer positions for determinism)
+# Projectile state — fixed-size pool for determinism (ring buffer, newest overwrites oldest)
 var fires_projectile: bool = false
-var _proj_active: bool = false
-var _proj_x: int = 0
-var _proj_y: int = 0
-var _proj_dir: int = 1
-var _proj_lifetime: int = 0
-var _proj_sprite: Sprite = null
+var _proj_active: Array = []   # bool per slot
+var _proj_x: Array = []        # int per slot
+var _proj_y: Array = []        # int per slot
+var _proj_dir: Array = []      # int per slot
+var _proj_lifetime: Array = [] # int per slot
+var _proj_next: int = 0        # next slot to write into
+var _proj_sprites: Array = []  # Sprite per slot
 
 # Networked input — set by fight.gd each frame in online mode.
 var is_networked: bool = false
@@ -114,11 +116,18 @@ func _ready() -> void:
 	collision_mask |= 2
 	# animation_finished is intentionally NOT connected — we drive state transitions
 	# from _physics_process via _anim_ticks_remaining to stay deterministic.
-	_proj_sprite = Sprite.new()
-	_proj_sprite.set_as_toplevel(true)
-	_proj_sprite.scale = Vector2(3.0, 3.0)
-	_proj_sprite.visible = false
-	add_child(_proj_sprite)
+	for i in range(PROJ_POOL):
+		_proj_active.append(false)
+		_proj_x.append(0)
+		_proj_y.append(0)
+		_proj_dir.append(1)
+		_proj_lifetime.append(0)
+		var s := Sprite.new()
+		s.set_as_toplevel(true)
+		s.scale = Vector2(3.0, 3.0)
+		s.visible = false
+		add_child(s)
+		_proj_sprites.append(s)
 
 	if face_left:
 		anim.flip_h = true
@@ -156,8 +165,10 @@ func apply_character(def: CharacterDef) -> void:
 	kick_speed_scale = def.kick_speed_scale
 	kick_heals_self = def.kick_heals_self
 	fires_projectile = def.fires_projectile
-	if fires_projectile and _proj_sprite:
-		_proj_sprite.texture = load("res://assets/ipman/money-projectile.png")
+	if fires_projectile:
+		var tex = load("res://assets/ipman/money-projectile.png")
+		for s in _proj_sprites:
+			s.texture = tex
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -182,10 +193,11 @@ func reset_for_round() -> void:
 	_current_combo_count = 0
 	_pending_special = false
 	_blocked_punch = false
-	_proj_active = false
-	_proj_lifetime = 0
-	if _proj_sprite:
-		_proj_sprite.visible = false
+	_proj_next = 0
+	for i in range(PROJ_POOL):
+		_proj_active[i] = false
+		_proj_lifetime[i] = 0
+		_proj_sprites[i].visible = false
 	_committed_keys = 0
 	_prev_committed_keys = 0
 	_anim_hit_fired = false
@@ -512,37 +524,40 @@ func _check_special_combo() -> void:
 
 func _launch_projectile() -> void:
 	var facing_dir := -1 if anim.flip_h else 1
-	_proj_active = true
-	_proj_dir = facing_dir
-	_proj_x = int(global_position.x) + facing_dir * 70 + 150
-	_proj_y = int(global_position.y) - 200
-	_proj_lifetime = 0
+	var i := _proj_next
+	_proj_next = (_proj_next + 1) % PROJ_POOL
+	_proj_active[i] = true
+	_proj_dir[i] = facing_dir
+	_proj_x[i] = int(global_position.x) + facing_dir * 70
+	_proj_y[i] = int(global_position.y) - 200
+	_proj_lifetime[i] = 0
 
 
 func _update_projectile() -> void:
-	if not _proj_active:
-		return
-	_proj_x += _proj_dir * PROJ_SPEED
-	_proj_lifetime += 1
-
-	if _proj_lifetime > PROJ_LIFETIME_TICKS or _proj_x < -200 or _proj_x > 1500:
-		_proj_active = false
-		return
-
 	if _opponent == null:
 		_find_opponent()
-	if _opponent == null:
-		return
+	for i in range(PROJ_POOL):
+		if not _proj_active[i]:
+			continue
+		_proj_x[i] += _proj_dir[i] * PROJ_SPEED
+		_proj_lifetime[i] += 1
 
-	var dx := abs(_proj_x - int(_opponent.global_position.x))
-	var dy := abs(_proj_y - int(_opponent.global_position.y))
-	if dx < PROJ_HIT_RADIUS and dy < PROJ_Y_TOLERANCE:
-		_proj_active = false
-		var hit_pos := Vector2(_proj_x, _proj_y)
-		var registered: bool = _opponent.take_hit(false, hit_pos, false, punch_damage)
-		if registered:
-			_hitstop_ticks = HITSTOP_TICKS
-			emit_signal("hit_landed", false, 0)
+		if _proj_lifetime[i] > PROJ_LIFETIME_TICKS or _proj_x[i] < -200 or _proj_x[i] > 1500:
+			_proj_active[i] = false
+			continue
+
+		if _opponent == null:
+			continue
+
+		var dx := abs(_proj_x[i] - int(_opponent.global_position.x))
+		var dy := abs(_proj_y[i] - int(_opponent.global_position.y))
+		if dx < PROJ_HIT_RADIUS and dy < PROJ_Y_TOLERANCE:
+			_proj_active[i] = false
+			var hit_pos := Vector2(_proj_x[i], _proj_y[i])
+			var registered: bool = _opponent.take_hit(false, hit_pos, false, punch_damage)
+			if registered:
+				_hitstop_ticks = HITSTOP_TICKS
+				emit_signal("hit_landed", false, 0)
 
 
 func set_committed_keys(keys: int) -> void:
@@ -637,8 +652,7 @@ func _physics_process(delta: float) -> void:
 		_proj_launch_count += 1
 		if _proj_launch_count >= _proj_launch_tick:
 			_proj_launch_fired = true
-			if not _proj_active:
-				_launch_projectile()
+			_launch_projectile()
 
 	_update_projectile()
 
@@ -733,10 +747,11 @@ func _physics_process(delta: float) -> void:
 			if abs(to_opp) > 50:
 				anim.flip_h = to_opp < 0
 
-	if _proj_sprite:
-		_proj_sprite.visible = _proj_active
-		if _proj_active:
-			_proj_sprite.global_position = Vector2(_proj_x, _proj_y)
-			_proj_sprite.flip_h = (_proj_dir < 0)
+	for i in range(PROJ_POOL):
+		var s: Sprite = _proj_sprites[i]
+		s.visible = _proj_active[i]
+		if _proj_active[i]:
+			s.global_position = Vector2(_proj_x[i], _proj_y[i])
+			s.flip_h = (_proj_dir[i] < 0)
 
 	_prev_committed_keys = _committed_keys
