@@ -51,6 +51,7 @@ func _init() -> void:
 	bobe.kick_damage = 10
 	bobe.block_damage_modifier = 0.18
 	bobe.max_health = 115
+	bobe.kick_heals_self = 5
 	_register(bobe)
 
 
