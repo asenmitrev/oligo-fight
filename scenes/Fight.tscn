@@ -51,6 +51,7 @@ script = ExtResource( 2 )
 action_left = "p2_left"
 action_right = "p2_right"
 action_jump = "p2_jump"
+action_down = "p2_down"
 action_punch = "p2_punch"
 action_kick = "p2_kick"
 face_left = true
