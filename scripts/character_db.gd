@@ -13,9 +13,10 @@ var all_characters: Array = []
 
 func _init() -> void:
 	var kraska = _make_def("kraska", "Kraska", _kraska_frames, Color(1, 1, 1, 1))
+	kraska.punch_arm_extension = 225.0  # punch animation extends 20px further than Georgi's
 	kraska.speed = 350.0
 	kraska.jump_velocity = -1680.0
-	kraska.punch_damage = 16
+	kraska.punch_damage = 35
 	kraska.kick_damage = 9
 	kraska.block_damage_modifier = 0.15
 	kraska.max_health = 110
@@ -26,8 +27,8 @@ func _init() -> void:
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
 	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Georgi's
 	simonka.speed = 380.0
-	simonka.jump_velocity = -1750.0
-	simonka.punch_damage = 15
+	simonka.jump_velocity = -2750.0
+	simonka.punch_damage = 12
 	simonka.kick_damage = 8
 	simonka.block_damage_modifier = 0.12
 	simonka.max_health = 100

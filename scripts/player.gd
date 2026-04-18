@@ -279,14 +279,13 @@ func force_fall() -> void:
 	_enter_fallen()
 
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage_mult: float = 1.0) -> bool:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15) -> bool:
 	if is_defeated or state == State.GETUP:
 		return false
 	if state == State.FALLEN and is_on_floor():
 		return false
 
 	var is_blocking = _check_blocking()
-	var damage := int((kick_damage if is_kick else punch_damage) * damage_mult)
 	if is_counter: damage = int(damage * COUNTER_HIT_BONUS)
 
 	var block_broken := false
@@ -413,8 +412,8 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		return
 
 	var is_counter  = _opponent._attacking
-	var damage_mult := 2.0 if anim.animation == "bodypunch" else 1.0
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, damage_mult)
+
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage)
 	if not hit_registered:
 		return
 	_hitstop_ticks = HITSTOP_TICKS
