@@ -632,7 +632,10 @@ func _physics_process(delta: float) -> void:
 			if _action_just_pressed(action_punch):
 				_attacking = true
 				if not is_on_floor_t:
-					_play_anim("flypunch")
+					_play_anim("punch" if fires_projectile else "flypunch")
+					if fires_projectile:
+						_proj_launch_tick = 1
+						anim.frame = 2
 				elif body_punch_enabled:
 					_play_anim("bodypunch")
 				else:

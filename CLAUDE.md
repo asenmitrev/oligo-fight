@@ -35,3 +35,9 @@
 - Keep functions small and focused
 - Add comments for complex logic
 - Error handling: prefer try/catch in TS, use assertions in GDScript
+
+
+### Images
+- when adding a new animation, always resize the sprite to 256x256 total, so each frame is 128x128
+- use imagemagick, it is in the system
+- always use an algorithm that minimally blurs and maximally pixelates
