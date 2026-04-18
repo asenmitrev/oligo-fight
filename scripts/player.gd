@@ -24,11 +24,13 @@ const WALK_BACK_SPEED_MULT := 0.65
 const COMBO_INPUT_WINDOW_TICKS := 30  # 0.5 s at 60 Hz
 const SPECIAL_COMBO_DAMAGE := 35
 const SPECIAL_COMBO_SEQUENCE := ["punch", "punch", "kick"]
-const PROJ_SPEED: int = 13             # px per physics tick (~780 px/s at 60 Hz)
-const PROJ_HIT_RADIUS: int = 75        # horizontal proximity to opponent center
-const PROJ_Y_TOLERANCE: int = 220      # opponent physics origin is ~200px below projectile flight height
-const PROJ_LIFETIME_TICKS: int = 300   # auto-despawn after 5 s
-const PROJ_POOL: int = 6  # max simultaneous projectiles in flight
+var _proj_speed: int = 0
+var _proj_hit_radius: int = 0
+var _proj_y_tolerance: int = 0
+var _proj_lifetime_ticks: int = 0
+var _proj_pool: int = 0
+var _proj_spawn_x_offset: int = 70
+var _proj_spawn_y_offset: int = 200
 
 export var action_left: String = "p1_left"
 # ... (rest of the exports)
@@ -117,19 +119,6 @@ func _ready() -> void:
 	collision_mask |= 2
 	# animation_finished is intentionally NOT connected — we drive state transitions
 	# from _physics_process via _anim_ticks_remaining to stay deterministic.
-	for i in range(PROJ_POOL):
-		_proj_active.append(false)
-		_proj_x.append(0)
-		_proj_y.append(0)
-		_proj_dir.append(1)
-		_proj_lifetime.append(0)
-		var s := Sprite.new()
-		s.set_as_toplevel(true)
-		s.scale = Vector2(3.0, 3.0)
-		s.visible = false
-		add_child(s)
-		_proj_sprites.append(s)
-
 	if face_left:
 		anim.flip_h = true
 	if health_bar_path:
@@ -167,10 +156,35 @@ func apply_character(def: CharacterDef) -> void:
 	punch_speed_scale = def.punch_speed_scale
 	kick_heals_self = def.kick_heals_self
 	fires_projectile = def.fires_projectile
-	if fires_projectile:
-		var tex = load("res://assets/ipman/money-projectile.png")
-		for s in _proj_sprites:
-			s.texture = tex
+	_proj_speed = def.proj_speed
+	_proj_hit_radius = def.proj_hit_radius
+	_proj_y_tolerance = def.proj_y_tolerance
+	_proj_lifetime_ticks = def.proj_lifetime_ticks
+	_proj_spawn_x_offset = def.proj_spawn_x_offset
+	_proj_spawn_y_offset = def.proj_spawn_y_offset
+	for s in _proj_sprites:
+		s.queue_free()
+	_proj_sprites.clear()
+	_proj_active.clear()
+	_proj_x.clear()
+	_proj_y.clear()
+	_proj_dir.clear()
+	_proj_lifetime.clear()
+	_proj_next = 0
+	_proj_pool = def.proj_pool
+	for i in range(_proj_pool):
+		_proj_active.append(false)
+		_proj_x.append(0)
+		_proj_y.append(0)
+		_proj_dir.append(1)
+		_proj_lifetime.append(0)
+		var s := Sprite.new()
+		s.set_as_toplevel(true)
+		s.scale = Vector2(def.proj_scale, def.proj_scale)
+		s.texture = def.proj_texture
+		s.visible = false
+		add_child(s)
+		_proj_sprites.append(s)
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -196,7 +210,7 @@ func reset_for_round() -> void:
 	_pending_special = false
 	_blocked_punch = false
 	_proj_next = 0
-	for i in range(PROJ_POOL):
+	for i in range(_proj_pool):
 		_proj_active[i] = false
 		_proj_lifetime[i] = 0
 		_proj_sprites[i].visible = false
@@ -533,24 +547,24 @@ func _check_special_combo() -> void:
 func _launch_projectile() -> void:
 	var facing_dir := -1 if anim.flip_h else 1
 	var i := _proj_next
-	_proj_next = (_proj_next + 1) % PROJ_POOL
+	_proj_next = (_proj_next + 1) % _proj_pool
 	_proj_active[i] = true
 	_proj_dir[i] = facing_dir
-	_proj_x[i] = int(global_position.x) + facing_dir * 70
-	_proj_y[i] = int(global_position.y) - 200
+	_proj_x[i] = int(global_position.x) + facing_dir * _proj_spawn_x_offset
+	_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
 	_proj_lifetime[i] = 0
 
 
 func _update_projectile() -> void:
 	if _opponent == null:
 		_find_opponent()
-	for i in range(PROJ_POOL):
+	for i in range(_proj_pool):
 		if not _proj_active[i]:
 			continue
-		_proj_x[i] += _proj_dir[i] * PROJ_SPEED
+		_proj_x[i] += _proj_dir[i] * _proj_speed
 		_proj_lifetime[i] += 1
 
-		if _proj_lifetime[i] > PROJ_LIFETIME_TICKS or _proj_x[i] < -200 or _proj_x[i] > 1500:
+		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
 			_proj_active[i] = false
 			continue
 
@@ -559,7 +573,7 @@ func _update_projectile() -> void:
 
 		var dx := abs(_proj_x[i] - int(_opponent.global_position.x))
 		var dy := abs(_proj_y[i] - int(_opponent.global_position.y))
-		if dx < PROJ_HIT_RADIUS and dy < PROJ_Y_TOLERANCE and int(_opponent.global_position.y) >= _proj_y[i]:
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance and int(_opponent.global_position.y) >= _proj_y[i]:
 			_proj_active[i] = false
 			var hit_pos := Vector2(_proj_x[i], _proj_y[i])
 			var registered: bool = _opponent.take_hit(false, hit_pos, false, punch_damage)
@@ -755,7 +769,7 @@ func _physics_process(delta: float) -> void:
 			if abs(to_opp) > 50:
 				anim.flip_h = to_opp < 0
 
-	for i in range(PROJ_POOL):
+	for i in range(_proj_pool):
 		var s: Sprite = _proj_sprites[i]
 		s.visible = _proj_active[i]
 		if _proj_active[i]:

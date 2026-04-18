@@ -5,6 +5,7 @@ const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_fr
 const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
 const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
+const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -24,6 +25,15 @@ func _init() -> void:
 	ipman.body_punch_enabled = false
 	ipman.kick_speed_scale = 1.2
 	ipman.fires_projectile = true
+	ipman.proj_speed = 13
+	ipman.proj_hit_radius = 75
+	ipman.proj_y_tolerance = 220
+	ipman.proj_lifetime_ticks = 300
+	ipman.proj_pool = 6
+	ipman.proj_texture = _ipman_proj_tex
+	ipman.proj_scale = 3.0
+	ipman.proj_spawn_x_offset = 70
+	ipman.proj_spawn_y_offset = 200
 	_register(ipman)
 
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))

@@ -21,6 +21,15 @@ export var kick_speed_scale: float = 1.0
 export var punch_speed_scale: float = 1.0
 export var kick_heals_self: int = 0
 export var fires_projectile: bool = false
+export var proj_speed: int = 0
+export var proj_hit_radius: int = 0
+export var proj_y_tolerance: int = 0
+export var proj_lifetime_ticks: int = 0
+export var proj_pool: int = 0
+export var proj_texture: Texture
+export var proj_scale: float = 3.0
+export var proj_spawn_x_offset: int = 70
+export var proj_spawn_y_offset: int = 200
 
 
 func get_preview_sprite_frames() -> SpriteFrames:

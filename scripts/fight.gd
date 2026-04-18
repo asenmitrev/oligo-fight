@@ -318,7 +318,7 @@ func _state_hash() -> int:
 			1 if p._anim_hit_fired else 0,
 			p._attack_tick_count, p._attack_hit_tick
 		]
-		for i in range(p.PROJ_POOL):
+		for i in range(p._proj_pool):
 			s += "%d,%d,%d;" % [
 				1 if p._proj_active[i] else 0,
 				p._proj_x[i], p._proj_lifetime[i]
