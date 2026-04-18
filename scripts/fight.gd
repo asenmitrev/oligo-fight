@@ -299,19 +299,61 @@ func _setup_online() -> void:
 func _reset_online_state() -> void:
 	NetworkManager.remote_input_buffer.clear()
 	NetworkManager.local_input_buffer.clear()
+	NetworkManager.remote_state_hash_buffer.clear()
 	_real_frame = 0
 	_exec_frame = 0
 	_is_stalled = false
 	_stall_frames = 0
 
 
+func _state_hash() -> int:
+	var s := ""
+	for p in [_p1, _p2]:
+		s += "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;" % [
+			int(round(p.global_position.x)), int(round(p.global_position.y)),
+			p.health, p.state as int,
+			p._knockback_x, p._hitstop_ticks, p._hit_ticks, p._block_stun_ticks,
+			p._anim_ticks_remaining,
+			1 if p._attacking else 0,
+			1 if p._anim_hit_fired else 0,
+			p._attack_tick_count, p._attack_hit_tick
+		]
+	return s.hash()
+
+
+func _print_state_detail(label: String) -> void:
+	print("[%s exec=%d]" % [label, _exec_frame])
+	for p in [_p1, _p2]:
+		print("  %s pos=(%d,%d) hp=%d st=%d kb=%d hs=%d ht=%d bs=%d rem=%d atk=%s fired=%s cnt=%d htick=%d" % [
+			p.display_name,
+			int(round(p.global_position.x)), int(round(p.global_position.y)),
+			p.health, p.state as int,
+			p._knockback_x, p._hitstop_ticks, p._hit_ticks, p._block_stun_ticks,
+			p._anim_ticks_remaining,
+			str(p._attacking), str(p._anim_hit_fired),
+			p._attack_tick_count, p._attack_hit_tick
+		])
+
+
 func _process_online_frame() -> void:
 	var delay := NetworkManager.input_delay_frames
 
-	# Always sample and send local input for this real-time frame
+	# Compute state hash and send with local input for this real-time frame.
+	# The hash represents state BEFORE this exec_frame (i.e. after exec_frame-1).
+	# We use real_frame as the index — both machines advance real_frame in lockstep.
+	var my_hash := _state_hash()
 	var local_keys := _sample_local_input()
 	NetworkManager.local_input_buffer[_real_frame] = local_keys
-	NetworkManager.send_input_frame(_real_frame, local_keys)
+	NetworkManager.send_input_frame(_real_frame, local_keys, my_hash)
+
+	# Compare our hash with the remote's hash for the same real_frame.
+	# Both machines should have identical state at the same real_frame when in sync.
+	if NetworkManager.remote_state_hash_buffer.has(_real_frame):
+		var remote_hash: int = NetworkManager.remote_state_hash_buffer[_real_frame]
+		if remote_hash != my_hash:
+			print("[DESYNC detected at real_frame=%d exec_frame=%d]" % [_real_frame, _exec_frame])
+			_print_state_detail("LOCAL")
+
 	_real_frame += 1
 
 	# Wait until we have buffered enough frames to start executing
@@ -641,23 +683,23 @@ func _on_player_defeated() -> void:
 	else:
 		_flash_circle(_p2_circles[p2_wins - 1])
 
-	var georgi_beat_simonka: bool = winner_name == "Georgi" and loser_name == "Simonka"
+	var georgi_beat_simonka: bool = (not is_online) and winner_name == "Georgi" and loser_name == "Simonka"
 	var win_text: String = "Georgi thinks he's won!" if georgi_beat_simonka else winner_name + " Wins!"
 	var round_text: String = "Georgi thinks he's won Round %d!" % current_round if georgi_beat_simonka else winner_name + " wins Round %d!" % current_round
 
 	if georgi_beat_simonka:
-		# Special sequence for Georgi's "fake" win
+		# Special sequence for Georgi's "fake" win (offline only — real-time timers would desync online)
 		win_label.text = win_text
 		win_screen.visible = true
-		
+
 		yield(get_tree().create_timer(1.0), "timeout")
-		
+
 		# Simonka stands back up
 		loser.frozen = false
 		loser.anim.flip_h = winner.global_position.x < loser.global_position.x
 		loser.force_getup()
 		yield(get_tree().create_timer(0.8), "timeout")
-		
+
 		# If they are close, she hits him
 		var dist = winner.global_position.distance_to(loser.global_position)
 		winner.frozen = false # Unfreeze winner too so he can fall
@@ -668,7 +710,7 @@ func _on_player_defeated() -> void:
 			winner.force_fall()
 		else:
 			winner.force_fall()
-			
+
 		yield(get_tree().create_timer(1.0), "timeout")
 	else:
 		if p1_wins >= 2 or p2_wins >= 2:

@@ -27,6 +27,7 @@ var input_delay_frames: int = 3     # Calibrated from RTT at connect time
 # Key = frame number, value = int bitmask
 var local_input_buffer: Dictionary = {}
 var remote_input_buffer: Dictionary = {}
+var remote_state_hash_buffer: Dictionary = {}  # frame -> int hash from remote
 
 var _client: WebSocketClient = null
 var _connected: bool = false
@@ -83,8 +84,8 @@ func send_char_select(character: String, bg_index: int) -> void:
 	_send_json({"type": "char_select", "character": character, "background_index": bg_index})
 
 
-func send_input_frame(frame: int, keys: int) -> void:
-	_send_json({"type": "input_frame", "frame": frame, "keys": keys})
+func send_input_frame(frame: int, keys: int, state_hash: int = 0) -> void:
+	_send_json({"type": "input_frame", "frame": frame, "keys": keys, "sh": state_hash})
 
 
 func _measure_rtt() -> void:
@@ -152,6 +153,8 @@ func _handle_message(msg: Dictionary) -> void:
 			var frame: int = msg["frame"]
 			var keys: int = msg["keys"]
 			remote_input_buffer[frame] = keys
+			if msg.has("sh"):
+				remote_state_hash_buffer[frame] = int(msg["sh"])
 			emit_signal("input_received", frame, keys)
 
 		"pong":
