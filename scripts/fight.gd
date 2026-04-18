@@ -391,7 +391,7 @@ func _process_online_frame() -> void:
 
 
 func _sample_local_input() -> int:
-	var prefix := "p1_" if _local_role == "p1" else "p2_"
+	var prefix := "p1_"
 	var keys := 0
 	if Input.is_action_pressed(prefix + "left"):       keys |= 1
 	if Input.is_action_pressed(prefix + "right"):      keys |= 2

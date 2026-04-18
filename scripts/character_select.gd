@@ -354,26 +354,27 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
 
 	if handle_p2:
+		var p2_prefix := "p1_" if _is_online else "p2_"
 		if not p2_confirmed:
-			if event.is_action_pressed("p2_left"):
+			if event.is_action_pressed(p2_prefix + "left"):
 				p2_index = (p2_index - 1 + num) % num
 				_update_ui()
 				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 				if _is_online:
 					NetworkManager.send_char_hover(p2_index)
-			elif event.is_action_pressed("p2_right"):
+			elif event.is_action_pressed(p2_prefix + "right"):
 				p2_index = (p2_index + 1) % num
 				_update_ui()
 				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 				if _is_online:
 					NetworkManager.send_char_hover(p2_index)
-			elif event.is_action_pressed("p2_confirm"):
+			elif event.is_action_pressed(p2_prefix + "confirm"):
 				p2_confirmed = true
 				_update_ui()
 				_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_CONFIRMED)
 				_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
 				_check_start()
-		elif event.is_action_pressed("p2_confirm") and not p1_confirmed and not _is_online:
+		elif event.is_action_pressed(p2_prefix + "confirm") and not p1_confirmed and not _is_online:
 			p2_confirmed = false
 			_update_ui()
 			_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
