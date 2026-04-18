@@ -612,24 +612,36 @@ func _physics_process(delta: float) -> void:
 		return
 	if _opponent == null:
 		_find_opponent()
-	var is_on_floor_t = is_on_floor();
+	var is_on_floor_t = is_on_floor()
+
+	# Cache all inputs once to avoid repeated is_networked checks and dict lookups.
+	var inp_left:     bool = _action_pressed(action_left)
+	var inp_right:    bool = _action_pressed(action_right)
+	var inp_down:     bool = _action_pressed(action_down)
+	var inp_jump_jp:  bool = _action_just_pressed(action_jump)
+	var inp_punch_jp: bool = _action_just_pressed(action_punch)
+	var inp_kick_jp:  bool = _action_just_pressed(action_kick)
+
+	var cur_state = state
 
 	var to_opp := 0.0
 	var is_blocking_input := false
 	if _opponent:
 		to_opp = _opponent.global_position.x - global_position.x
-		is_blocking_input = _check_blocking(to_opp)
+		if   to_opp > 0 and inp_left:  is_blocking_input = true
+		elif to_opp < 0 and inp_right: is_blocking_input = true
 
-	if state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
-		if _action_just_pressed(action_jump) and is_on_floor_t:
+	if cur_state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
+		if inp_jump_jp and is_on_floor_t:
 			_block_stun_ticks = 0
 			_blocked_punch = false
 			state = State.NORMAL
+			cur_state = State.NORMAL
 			velocity.y = jump_velocity
 
-	if state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
+	if cur_state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
 		if not _attacking and not is_blocking_input:
-			if _action_just_pressed(action_punch):
+			if inp_punch_jp:
 				_attacking = true
 				if not is_on_floor_t:
 					_play_anim("punch" if fires_projectile else "flypunch")
@@ -642,12 +654,12 @@ func _physics_process(delta: float) -> void:
 					_play_anim("punch")
 				if combos_enabled:
 					_record_input("punch")
-			elif _action_just_pressed(action_kick):
+			elif inp_kick_jp:
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor_t else "kick")
 				if combos_enabled:
 					_record_input("kick")
-		if _action_just_pressed(action_jump) and is_on_floor_t and not _attacking:
+		if inp_jump_jp and is_on_floor_t and not _attacking:
 			velocity.y = jump_velocity
 
 	if _input_buffer_ticks > 0:
@@ -661,6 +673,7 @@ func _physics_process(delta: float) -> void:
 		_anim_ticks_remaining -= 1
 		if _anim_ticks_remaining == 0:
 			_handle_animation_finished()
+			cur_state = state  # refresh after possible state change
 
 	if _hitstop_ticks > 0:
 		_hitstop_ticks -= 1
@@ -679,7 +692,8 @@ func _physics_process(delta: float) -> void:
 			_proj_launch_fired = true
 			_launch_projectile()
 
-	_update_projectile()
+	if fires_projectile:
+		_update_projectile()
 
 	if _hit_ticks > 0:
 		_hit_ticks -= 1
@@ -695,28 +709,26 @@ func _physics_process(delta: float) -> void:
 		_block_stun_ticks -= 1
 		if _block_stun_ticks == 0:
 			state = State.NORMAL
+			cur_state = State.NORMAL
 			_blocked_punch = false
 
 	if not is_on_floor_t:
-		var fast_fall = _action_pressed(action_down)
 		# Round gravity accumulation to prevent float drift between clients.
-		velocity.y = round(velocity.y + GRAVITY * (3.0 if fast_fall else 1.0) * delta)
+		velocity.y = round(velocity.y + GRAVITY * (3.0 if inp_down else 1.0) * delta)
 
 	# Launched players play looping "jump"; switch to non-looping "falls" once descending.
-	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
+	if cur_state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
 		_current_anim = ""
 		_play_anim("falls")
 
-	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
+	if cur_state == State.FALLEN or cur_state == State.GETUP or cur_state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
 		global_position.x = round(global_position.x)
 		global_position.y = round(global_position.y)
 		return
 
-	var left      := _action_pressed(action_left)
-	var right     := _action_pressed(action_right)
-	var direction := float(right) - float(left)
+	var direction := float(inp_right) - float(inp_left)
 
 	var is_opponent_attacking = _opponent._attacking
 	var is_walking_back = false
@@ -727,7 +739,7 @@ func _physics_process(delta: float) -> void:
 
 	var should_block_visually = is_blocking_input and is_opponent_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
 
-	if state == State.HIT and should_block_visually and is_on_floor_t:
+	if cur_state == State.HIT and should_block_visually and is_on_floor_t:
 		velocity.x = 0.0
 	elif _attacking and is_on_floor_t:
 		var lunge = 1.0 if not anim.flip_h else -1.0
@@ -742,12 +754,11 @@ func _physics_process(delta: float) -> void:
 
 	velocity = _move_with_floor_snap()
 
-
 	global_position.x = round(global_position.x)
 	global_position.y = round(global_position.y)
 
 	# Animation updates
-	if state == State.NORMAL and not _attacking:
+	if cur_state == State.NORMAL and not _attacking:
 		if should_block_visually and is_on_floor_t:
 			_play_anim("block")
 			if anim.frame >= 1:
@@ -760,23 +771,24 @@ func _physics_process(delta: float) -> void:
 		else:
 			_play_anim("idle")
 
-	if state == State.BLOCKING and _current_anim != "block":
+	if cur_state == State.BLOCKING and _current_anim != "block":
 		_play_anim("block")
 		if anim.frame >= 1:
 			anim.frame = 1
 			anim.stop()
 
 	# Auto-face opponent when idle, walking, or blocking
-	if not _attacking and is_on_floor_t and (state == State.NORMAL or state == State.BLOCKING):
+	if not _attacking and is_on_floor_t and (cur_state == State.NORMAL or cur_state == State.BLOCKING):
 		if _opponent:
-			if abs(to_opp) > 50:
+			if dist_to_opp > 50:
 				anim.flip_h = to_opp < 0
 
-	for i in range(_proj_pool):
-		var s: Sprite = _proj_sprites[i]
-		s.visible = _proj_active[i]
-		if _proj_active[i]:
-			s.global_position = Vector2(_proj_x[i], _proj_y[i])
-			s.flip_h = (_proj_dir[i] < 0)
+	if fires_projectile:
+		for i in range(_proj_pool):
+			var s: Sprite = _proj_sprites[i]
+			s.visible = _proj_active[i]
+			if _proj_active[i]:
+				s.global_position = Vector2(_proj_x[i], _proj_y[i])
+				s.flip_h = (_proj_dir[i] < 0)
 
 	_prev_committed_keys = _committed_keys
