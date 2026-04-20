@@ -146,6 +146,7 @@ var _proj_launch_tick: int = -1
 var _proj_launch_count: int = 0
 var _attack_tick_count: int = 0
 var _attack_is_kick: bool = false
+var _lunge_upwards_kick: bool = false
 
 # Physics-tick animation end detection: replaces the render-loop animation_finished
 # signal so state transitions happen at the same exec_frame on both clients.
@@ -192,6 +193,7 @@ func apply_character(def: CharacterDef) -> void:
 	combos_enabled = def.combos_enabled
 	body_punch_enabled = def.body_punch_enabled
 	kick_speed_scale = def.kick_speed_scale
+	_lunge_upwards_kick = def.lunge_upwards_kick
 	punch_speed_scale = def.punch_speed_scale
 	flykick_speed_scale = def.flykick_speed_scale
 	flypunch_speed_scale = def.flypunch_speed_scale
@@ -756,10 +758,11 @@ func _action_just_pressed(action: String) -> bool:
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
+	var is_on_floor_t = is_on_floor()
 	if _pending_whataboutism:
 		_pending_whataboutism = false
 		_end_invisibility()
-		if not is_defeated and not (state == State.FALLEN and is_on_floor()):
+		if not is_defeated and not (state == State.FALLEN and is_on_floor_t):
 			_apply_impact(_pending_whataboutism_pos, _pending_whataboutism_knockback)
 			health = max(0, health - _pending_whataboutism_damage)
 			if _health_bar:
@@ -772,7 +775,6 @@ func _physics_process(delta: float) -> void:
 		return
 	if _opponent == null:
 		_find_opponent()
-	var is_on_floor_t = is_on_floor()
 
 	# Cache all inputs once to avoid repeated is_networked checks and dict lookups.
 	var inp_left:     bool = _action_pressed(action_left)
@@ -923,10 +925,12 @@ func _physics_process(delta: float) -> void:
 
 	if cur_state == State.HIT and should_block_visually and is_on_floor_t:
 		velocity.x = 0.0
-	elif _attacking and is_on_floor_t and not fires_projectile:
+	elif _attacking and (is_on_floor_t or (_lunge_upwards_kick and _attack_is_kick)) and not fires_projectile:
 		var lunge = 1.0 if not anim.flip_h else -1.0
 		var lunge_scale = kick_lunge_scale if _attack_is_kick else punch_lunge_scale
 		velocity.x = lunge * (speed * 0.3 * lunge_scale)
+		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t:
+			velocity.y = -(speed * 0.7 * lunge_scale)
 	else:
 		var current_speed = speed
 		if is_walking_back:

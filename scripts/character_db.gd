@@ -57,7 +57,7 @@ func _init() -> void:
 	simonka.block_damage_modifier = 0.12
 	simonka.max_health = 100
 	simonka.sprite_scale = 0.9
-	_register(simonka)
+	# _register(simonka)
 
 	var veli = _make_def("veli", "Veli", _veli_frames, Color(1, 1, 1, 1))
 	veli.speed = 320.0
@@ -169,6 +169,9 @@ func _init() -> void:
 	rado.block_damage_modifier = 0.15
 	rado.max_health = 110
 	rado.whataboutism_blocks = true
+	rado.lunge_upwards_kick = true
+	rado.kick_lunge_scale = 6.0
+	
 	_register(rado)
 
 

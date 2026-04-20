@@ -18,6 +18,7 @@ export var launch_punch: bool = false
 export var combos_enabled: bool = true
 export var body_punch_enabled: bool = false
 export var kick_speed_scale: float = 1.0
+export var lunge_upwards_kick: bool = false
 export var punch_speed_scale: float = 1.0
 export var flykick_speed_scale: float = 1.0
 export var flypunch_speed_scale: float = 1.0
