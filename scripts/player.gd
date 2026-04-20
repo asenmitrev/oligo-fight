@@ -80,6 +80,8 @@ var combos_enabled: bool = true
 var body_punch_enabled: bool = false
 var kick_speed_scale: float = 1.0
 var punch_speed_scale: float = 1.0
+var flykick_speed_scale: float = 1.0
+var flypunch_speed_scale: float = 1.0
 var kick_heals_self: int = 0
 var kick_knockback_multiplier: float = 1.0
 var stay_down: bool = false
@@ -169,6 +171,8 @@ func apply_character(def: CharacterDef) -> void:
 	body_punch_enabled = def.body_punch_enabled
 	kick_speed_scale = def.kick_speed_scale
 	punch_speed_scale = def.punch_speed_scale
+	flykick_speed_scale = def.flykick_speed_scale
+	flypunch_speed_scale = def.flypunch_speed_scale
 	kick_heals_self = def.kick_heals_self
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
@@ -274,10 +278,14 @@ func _play_anim(anim_name: String) -> void:
 		_proj_launch_count = 0
 
 		var speed_scale: float
-		if anim_name in ["kick", "flykick"]:
+		if anim_name == "kick":
 			speed_scale = kick_speed_scale
-		elif anim_name in ["punch", "body_punch"]:
+		elif anim_name == "flykick":
+			speed_scale = flykick_speed_scale
+		elif anim_name == "punch" or anim_name == "body_punch":
 			speed_scale = punch_speed_scale
+		elif anim_name == "flypunch":
+			speed_scale = flypunch_speed_scale
 		else:
 			speed_scale = 1.0
 		anim.speed_scale = speed_scale
