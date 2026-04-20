@@ -379,6 +379,7 @@ func force_fall() -> void:
 
 
 func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0) -> bool:
+	_end_invisibility()
 	if is_defeated or state == State.GETUP:
 		return false
 	if state == State.FALLEN and is_on_floor():
@@ -689,23 +690,19 @@ func _physics_process(delta: float) -> void:
 	if cur_state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
 		if not _attacking and not is_blocking_input:
 			if inp_punch_jp:
-				var ground_invis_block = punch_makes_invisible and _invis_ticks > 0 and is_on_floor_t
-				if not ground_invis_block:
-					_attacking = true
-					if not is_on_floor_t:
-						_end_invisibility()
-						_play_anim("punch" if fires_projectile else "flypunch")
-						if fires_projectile:
-							_proj_launch_tick = 1
-							anim.frame = 2
-					elif body_punch_enabled:
-						_play_anim("bodypunch")
-					else:
-						_play_anim("punch")
-					if combos_enabled:
-						_record_input("punch")
+				_attacking = true
+				if not is_on_floor_t:
+					_play_anim("punch" if fires_projectile else "flypunch")
+					if fires_projectile:
+						_proj_launch_tick = 1
+						anim.frame = 2
+				elif body_punch_enabled:
+					_play_anim("bodypunch")
+				else:
+					_play_anim("punch")
+				if combos_enabled:
+					_record_input("punch")
 			elif inp_kick_jp:
-				_end_invisibility()
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor_t else "kick")
 				if combos_enabled:
