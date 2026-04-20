@@ -8,6 +8,7 @@ const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames
 const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames.tres")
 const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_frames.tres")
 const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.tres")
+const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 
@@ -122,6 +123,15 @@ func _init() -> void:
 	itso.max_health = 110
 	itso.kick_lunge_scale = 6.0
 	_register(itso)
+
+	var crunch = _make_def("crunch", "Crunch", _crunch_frames, Color(1, 1, 1, 1))
+	crunch.speed = 350.0
+	crunch.jump_velocity = JUMP_VELOCITY
+	crunch.punch_damage = 13
+	crunch.kick_damage = 11
+	crunch.block_damage_modifier = 0.15
+	crunch.max_health = 105
+	_register(crunch)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
