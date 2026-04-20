@@ -11,6 +11,8 @@ const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.t
 const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
+const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
+const _crunch_pigeon_tex: Texture = preload("res://assets/crunch/pigeon.png")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -30,6 +32,7 @@ func _init() -> void:
 	ipman.body_punch_enabled = false
 	ipman.kick_speed_scale = 1.2
 	ipman.fires_projectile = true
+	ipman.proj_fires_on_punch = true
 	ipman.flypunch_speed_scale = 1.5
 	ipman.proj_damage = 10
 	ipman.proj_speed = 13
@@ -97,8 +100,8 @@ func _init() -> void:
 	siyana.block_damage_modifier = 0.15
 	siyana.max_health = 105
 	siyana.fires_projectile = true
+	siyana.proj_fires_on_kick = true
 	siyana.proj_damage = 25
-	siyana.proj_trigger = "kick"
 	siyana.proj_speed = 4
 	siyana.proj_hit_radius = 60
 	siyana.proj_y_tolerance = 100
@@ -131,6 +134,27 @@ func _init() -> void:
 	crunch.kick_damage = 11
 	crunch.block_damage_modifier = 0.15
 	crunch.max_health = 105
+	crunch.fires_projectile = true
+	crunch.proj_fires_on_punch = true
+	crunch.proj_fires_on_kick = true
+	crunch.proj_damage = 12
+	crunch.proj_speed = 11
+	crunch.proj_hit_radius = 50
+	crunch.proj_y_tolerance = 120
+	crunch.proj_lifetime_ticks = 280
+	crunch.proj_pool = 4
+	crunch.proj_texture = _crunch_cupcake_tex
+	crunch.proj_scale = 5.0
+	crunch.proj_texture_kick = _crunch_pigeon_tex
+	crunch.proj_scale_kick = 0.75
+	crunch.proj_anim_hframes = 1
+	crunch.proj_anim_vframes = 1
+	crunch.proj_anim_fps = 8
+	crunch.proj_anim_hframes_kick = 2
+	crunch.proj_anim_vframes_kick = 2
+	crunch.proj_anim_fps_kick = 8
+	crunch.proj_spawn_x_offset = 70
+	crunch.proj_spawn_y_offset = 200
 	_register(crunch)
 
 

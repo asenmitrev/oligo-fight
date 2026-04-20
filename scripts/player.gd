@@ -33,10 +33,20 @@ var _proj_lifetime_ticks: int = 0
 var _proj_pool: int = 0
 var _proj_spawn_x_offset: int = 70
 var _proj_spawn_y_offset: int = 200
-var _proj_trigger: String = "punch"
+var _proj_fires_on_punch: bool = false
+var _proj_fires_on_kick: bool = false
+var _proj_texture_punch: Texture
+var _proj_texture_kick_tex: Texture
+var _proj_scale_base: float = 3.0
+var _proj_scale_kick: float = 0.0
 var _proj_anim_hframes: int = 1
 var _proj_anim_vframes: int = 1
 var _proj_anim_fps: int = 8
+var _proj_anim_hframes_kick: int = 1
+var _proj_anim_vframes_kick: int = 1
+var _proj_anim_fps_kick: int = 8
+var _proj_pending_is_kick: bool = false
+var _proj_is_kick: Array = []  # bool per slot
 
 export var action_left: String = "p1_left"
 # ... (rest of the exports)
@@ -180,7 +190,15 @@ func apply_character(def: CharacterDef) -> void:
 	kick_heals_self = def.kick_heals_self
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
-	_proj_trigger = def.proj_trigger
+	_proj_fires_on_punch = def.proj_fires_on_punch
+	_proj_fires_on_kick = def.proj_fires_on_kick
+	_proj_texture_punch = def.proj_texture
+	_proj_texture_kick_tex = def.proj_texture_kick
+	_proj_scale_base = def.proj_scale
+	_proj_scale_kick = def.proj_scale_kick
+	_proj_anim_hframes_kick = def.proj_anim_hframes_kick
+	_proj_anim_vframes_kick = def.proj_anim_vframes_kick
+	_proj_anim_fps_kick = def.proj_anim_fps_kick
 	_proj_speed = def.proj_speed
 	_proj_damage = def.proj_damage
 	_proj_hit_radius = def.proj_hit_radius
@@ -199,6 +217,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_y.clear()
 	_proj_dir.clear()
 	_proj_lifetime.clear()
+	_proj_is_kick.clear()
 	_proj_next = 0
 	_proj_pool = def.proj_pool
 	for i in range(_proj_pool):
@@ -207,12 +226,10 @@ func apply_character(def: CharacterDef) -> void:
 		_proj_y.append(0)
 		_proj_dir.append(1)
 		_proj_lifetime.append(0)
+		_proj_is_kick.append(false)
 		var s := Sprite.new()
 		s.set_as_toplevel(true)
-		s.scale = Vector2(def.proj_scale, def.proj_scale)
-		s.texture = def.proj_texture
-		s.hframes = def.proj_anim_hframes
-		s.vframes = def.proj_anim_vframes
+		s.scale = Vector2(def.proj_scale, def.proj_scale)  # overridden per-type at launch
 		s.visible = false
 		add_child(s)
 		_proj_sprites.append(s)
@@ -250,6 +267,7 @@ func reset_for_round() -> void:
 	for i in range(_proj_pool):
 		_proj_active[i] = false
 		_proj_lifetime[i] = 0
+		_proj_is_kick[i] = false
 		_proj_sprites[i].visible = false
 	_committed_keys = 0
 	_prev_committed_keys = 0
@@ -314,8 +332,13 @@ func _play_anim(anim_name: String) -> void:
 			if target_frame >= 0:
 				_attack_hit_tick = (target_frame * phz + fps_int - 1) / fps_int
 
-			if fires_projectile and anim_name == _proj_trigger:
-				var proj_frame := 3 if _proj_trigger == "punch" else 2
+			var _fires_this_anim := (fires_projectile and (
+				(_proj_fires_on_punch and anim_name == "punch") or
+				(_proj_fires_on_kick and anim_name == "kick")
+			))
+			if _fires_this_anim:
+				_proj_pending_is_kick = (anim_name == "kick")
+				var proj_frame := 3 if anim_name == "punch" else 2
 				_proj_launch_tick = (proj_frame * phz + fps_int - 1) / fps_int
 
 			# Animation-end tick for non-looping animations.
@@ -627,10 +650,23 @@ func _launch_projectile() -> void:
 	var i := _proj_next
 	_proj_next = (_proj_next + 1) % _proj_pool
 	_proj_active[i] = true
+	_proj_is_kick[i] = _proj_pending_is_kick
 	_proj_dir[i] = facing_dir
 	_proj_x[i] = int(global_position.x) + facing_dir * _proj_spawn_x_offset
 	_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
 	_proj_lifetime[i] = 0
+	var s: Sprite = _proj_sprites[i]
+	if _proj_pending_is_kick and _proj_texture_kick_tex:
+		s.texture = _proj_texture_kick_tex
+		s.hframes = _proj_anim_hframes_kick
+		s.vframes = _proj_anim_vframes_kick
+		var sk := _proj_scale_kick if _proj_scale_kick > 0.0 else _proj_scale_base
+		s.scale = Vector2(sk, sk)
+	else:
+		s.texture = _proj_texture_punch
+		s.hframes = _proj_anim_hframes
+		s.vframes = _proj_anim_vframes
+		s.scale = Vector2(_proj_scale_base, _proj_scale_base)
 
 
 func _update_projectile() -> void:
@@ -772,15 +808,17 @@ func _physics_process(delta: float) -> void:
 
 	if fires_projectile:
 		_update_projectile()
-		var total_anim_frames := _proj_anim_hframes * _proj_anim_vframes
 		for i in range(_proj_pool):
 			var s: Sprite = _proj_sprites[i]
 			s.visible = _proj_active[i]
 			if _proj_active[i]:
 				s.global_position = Vector2(_proj_x[i], _proj_y[i])
 				s.flip_h = (_proj_dir[i] < 0)
-				if total_anim_frames > 1:
-					s.frame = (_proj_lifetime[i] * _proj_anim_fps / Engine.iterations_per_second) % total_anim_frames
+				var hf := _proj_anim_hframes_kick if _proj_is_kick[i] else _proj_anim_hframes
+				var vf := _proj_anim_vframes_kick if _proj_is_kick[i] else _proj_anim_vframes
+				var fps := _proj_anim_fps_kick if _proj_is_kick[i] else _proj_anim_fps
+				if hf * vf > 1:
+					s.frame = (_proj_lifetime[i] * fps / Engine.iterations_per_second) % (hf * vf)
 
 	if _hit_ticks > 0:
 		_hit_ticks -= 1

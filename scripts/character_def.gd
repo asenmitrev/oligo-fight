@@ -26,19 +26,25 @@ export var punch_lunge_scale: float = 1.0
 export var kick_heals_self: int = 0
 export var fires_projectile: bool = false
 export var proj_damage: int = 10
-export var proj_trigger: String = "punch"
+export var proj_fires_on_punch: bool = false
+export var proj_fires_on_kick: bool = false
 export var proj_speed: int = 0
 export var proj_hit_radius: int = 0
 export var proj_y_tolerance: int = 0
 export var proj_lifetime_ticks: int = 0
 export var proj_pool: int = 0
 export var proj_texture: Texture
+export var proj_texture_kick: Texture
 export var proj_scale: float = 3.0
+export var proj_scale_kick: float = 0.0
 export var proj_spawn_x_offset: int = 70
 export var proj_spawn_y_offset: int = 200
 export var proj_anim_hframes: int = 1
 export var proj_anim_vframes: int = 1
 export var proj_anim_fps: int = 8
+export var proj_anim_hframes_kick: int = 1
+export var proj_anim_vframes_kick: int = 1
+export var proj_anim_fps_kick: int = 8
 export var fall_gravity_scale: float = 1.0
 export var invulnerable_when_airborne: bool = false
 export var partial_loop_jump: bool = false
