@@ -33,6 +33,7 @@ var _proj_lifetime_ticks: int = 0
 var _proj_pool: int = 0
 var _proj_spawn_x_offset: int = 70
 var _proj_spawn_y_offset: int = 200
+var _proj_pending_is_kick: bool = false
 var _proj_fires_on_punch: bool = false
 var _proj_fires_on_kick: bool = false
 var _proj_texture_punch: Texture
@@ -42,10 +43,10 @@ var _proj_scale_kick: float = 0.0
 var _proj_anim_hframes: int = 1
 var _proj_anim_vframes: int = 1
 var _proj_anim_fps: int = 8
+var _proj_kick_upwards: bool = false
 var _proj_anim_hframes_kick: int = 1
 var _proj_anim_vframes_kick: int = 1
 var _proj_anim_fps_kick: int = 8
-var _proj_pending_is_kick: bool = false
 var _proj_is_kick: Array = []  # bool per slot
 
 export var action_left: String = "p1_left"
@@ -116,6 +117,7 @@ var fires_projectile: bool = false
 var _proj_active: Array = []   # bool per slot
 var _proj_x: Array = []        # int per slot
 var _proj_y: Array = []        # int per slot
+var _proj_vy: Array = []       # int per slot — 0 for horizontal, +speed for 45° downward
 var _proj_dir: Array = []      # int per slot
 var _proj_lifetime: Array = [] # int per slot
 var _proj_next: int = 0        # next slot to write into
@@ -203,6 +205,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_damage = def.proj_damage
 	_proj_hit_radius = def.proj_hit_radius
 	_proj_y_tolerance = def.proj_y_tolerance
+	_proj_kick_upwards = def.proj_kick_upwards
 	_proj_lifetime_ticks = def.proj_lifetime_ticks
 	_proj_spawn_x_offset = def.proj_spawn_x_offset
 	_proj_spawn_y_offset = def.proj_spawn_y_offset
@@ -215,6 +218,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_active.clear()
 	_proj_x.clear()
 	_proj_y.clear()
+	_proj_vy.clear()
 	_proj_dir.clear()
 	_proj_lifetime.clear()
 	_proj_is_kick.clear()
@@ -224,6 +228,7 @@ func apply_character(def: CharacterDef) -> void:
 		_proj_active.append(false)
 		_proj_x.append(0)
 		_proj_y.append(0)
+		_proj_vy.append(0)
 		_proj_dir.append(1)
 		_proj_lifetime.append(0)
 		_proj_is_kick.append(false)
@@ -654,6 +659,7 @@ func _launch_projectile() -> void:
 	_proj_dir[i] = facing_dir
 	_proj_x[i] = int(global_position.x) + facing_dir * _proj_spawn_x_offset
 	_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
+	_proj_vy[i] = -_proj_speed if _proj_kick_upwards and _proj_pending_is_kick else 0
 	_proj_lifetime[i] = 0
 	var s: Sprite = _proj_sprites[i]
 	if _proj_pending_is_kick and _proj_texture_kick_tex:
@@ -676,6 +682,7 @@ func _update_projectile() -> void:
 		if not _proj_active[i]:
 			continue
 		_proj_x[i] += _proj_dir[i] * _proj_speed
+		_proj_y[i] += _proj_vy[i]
 		_proj_lifetime[i] += 1
 
 		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:

@@ -45,6 +45,7 @@ export var proj_anim_fps: int = 8
 export var proj_anim_hframes_kick: int = 1
 export var proj_anim_vframes_kick: int = 1
 export var proj_anim_fps_kick: int = 8
+export var proj_kick_upwards: bool = false
 export var fall_gravity_scale: float = 1.0
 export var invulnerable_when_airborne: bool = false
 export var partial_loop_jump: bool = false

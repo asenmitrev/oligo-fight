@@ -140,11 +140,11 @@ func _init() -> void:
 	crunch.proj_damage = 12
 	crunch.proj_speed = 11
 	crunch.proj_hit_radius = 50
-	crunch.proj_y_tolerance = 120
+	crunch.proj_y_tolerance = 220
 	crunch.proj_lifetime_ticks = 280
 	crunch.proj_pool = 4
 	crunch.proj_texture = _crunch_cupcake_tex
-	crunch.proj_scale = 5.0
+	crunch.proj_scale = 4
 	crunch.proj_texture_kick = _crunch_pigeon_tex
 	crunch.proj_scale_kick = 0.75
 	crunch.proj_anim_hframes = 1
@@ -152,7 +152,8 @@ func _init() -> void:
 	crunch.proj_anim_fps = 8
 	crunch.proj_anim_hframes_kick = 2
 	crunch.proj_anim_vframes_kick = 2
-	crunch.proj_anim_fps_kick = 8
+	crunch.proj_anim_fps_kick = 24
+	crunch.proj_kick_upwards = true
 	crunch.proj_spawn_x_offset = 70
 	crunch.proj_spawn_y_offset = 200
 	_register(crunch)
