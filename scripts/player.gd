@@ -93,6 +93,7 @@ var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
 var _pending_special: bool = false
 var punch_makes_invisible: bool = false
+var proj_fires_airborne: bool = false
 var _invis_ticks: int = 0
 const INVIS_MAX_TICKS: int = 180  # 3 s at 60 Hz
 
@@ -212,6 +213,7 @@ func apply_character(def: CharacterDef) -> void:
 	partial_loop_jump = def.partial_loop_jump
 	punch_pulls_opponent = def.punch_pulls_opponent
 	punch_makes_invisible = def.punch_makes_invisible
+	proj_fires_airborne = def.proj_fires_airborne
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -705,10 +707,10 @@ func _physics_process(delta: float) -> void:
 			if inp_punch_jp:
 				_attacking = true
 				if not is_on_floor_t:
-					_play_anim("punch" if fires_projectile else "flypunch")
-					if fires_projectile:
-						_proj_launch_tick = 1
-						anim.frame = 2
+					if proj_fires_airborne:
+						_play_anim("punch")
+					else:
+						_play_anim("flypunch")
 				elif body_punch_enabled:
 					_play_anim("bodypunch")
 				else:

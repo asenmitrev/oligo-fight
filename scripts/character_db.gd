@@ -38,6 +38,7 @@ func _init() -> void:
 	ipman.proj_scale = 3.0
 	ipman.proj_spawn_x_offset = 70
 	ipman.proj_spawn_y_offset = 200
+	ipman.proj_fires_airborne = true
 	_register(ipman)
 
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
