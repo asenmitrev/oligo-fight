@@ -7,6 +7,7 @@ const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.t
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
 const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames.tres")
 const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_frames.tres")
+const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 
@@ -28,6 +29,7 @@ func _init() -> void:
 	ipman.body_punch_enabled = false
 	ipman.kick_speed_scale = 1.2
 	ipman.fires_projectile = true
+	ipman.flypunch_speed_scale = 1.5
 	ipman.proj_damage = 10
 	ipman.proj_speed = 13
 	ipman.proj_hit_radius = 75
@@ -110,6 +112,15 @@ func _init() -> void:
 	siyana.proj_anim_vframes = 2
 	siyana.proj_anim_fps = 8
 	_register(siyana)
+
+	var itso = _make_def("itso", "Itso", _itso_frames, Color(1, 1, 1, 1))
+	itso.speed = 340.0
+	itso.jump_velocity = JUMP_VELOCITY
+	itso.punch_damage = 14
+	itso.kick_damage = 11
+	itso.block_damage_modifier = 0.15
+	itso.max_health = 110
+	_register(itso)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):

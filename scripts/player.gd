@@ -283,7 +283,10 @@ func _play_anim(anim_name: String) -> void:
 		elif anim_name == "flykick":
 			speed_scale = flykick_speed_scale
 		elif anim_name == "punch" or anim_name == "body_punch":
-			speed_scale = punch_speed_scale
+			if proj_fires_airborne and not is_on_floor():
+				speed_scale = flypunch_speed_scale
+			else:
+				speed_scale = punch_speed_scale
 		elif anim_name == "flypunch":
 			speed_scale = flypunch_speed_scale
 		else:
