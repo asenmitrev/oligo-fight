@@ -14,7 +14,8 @@ const HIT_WINDOW_TICKS     := 120  # 2.0 s at 60 Hz
 const PUNCH_ARM_EXTENSION  := 120.0
 const KICK_LEG_EXTENSION   := 150.0
 const HIT_TARGET_RADIUS    := 85.0
-const KNOCKBACK_FORCE      := 500.0
+const KNOCKBACK_FORCE      := 1500.0
+const PULL_RANGE           := 350.0
 var block_damage_modifier := 0.15
 const HITSTOP_TICKS        := 6    # 0.1 s at 60 Hz
 const COUNTER_HIT_BONUS    := 1.5
@@ -80,6 +81,7 @@ var input_disabled: bool = false
 var fall_gravity_scale: float = 1.0
 var invulnerable_when_airborne: bool = false
 var partial_loop_jump: bool = false
+var punch_pulls_opponent: bool = false
 var _input_buffer: Array = []
 var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
@@ -191,6 +193,7 @@ func apply_character(def: CharacterDef) -> void:
 	fall_gravity_scale = def.fall_gravity_scale
 	invulnerable_when_airborne = def.invulnerable_when_airborne
 	partial_loop_jump = def.partial_loop_jump
+	punch_pulls_opponent = def.punch_pulls_opponent
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -444,6 +447,17 @@ func _apply_impact(attacker_pos: Vector2, multiplier: float) -> void:
 	_knockback_x = int(dir * KNOCKBACK_FORCE * multiplier)
 
 
+func _apply_pull(attacker_pos: Vector2) -> void:
+	if is_defeated or state == State.GETUP:
+		return
+	if invulnerable_when_airborne and not is_on_floor():
+		return
+	var dir = sign(attacker_pos.x - global_position.x)
+	_knockback_x = int(dir * KNOCKBACK_FORCE)
+	_hitstop_ticks = HITSTOP_TICKS
+	_enter_hit()
+
+
 func _enter_hit() -> void:
 	state = State.HIT
 	_attacking = false
@@ -498,6 +512,14 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var to_opponent := _opponent.global_position.x - global_position.x
 
 	if sign(to_opponent) != sign(facing_dir):
+		return
+
+	if punch_pulls_opponent and not is_kick:
+		if abs(to_opponent) > PULL_RANGE:
+			return
+		_opponent._apply_pull(global_position)
+		_hitstop_ticks = HITSTOP_TICKS
+		emit_signal("hit_landed", false, 0)
 		return
 
 	var extension   := KICK_LEG_EXTENSION if is_kick else _punch_arm_extension
