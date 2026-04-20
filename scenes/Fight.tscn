@@ -17,6 +17,7 @@ extents = Vector2( 16.5, 461.5 )
 script = ExtResource( 3 )
 
 [node name="Music" type="AudioStreamPlayer" parent="."]
+volume_db = -6.0
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2( 640, 180 )
