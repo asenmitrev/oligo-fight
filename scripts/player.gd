@@ -755,6 +755,15 @@ func _physics_process(delta: float) -> void:
 
 	if fires_projectile:
 		_update_projectile()
+		var total_anim_frames := _proj_anim_hframes * _proj_anim_vframes
+		for i in range(_proj_pool):
+			var s: Sprite = _proj_sprites[i]
+			s.visible = _proj_active[i]
+			if _proj_active[i]:
+				s.global_position = Vector2(_proj_x[i], _proj_y[i])
+				s.flip_h = (_proj_dir[i] < 0)
+				if total_anim_frames > 1:
+					s.frame = (_proj_lifetime[i] * _proj_anim_fps / Engine.iterations_per_second) % total_anim_frames
 
 	if _hit_ticks > 0:
 		_hit_ticks -= 1
@@ -852,16 +861,5 @@ func _physics_process(delta: float) -> void:
 		if _opponent:
 			if dist_to_opp > 50:
 				anim.flip_h = to_opp < 0
-
-	if fires_projectile:
-		var total_anim_frames := _proj_anim_hframes * _proj_anim_vframes
-		for i in range(_proj_pool):
-			var s: Sprite = _proj_sprites[i]
-			s.visible = _proj_active[i]
-			if _proj_active[i]:
-				s.global_position = Vector2(_proj_x[i], _proj_y[i])
-				s.flip_h = (_proj_dir[i] < 0)
-				if total_anim_frames > 1:
-					s.frame = (_proj_lifetime[i] * _proj_anim_fps / Engine.iterations_per_second) % total_anim_frames
 
 	_prev_committed_keys = _committed_keys
