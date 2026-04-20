@@ -35,6 +35,7 @@ export var invulnerable_when_airborne: bool = false
 export var partial_loop_jump: bool = false
 export var punch_pulls_opponent: bool = false
 export var kick_knockback_multiplier: float = 1.0
+export var punch_makes_invisible: bool = false
 
 
 func get_preview_sprite_frames() -> SpriteFrames:

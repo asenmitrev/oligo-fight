@@ -87,6 +87,9 @@ var _input_buffer: Array = []
 var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
 var _pending_special: bool = false
+var punch_makes_invisible: bool = false
+var _invis_ticks: int = 0
+const INVIS_MAX_TICKS: int = 180  # 3 s at 60 Hz
 
 # Projectile state — fixed-size pool for determinism (ring buffer, newest overwrites oldest)
 var fires_projectile: bool = false
@@ -196,6 +199,7 @@ func apply_character(def: CharacterDef) -> void:
 	invulnerable_when_airborne = def.invulnerable_when_airborne
 	partial_loop_jump = def.partial_loop_jump
 	punch_pulls_opponent = def.punch_pulls_opponent
+	punch_makes_invisible = def.punch_makes_invisible
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -227,6 +231,8 @@ func reset_for_round() -> void:
 		_proj_sprites[i].visible = false
 	_committed_keys = 0
 	_prev_committed_keys = 0
+	_invis_ticks = 0
+	anim.modulate.a = 1.0
 	_anim_hit_fired = false
 	_attack_hit_tick = -1
 	_attack_tick_count = 0
@@ -494,6 +500,12 @@ func _enter_defeated() -> void:
 	emit_signal("defeated")
 
 
+func _end_invisibility() -> void:
+	if _invis_ticks > 0:
+		_invis_ticks = 0
+		anim.modulate.a = 1.0
+
+
 func _try_hit_opponent(is_kick: bool) -> void:
 	if is_kick and kick_heals_self > 0:
 		health = min(max_health, health + kick_heals_self)
@@ -536,6 +548,9 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if not hit_registered:
 		return
 	_hitstop_ticks = HITSTOP_TICKS
+	if punch_makes_invisible and not is_kick:
+		_invis_ticks = INVIS_MAX_TICKS
+		anim.modulate.a = 0.0
 
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
@@ -674,19 +689,23 @@ func _physics_process(delta: float) -> void:
 	if cur_state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
 		if not _attacking and not is_blocking_input:
 			if inp_punch_jp:
-				_attacking = true
-				if not is_on_floor_t:
-					_play_anim("punch" if fires_projectile else "flypunch")
-					if fires_projectile:
-						_proj_launch_tick = 1
-						anim.frame = 2
-				elif body_punch_enabled:
-					_play_anim("bodypunch")
-				else:
-					_play_anim("punch")
-				if combos_enabled:
-					_record_input("punch")
+				var ground_invis_block = punch_makes_invisible and _invis_ticks > 0 and is_on_floor_t
+				if not ground_invis_block:
+					_attacking = true
+					if not is_on_floor_t:
+						_end_invisibility()
+						_play_anim("punch" if fires_projectile else "flypunch")
+						if fires_projectile:
+							_proj_launch_tick = 1
+							anim.frame = 2
+					elif body_punch_enabled:
+						_play_anim("bodypunch")
+					else:
+						_play_anim("punch")
+					if combos_enabled:
+						_record_input("punch")
 			elif inp_kick_jp:
+				_end_invisibility()
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor_t else "kick")
 				if combos_enabled:
@@ -733,6 +752,11 @@ func _physics_process(delta: float) -> void:
 			hit_count = 0
 			if _opponent:
 				_opponent._current_combo_count = 0
+
+	if _invis_ticks > 0:
+		_invis_ticks -= 1
+		if _invis_ticks == 0:
+			anim.modulate.a = 1.0
 
 	# Integer multiply-divide: no float FMA non-determinism across platforms.
 	_knockback_x = _knockback_x * 5 / 6

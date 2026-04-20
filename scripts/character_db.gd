@@ -79,6 +79,7 @@ func _init() -> void:
 	sasho.kick_damage = 11
 	sasho.block_damage_modifier = 0.15
 	sasho.max_health = 110
+	sasho.punch_makes_invisible = true
 	_register(sasho)
 
 
