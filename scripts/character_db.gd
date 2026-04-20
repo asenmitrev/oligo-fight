@@ -6,6 +6,7 @@ const _veli_frames: SpriteFrames = preload("res://resources/veli_sprite_frames.t
 const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
 const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames.tres")
+const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 
 var _by_display_name: Dictionary = {}
@@ -81,6 +82,15 @@ func _init() -> void:
 	sasho.max_health = 110
 	sasho.punch_makes_invisible = true
 	_register(sasho)
+
+	var siyana = _make_def("siyana", "Siyana", _siyana_frames, Color(1, 1, 1, 1))
+	siyana.speed = 350.0
+	siyana.jump_velocity = JUMP_VELOCITY
+	siyana.punch_damage = 13
+	siyana.kick_damage = 10
+	siyana.block_damage_modifier = 0.15
+	siyana.max_health = 105
+	_register(siyana)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):

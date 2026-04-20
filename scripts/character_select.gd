@@ -145,7 +145,7 @@ func _setup_select_grid() -> void:
 	var vp := get_viewport().size
 	var sprite_y := vp.y - FEET_FROM_BOTTOM
 	# one center-x per character — add an entry here if you add a character
-	var centers_x := [vp.x * 0.167, vp.x * 0.333, vp.x * 0.500, vp.x * 0.667, vp.x * 0.833]
+	var centers_x := [vp.x * 0.143, vp.x * 0.286, vp.x * 0.429, vp.x * 0.571, vp.x * 0.714, vp.x * 0.857]
 	assert(CharacterDB.all_characters.size() == centers_x.size(), "centers_x needs one entry per character")
 
 	for i in range(CharacterDB.all_characters.size()):
@@ -177,7 +177,7 @@ func _setup_select_grid() -> void:
 		preview.position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH)
 		preview.offset = PREVIEW_OFFSET
 		preview.scale = Vector2(ps, ps)
-		preview.flip_h = (i == 2 or i == 3)
+		preview.flip_h = (i >= centers_x.size() / 2)
 		preview.frames = char_def.get_preview_sprite_frames()
 		if char_def.id == "kraska":
 			preview.animation = "idle"
