@@ -82,6 +82,8 @@ var kick_speed_scale: float = 1.0
 var punch_speed_scale: float = 1.0
 var flykick_speed_scale: float = 1.0
 var flypunch_speed_scale: float = 1.0
+var kick_lunge_scale: float = 1.0
+var punch_lunge_scale: float = 1.0
 var kick_heals_self: int = 0
 var kick_knockback_multiplier: float = 1.0
 var stay_down: bool = false
@@ -173,6 +175,8 @@ func apply_character(def: CharacterDef) -> void:
 	punch_speed_scale = def.punch_speed_scale
 	flykick_speed_scale = def.flykick_speed_scale
 	flypunch_speed_scale = def.flypunch_speed_scale
+	kick_lunge_scale = def.kick_lunge_scale
+	punch_lunge_scale = def.punch_lunge_scale
 	kick_heals_self = def.kick_heals_self
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
@@ -832,7 +836,8 @@ func _physics_process(delta: float) -> void:
 		velocity.x = 0.0
 	elif _attacking and is_on_floor_t and not fires_projectile:
 		var lunge = 1.0 if not anim.flip_h else -1.0
-		velocity.x = lunge * (speed * 0.3)
+		var lunge_scale = kick_lunge_scale if _attack_is_kick else punch_lunge_scale
+		velocity.x = lunge * (speed * 0.3 * lunge_scale)
 	else:
 		var current_speed = speed
 		if is_walking_back:

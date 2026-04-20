@@ -120,6 +120,7 @@ func _init() -> void:
 	itso.kick_damage = 11
 	itso.block_damage_modifier = 0.15
 	itso.max_health = 110
+	itso.kick_lunge_scale = 6.0
 	_register(itso)
 
 
