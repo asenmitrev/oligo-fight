@@ -26,12 +26,17 @@ const COMBO_INPUT_WINDOW_TICKS := 30  # 0.5 s at 60 Hz
 const SPECIAL_COMBO_DAMAGE := 35
 const SPECIAL_COMBO_SEQUENCE := ["punch", "punch", "kick"]
 var _proj_speed: int = 0
+var _proj_damage: int = 10
 var _proj_hit_radius: int = 0
 var _proj_y_tolerance: int = 0
 var _proj_lifetime_ticks: int = 0
 var _proj_pool: int = 0
 var _proj_spawn_x_offset: int = 70
 var _proj_spawn_y_offset: int = 200
+var _proj_trigger: String = "punch"
+var _proj_anim_hframes: int = 1
+var _proj_anim_vframes: int = 1
+var _proj_anim_fps: int = 8
 
 export var action_left: String = "p1_left"
 # ... (rest of the exports)
@@ -166,12 +171,17 @@ func apply_character(def: CharacterDef) -> void:
 	kick_heals_self = def.kick_heals_self
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
+	_proj_trigger = def.proj_trigger
 	_proj_speed = def.proj_speed
+	_proj_damage = def.proj_damage
 	_proj_hit_radius = def.proj_hit_radius
 	_proj_y_tolerance = def.proj_y_tolerance
 	_proj_lifetime_ticks = def.proj_lifetime_ticks
 	_proj_spawn_x_offset = def.proj_spawn_x_offset
 	_proj_spawn_y_offset = def.proj_spawn_y_offset
+	_proj_anim_hframes = def.proj_anim_hframes
+	_proj_anim_vframes = def.proj_anim_vframes
+	_proj_anim_fps = def.proj_anim_fps
 	for s in _proj_sprites:
 		s.queue_free()
 	_proj_sprites.clear()
@@ -192,6 +202,8 @@ func apply_character(def: CharacterDef) -> void:
 		s.set_as_toplevel(true)
 		s.scale = Vector2(def.proj_scale, def.proj_scale)
 		s.texture = def.proj_texture
+		s.hframes = def.proj_anim_hframes
+		s.vframes = def.proj_anim_vframes
 		s.visible = false
 		add_child(s)
 		_proj_sprites.append(s)
@@ -285,8 +297,9 @@ func _play_anim(anim_name: String) -> void:
 			if target_frame >= 0:
 				_attack_hit_tick = (target_frame * phz + fps_int - 1) / fps_int
 
-			if fires_projectile and anim_name == "punch":
-				_proj_launch_tick = (3 * phz + fps_int - 1) / fps_int
+			if fires_projectile and anim_name == _proj_trigger:
+				var proj_frame := 3 if _proj_trigger == "punch" else 2
+				_proj_launch_tick = (proj_frame * phz + fps_int - 1) / fps_int
 
 			# Animation-end tick for non-looping animations.
 			if not anim.frames.get_animation_loop(anim_name):
@@ -624,7 +637,7 @@ func _update_projectile() -> void:
 		if dx < _proj_hit_radius and dy < _proj_y_tolerance and int(_opponent.global_position.y) >= _proj_y[i]:
 			_proj_active[i] = false
 			var hit_pos := Vector2(_proj_x[i], _proj_y[i])
-			var registered: bool = _opponent.take_hit(false, hit_pos, false, punch_damage)
+			var registered: bool = _opponent.take_hit(false, hit_pos, false, _proj_damage)
 			if registered:
 				_hitstop_ticks = HITSTOP_TICKS
 				emit_signal("hit_landed", false, 0)
@@ -795,7 +808,7 @@ func _physics_process(delta: float) -> void:
 
 	if cur_state == State.HIT and should_block_visually and is_on_floor_t:
 		velocity.x = 0.0
-	elif _attacking and is_on_floor_t:
+	elif _attacking and is_on_floor_t and not fires_projectile:
 		var lunge = 1.0 if not anim.flip_h else -1.0
 		velocity.x = lunge * (speed * 0.3)
 	else:
@@ -841,11 +854,14 @@ func _physics_process(delta: float) -> void:
 				anim.flip_h = to_opp < 0
 
 	if fires_projectile:
+		var total_anim_frames := _proj_anim_hframes * _proj_anim_vframes
 		for i in range(_proj_pool):
 			var s: Sprite = _proj_sprites[i]
 			s.visible = _proj_active[i]
 			if _proj_active[i]:
 				s.global_position = Vector2(_proj_x[i], _proj_y[i])
 				s.flip_h = (_proj_dir[i] < 0)
+				if total_anim_frames > 1:
+					s.frame = (_proj_lifetime[i] * _proj_anim_fps / Engine.iterations_per_second) % total_anim_frames
 
 	_prev_committed_keys = _committed_keys

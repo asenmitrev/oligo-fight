@@ -8,6 +8,7 @@ const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames
 const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames.tres")
 const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
+const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -27,6 +28,7 @@ func _init() -> void:
 	ipman.body_punch_enabled = false
 	ipman.kick_speed_scale = 1.2
 	ipman.fires_projectile = true
+	ipman.proj_damage = 10
 	ipman.proj_speed = 13
 	ipman.proj_hit_radius = 75
 	ipman.proj_y_tolerance = 220
@@ -90,6 +92,22 @@ func _init() -> void:
 	siyana.kick_damage = 10
 	siyana.block_damage_modifier = 0.15
 	siyana.max_health = 105
+	siyana.fires_projectile = true
+	siyana.proj_damage = 25
+	siyana.proj_trigger = "kick"
+	siyana.proj_speed = 4
+	siyana.proj_hit_radius = 60
+	siyana.proj_y_tolerance = 100
+	siyana.proj_lifetime_ticks = 240
+	siyana.proj_pool = 3
+	siyana.proj_texture = _siyana_proj_tex
+	siyana.proj_scale = 1.0
+	siyana.proj_spawn_x_offset = 80
+	siyana.proj_spawn_y_offset = 0
+	siyana.kick_speed_scale = 0.40
+	siyana.proj_anim_hframes = 2
+	siyana.proj_anim_vframes = 2
+	siyana.proj_anim_fps = 8
 	_register(siyana)
 
 
