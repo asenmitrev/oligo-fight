@@ -134,6 +134,8 @@ func _init() -> void:
 	crunch.kick_damage = 11
 	crunch.block_damage_modifier = 0.15
 	crunch.max_health = 105
+	crunch.punch_speed_scale = 0.75
+	crunch.kick_speed_scale = 0.75
 	crunch.fires_projectile = true
 	crunch.proj_fires_on_punch = true
 	crunch.proj_fires_on_kick = true
@@ -142,7 +144,7 @@ func _init() -> void:
 	crunch.proj_hit_radius = 50
 	crunch.proj_y_tolerance = 220
 	crunch.proj_lifetime_ticks = 280
-	crunch.proj_pool = 4
+	crunch.proj_pool = 10
 	crunch.proj_texture = _crunch_cupcake_tex
 	crunch.proj_scale = 4
 	crunch.proj_texture_kick = _crunch_pigeon_tex
