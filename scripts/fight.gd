@@ -681,12 +681,12 @@ func _on_player_defeated() -> void:
 	else:
 		_flash_circle(_p2_circles[p2_wins - 1])
 
-	var georgi_beat_simonka: bool = (not is_online) and winner_name == "Georgi" and loser_name == "Simonka"
-	var win_text: String = "Georgi thinks he's won!" if georgi_beat_simonka else winner_name + " Wins!"
-	var round_text: String = "Georgi thinks he's won Round %d!" % current_round if georgi_beat_simonka else winner_name + " wins Round %d!" % current_round
+	var veli_beat_simonka: bool = (not is_online) and winner_name == "Veli" and loser_name == "Simonka"
+	var win_text: String = "Veli thinks he's won!" if veli_beat_simonka else winner_name + " Wins!"
+	var round_text: String = "Veli thinks he's won Round %d!" % current_round if veli_beat_simonka else winner_name + " wins Round %d!" % current_round
 
-	if georgi_beat_simonka:
-		# Special sequence for Georgi's "fake" win (offline only — real-time timers would desync online)
+	if veli_beat_simonka:
+		# Special sequence for Veli's "fake" win (offline only — real-time timers would desync online)
 		win_label.text = win_text
 		win_screen.visible = true
 

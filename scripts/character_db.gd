@@ -2,7 +2,7 @@ extends Node
 
 const CharacterDef = preload("res://scripts/character_def.gd")
 const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
-const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_frames.tres")
+const _veli_frames: SpriteFrames = preload("res://resources/veli_sprite_frames.tres")
 const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
@@ -37,7 +37,7 @@ func _init() -> void:
 	_register(ipman)
 
 	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
-	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Georgi's
+	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Veli's
 	simonka.speed = 380.0
 	simonka.jump_velocity = JUMP_VELOCITY * 1.4
 	simonka.punch_damage = 12
@@ -47,14 +47,17 @@ func _init() -> void:
 	simonka.sprite_scale = 0.9
 	_register(simonka)
 
-	var georgi = _make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1))
-	georgi.speed = 320.0
-	georgi.jump_velocity = JUMP_VELOCITY
-	georgi.punch_damage = 15
-	georgi.kick_damage = 10
-	georgi.block_damage_modifier = 0.18
-	georgi.max_health = 120
-	_register(georgi)
+	var veli = _make_def("veli", "Veli", _veli_frames, Color(1, 1, 1, 1))
+	veli.speed = 320.0
+	veli.jump_velocity = JUMP_VELOCITY * 0.5
+	veli.punch_damage = 15
+	veli.kick_damage = 10
+	veli.block_damage_modifier = 0.18
+	veli.max_health = 120
+	veli.fall_gravity_scale = 0.15
+	veli.invulnerable_when_airborne = true
+	veli.partial_loop_jump = true
+	_register(veli)
 
 	var bobe = _make_def("bobe", "Bobe", _bobe_frames, Color(1, 1, 1, 1))
 	bobe.speed = 330.0

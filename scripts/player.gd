@@ -77,6 +77,9 @@ var punch_speed_scale: float = 1.0
 var kick_heals_self: int = 0
 var stay_down: bool = false
 var input_disabled: bool = false
+var fall_gravity_scale: float = 1.0
+var invulnerable_when_airborne: bool = false
+var partial_loop_jump: bool = false
 var _input_buffer: Array = []
 var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
@@ -185,6 +188,9 @@ func apply_character(def: CharacterDef) -> void:
 		s.visible = false
 		add_child(s)
 		_proj_sprites.append(s)
+	fall_gravity_scale = def.fall_gravity_scale
+	invulnerable_when_airborne = def.invulnerable_when_airborne
+	partial_loop_jump = def.partial_loop_jump
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -365,6 +371,8 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 	if is_defeated or state == State.GETUP:
 		return false
 	if state == State.FALLEN and is_on_floor():
+		return false
+	if invulnerable_when_airborne and not is_on_floor():
 		return false
 
 	var to_opp_block := 0.0
@@ -714,7 +722,8 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor_t:
 		# Round gravity accumulation to prevent float drift between clients.
-		velocity.y = round(velocity.y + GRAVITY * (3.0 if inp_down else 1.0) * delta)
+		var grav_scale := fall_gravity_scale if cur_state == State.NORMAL else 1.0
+		velocity.y = round(velocity.y + GRAVITY * (3.0 if inp_down else 1.0) * grav_scale * delta)
 
 	# Launched players play looping "jump"; switch to non-looping "falls" once descending.
 	if cur_state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
@@ -766,6 +775,9 @@ func _physics_process(delta: float) -> void:
 				anim.stop()
 		elif not is_on_floor_t:
 			_play_anim("jump")
+			if partial_loop_jump and anim.frame >= 2:
+				anim.stop()
+				anim.frame = 2
 		elif direction != 0:
 			_play_anim("walk")
 		else:
