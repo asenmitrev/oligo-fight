@@ -5,6 +5,7 @@ const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_fr
 const _veli_frames: SpriteFrames = preload("res://resources/veli_sprite_frames.tres")
 const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
+const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 
 var _by_display_name: Dictionary = {}
@@ -70,6 +71,15 @@ func _init() -> void:
 	bobe.max_health = 115
 	bobe.kick_heals_self = 5
 	_register(bobe)
+
+	var sasho = _make_def("sasho", "Sasho", _sasho_frames, Color(1, 1, 1, 1))
+	sasho.speed = 340.0
+	sasho.jump_velocity = JUMP_VELOCITY
+	sasho.punch_damage = 14
+	sasho.kick_damage = 11
+	sasho.block_damage_modifier = 0.15
+	sasho.max_health = 110
+	_register(sasho)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
