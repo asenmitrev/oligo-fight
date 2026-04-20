@@ -68,6 +68,12 @@ var _p2_combo_timer: float = 0.0
 const COMBO_DISPLAY_DURATION := 2.5
 const COMBO_FADE_START := 1.0
 
+# Whataboutism HUD
+var _whataboutism_node: Control = null
+var _whataboutism_timer: float = 0.0
+const WHATABOUTISM_DISPLAY_DURATION := 2.0
+const WHATABOUTISM_FADE_START := 0.8
+
 func _ready() -> void:
 	assert(FIGHT_BACKGROUNDS.size() == GameState.FIGHT_BACKGROUND_COUNT)
 	_apply_fight_background()
@@ -79,9 +85,11 @@ func _ready() -> void:
 	_p1.connect("defeated", self, "_on_player_defeated")
 	_p1.connect("hit_landed", self, "_on_p1_hit_landed")
 	_p1.connect("special_combo_triggered", self, "_on_special_combo")
+	_p1.connect("whataboutism_triggered", self, "_on_whataboutism")
 	_p2.connect("defeated", self, "_on_player_defeated")
 	_p2.connect("hit_landed", self, "_on_p2_hit_landed")
 	_p2.connect("special_combo_triggered", self, "_on_special_combo")
+	_p2.connect("whataboutism_triggered", self, "_on_whataboutism")
 
 	_setup_combo_labels()
 	_setup_win_circles()
@@ -190,6 +198,15 @@ func _process(delta: float) -> void:
 		if _p2_combo_timer > 0.0:
 			_update_combo_pos(_p2_combo_root, _p2, _p1)
 
+	if _whataboutism_timer > 0.0:
+		_whataboutism_timer = max(0.0, _whataboutism_timer - delta)
+		if _whataboutism_node:
+			_whataboutism_node.rect_scale = _whataboutism_node.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * 10.0)
+			if _whataboutism_timer < WHATABOUTISM_FADE_START:
+				_whataboutism_node.modulate.a = _whataboutism_timer / WHATABOUTISM_FADE_START
+			if _whataboutism_timer == 0.0:
+				_whataboutism_node.modulate.a = 0.0
+
 func shake_camera(intensity: float, duration: float) -> void:
 	_shake_intensity = intensity
 	_shake_duration = duration
@@ -214,6 +231,29 @@ func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
 
 func _on_special_combo() -> void:
 	shake_camera(12.0, 0.3)
+
+func _on_whataboutism() -> void:
+	shake_camera(10.0, 0.25)
+	if _whataboutism_node == null:
+		_setup_whataboutism()
+	_whataboutism_timer = WHATABOUTISM_DISPLAY_DURATION
+	_whataboutism_node.modulate.a = 1.0
+	_whataboutism_node.rect_scale = Vector2(1.4, 1.4)
+
+func _setup_whataboutism() -> void:
+	var tex = load("res://assets/rado/whatabaoutism.png") as Texture
+	var vp_size = get_viewport().size
+	var img_size = Vector2(280, 280)
+	_whataboutism_node = Control.new()
+	_whataboutism_node.rect_size = img_size
+	_whataboutism_node.rect_position = vp_size / 2.0 - img_size / 2.0
+	_whataboutism_node.modulate.a = 0.0
+	var img = TextureRect.new()
+	img.texture = tex
+	img.expand = true
+	img.rect_size = img_size
+	_whataboutism_node.add_child(img)
+	$HUD.add_child(_whataboutism_node)
 
 func _setup_combo_labels() -> void:
 	var font_data = DynamicFontData.new()

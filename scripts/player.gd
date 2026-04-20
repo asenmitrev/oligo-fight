@@ -67,6 +67,7 @@ enum State { NORMAL, HIT, FALLEN, GETUP, BLOCKING }
 signal defeated
 signal hit_landed(is_heavy, combo_count)
 signal special_combo_triggered
+signal whataboutism_triggered
 
 var state = State.NORMAL
 var max_health := 100
@@ -109,6 +110,13 @@ var _current_combo_count: int = 0
 var _pending_special: bool = false
 var punch_makes_invisible: bool = false
 var proj_fires_airborne: bool = false
+var whataboutism_blocks: bool = false
+var _whataboutism_block_count: int = 0
+var _whataboutism_window_ticks: int = 0
+var _pending_whataboutism: bool = false
+var _pending_whataboutism_pos: Vector2 = Vector2.ZERO
+var _pending_whataboutism_damage: int = 0
+var _pending_whataboutism_knockback: float = 1.0
 var _invis_ticks: int = 0
 const INVIS_MAX_TICKS: int = 180  # 3 s at 60 Hz
 
@@ -244,6 +252,7 @@ func apply_character(def: CharacterDef) -> void:
 	punch_pulls_opponent = def.punch_pulls_opponent
 	punch_makes_invisible = def.punch_makes_invisible
 	proj_fires_airborne = def.proj_fires_airborne
+	whataboutism_blocks = def.whataboutism_blocks
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -463,8 +472,24 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			state = State.BLOCKING
 			_block_stun_ticks = BLOCK_STUN_TICKS
 			_blocked_punch = true
+			_play_anim("block")
+			if anim.frame >= 1:
+				anim.frame = 1
+				anim.stop()
 			if _opponent:
 				_opponent._current_combo_count = 0
+			if whataboutism_blocks:
+				_whataboutism_window_ticks = COMBO_INPUT_WINDOW_TICKS
+				_whataboutism_block_count += 1
+				if _whataboutism_block_count >= 3:
+					_whataboutism_block_count = 0
+					_whataboutism_window_ticks = 0
+					emit_signal("whataboutism_triggered")
+					if _opponent:
+						_opponent._pending_whataboutism = true
+						_opponent._pending_whataboutism_pos = global_position
+						_opponent._pending_whataboutism_damage = kick_damage
+						_opponent._pending_whataboutism_knockback = kick_knockback_multiplier
 	else:
 		_apply_impact(attacker_pos, knockback_multiplier if is_kick else 1.0)
 		hit_count += 1
@@ -731,6 +756,20 @@ func _action_just_pressed(action: String) -> bool:
 func _physics_process(delta: float) -> void:
 	if frozen:
 		return
+	if _pending_whataboutism:
+		_pending_whataboutism = false
+		_end_invisibility()
+		if not is_defeated and not (state == State.FALLEN and is_on_floor()):
+			_apply_impact(_pending_whataboutism_pos, _pending_whataboutism_knockback)
+			health = max(0, health - _pending_whataboutism_damage)
+			if _health_bar:
+				_health_bar.value = health
+			if health <= 0:
+				_enter_defeated()
+			else:
+				_enter_fallen()
+			_hitstop_ticks = HITSTOP_TICKS
+		return
 	if _opponent == null:
 		_find_opponent()
 	var is_on_floor_t = is_on_floor()
@@ -848,6 +887,11 @@ func _physics_process(delta: float) -> void:
 			state = State.NORMAL
 			cur_state = State.NORMAL
 			_blocked_punch = false
+
+	if _whataboutism_window_ticks > 0:
+		_whataboutism_window_ticks -= 1
+		if _whataboutism_window_ticks == 0:
+			_whataboutism_block_count = 0
 
 	if not is_on_floor_t:
 		# Round gravity accumulation to prevent float drift between clients.

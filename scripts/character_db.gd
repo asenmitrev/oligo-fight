@@ -168,6 +168,7 @@ func _init() -> void:
 	rado.kick_damage = 11
 	rado.block_damage_modifier = 0.15
 	rado.max_health = 110
+	rado.whataboutism_blocks = true
 	_register(rado)
 
 
