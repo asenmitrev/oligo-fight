@@ -9,6 +9,7 @@ const _sasho_frames: SpriteFrames = preload("res://resources/sasho_sprite_frames
 const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_frames.tres")
 const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.tres")
 const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_frames.tres")
+const _rado_frames: SpriteFrames = preload("res://resources/rado_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
@@ -159,6 +160,15 @@ func _init() -> void:
 	crunch.proj_spawn_x_offset = 70
 	crunch.proj_spawn_y_offset = 200
 	_register(crunch)
+
+	var rado = _make_def("rado", "Rado", _rado_frames, Color(1, 1, 1, 1))
+	rado.speed = 340.0
+	rado.jump_velocity = JUMP_VELOCITY
+	rado.punch_damage = 13
+	rado.kick_damage = 11
+	rado.block_damage_modifier = 0.15
+	rado.max_health = 110
+	_register(rado)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
