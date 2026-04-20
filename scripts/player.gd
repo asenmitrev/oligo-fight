@@ -76,6 +76,7 @@ var body_punch_enabled: bool = false
 var kick_speed_scale: float = 1.0
 var punch_speed_scale: float = 1.0
 var kick_heals_self: int = 0
+var kick_knockback_multiplier: float = 1.0
 var stay_down: bool = false
 var input_disabled: bool = false
 var fall_gravity_scale: float = 1.0
@@ -160,6 +161,7 @@ func apply_character(def: CharacterDef) -> void:
 	kick_speed_scale = def.kick_speed_scale
 	punch_speed_scale = def.punch_speed_scale
 	kick_heals_self = def.kick_heals_self
+	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
 	_proj_speed = def.proj_speed
 	_proj_hit_radius = def.proj_hit_radius
@@ -370,7 +372,7 @@ func force_fall() -> void:
 	_enter_fallen()
 
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15) -> bool:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0) -> bool:
 	if is_defeated or state == State.GETUP:
 		return false
 	if state == State.FALLEN and is_on_floor():
@@ -389,7 +391,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 	if is_blocking:
 		if is_kick:
 			block_broken = true
-			_apply_impact(attacker_pos, 1.0)
+			_apply_impact(attacker_pos, knockback_multiplier)
 		else:
 			damage = int(damage * block_damage_modifier)
 			_apply_impact(attacker_pos, 0.5)
@@ -399,7 +401,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			if _opponent:
 				_opponent._current_combo_count = 0
 	else:
-		_apply_impact(attacker_pos, 1.0)
+		_apply_impact(attacker_pos, knockback_multiplier if is_kick else 1.0)
 		hit_count += 1
 		_hit_ticks = HIT_WINDOW_TICKS
 		_current_combo_count = 0
@@ -530,7 +532,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 
 	var is_counter  = _opponent._attacking
 
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage)
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage, kick_knockback_multiplier if is_kick else 1.0)
 	if not hit_registered:
 		return
 	_hitstop_ticks = HITSTOP_TICKS

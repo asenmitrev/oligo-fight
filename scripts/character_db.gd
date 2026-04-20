@@ -52,7 +52,8 @@ func _init() -> void:
 	veli.jump_velocity = JUMP_VELOCITY * 0.5
 	veli.punch_damage = 0
 	veli.punch_pulls_opponent = true
-	veli.kick_damage = 10
+	veli.kick_damage = 20
+	veli.kick_knockback_multiplier = 3.667
 	veli.block_damage_modifier = 0.18
 	veli.max_health = 120
 	veli.fall_gravity_scale = 0.15
