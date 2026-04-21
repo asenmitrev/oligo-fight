@@ -71,6 +71,7 @@ func _init() -> void:
 	veli.fall_gravity_scale = 0.15
 	veli.invulnerable_when_airborne = true
 	veli.partial_loop_jump = true
+	veli.disable_attacks_airborne = true
 	_register(veli)
 
 	var bobe = _make_def("bobe", "Bobe", _bobe_frames, Color(1, 1, 1, 1))

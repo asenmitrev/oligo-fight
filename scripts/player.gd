@@ -111,6 +111,7 @@ var _pending_special: bool = false
 var punch_makes_invisible: bool = false
 var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
+var disable_attacks_airborne: bool = false
 var _whataboutism_block_count: int = 0
 var _whataboutism_window_ticks: int = 0
 var _pending_whataboutism: bool = false
@@ -255,6 +256,7 @@ func apply_character(def: CharacterDef) -> void:
 	punch_makes_invisible = def.punch_makes_invisible
 	proj_fires_airborne = def.proj_fires_airborne
 	whataboutism_blocks = def.whataboutism_blocks
+	disable_attacks_airborne = def.disable_attacks_airborne
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	anim.play("idle")
@@ -802,7 +804,7 @@ func _physics_process(delta: float) -> void:
 			velocity.y = jump_velocity
 
 	if cur_state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
-		if not _attacking and not is_blocking_input:
+		if not _attacking and not is_blocking_input  and not (disable_attacks_airborne and not is_on_floor_t):
 			if inp_punch_jp:
 				_attacking = true
 				if not is_on_floor_t:
