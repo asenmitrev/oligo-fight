@@ -368,6 +368,8 @@ func _play_anim(anim_name: String) -> void:
 
 
 func _find_opponent() -> void:
+	if _opponent != null and is_instance_valid(_opponent):
+		return
 	for p in get_tree().get_nodes_in_group("players"):
 		if p != self:
 			_opponent = p as KinematicBody2D
@@ -704,34 +706,6 @@ func _launch_projectile() -> void:
 		s.scale = Vector2(_proj_scale_base, _proj_scale_base)
 
 
-func _update_projectile() -> void:
-	if _opponent == null:
-		_find_opponent()
-	for i in range(_proj_pool):
-		if not _proj_active[i]:
-			continue
-		_proj_x[i] += _proj_dir[i] * _proj_speed
-		_proj_y[i] += _proj_vy[i]
-		_proj_lifetime[i] += 1
-
-		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
-			_proj_active[i] = false
-			continue
-
-		if _opponent == null:
-			continue
-
-		var dx := abs(_proj_x[i] - int(_opponent.global_position.x))
-		var dy := abs(_proj_y[i] - int(_opponent.global_position.y))
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance and int(_opponent.global_position.y) >= _proj_y[i]:
-			_proj_active[i] = false
-			var hit_pos := Vector2(_proj_x[i], _proj_y[i])
-			var registered: bool = _opponent.take_hit(false, hit_pos, false, _proj_damage)
-			if registered:
-				_hitstop_ticks = HITSTOP_TICKS
-				emit_signal("hit_landed", false, 0)
-
-
 func set_committed_keys(keys: int) -> void:
 	_committed_keys = keys
 
@@ -778,20 +752,51 @@ func _physics_process(delta: float) -> void:
 	if _opponent == null:
 		_find_opponent()
 
-	# Cache all inputs once to avoid repeated is_networked checks and dict lookups.
-	var inp_left:     bool = _action_pressed(action_left)
-	var inp_right:    bool = _action_pressed(action_right)
-	var inp_down:     bool = _action_pressed(action_down)
-	var inp_jump_jp:  bool = _action_just_pressed(action_jump)
-	var inp_punch_jp: bool = _action_just_pressed(action_punch)
-	var inp_kick_jp:  bool = _action_just_pressed(action_kick)
+	# Cache opponent data for the rest of the frame.
+	var opp_pos := Vector2.ZERO
+	var opp_attacking := false
+	if _opponent:
+		opp_pos = _opponent.global_position
+		opp_attacking = _opponent._attacking
+
+	# Cache all inputs once to avoid repeated checks and dict lookups.
+	var inp_left: bool
+	var inp_right: bool
+	var inp_down: bool
+	var inp_jump_jp: bool
+	var inp_punch_jp: bool
+	var inp_kick_jp: bool
+
+	if is_networked:
+		var k := _committed_keys
+		var pk := _prev_committed_keys
+		inp_left     = bool(k & 1)
+		inp_right    = bool(k & 2)
+		var j_bit    := 4
+		inp_jump_jp  = bool(k & j_bit) and not bool(pk & j_bit)
+		inp_down     = bool(k & 8)
+		var p_bit    := 16
+		inp_punch_jp = bool(k & p_bit) and not bool(pk & p_bit)
+		var k_bit    := 32
+		inp_kick_jp  = bool(k & k_bit) and not bool(pk & k_bit)
+	else:
+		if input_disabled:
+			inp_left = false; inp_right = false; inp_down = false
+			inp_jump_jp = false; inp_punch_jp = false; inp_kick_jp = false
+		else:
+			inp_left     = Input.is_action_pressed(action_left)
+			inp_right    = Input.is_action_pressed(action_right)
+			inp_down     = Input.is_action_pressed(action_down)
+			inp_jump_jp  = Input.is_action_just_pressed(action_jump)
+			inp_punch_jp = Input.is_action_just_pressed(action_punch)
+			inp_kick_jp  = Input.is_action_just_pressed(action_kick)
 
 	var cur_state = state
 
 	var to_opp := 0.0
 	var is_blocking_input := false
 	if _opponent:
-		to_opp = _opponent.global_position.x - global_position.x
+		to_opp = opp_pos.x - global_position.x
 		if   to_opp > 0 and inp_left:  is_blocking_input = true
 		elif to_opp < 0 and inp_right: is_blocking_input = true
 
@@ -857,18 +862,45 @@ func _physics_process(delta: float) -> void:
 			_launch_projectile()
 
 	if fires_projectile:
-		_update_projectile()
+		var phz := Engine.iterations_per_second
+		var opp_x_int := int(opp_pos.x)
+		var opp_y_int := int(opp_pos.y)
+
 		for i in range(_proj_pool):
+			if not _proj_active[i]:
+				_proj_sprites[i].visible = false
+				continue
+
+			_proj_x[i] += _proj_dir[i] * _proj_speed
+			_proj_y[i] += _proj_vy[i]
+			_proj_lifetime[i] += 1
+
+			if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
+				_proj_active[i] = false
+				_proj_sprites[i].visible = false
+				continue
+
+			var dx := abs(_proj_x[i] - opp_x_int)
+			var dy := abs(_proj_y[i] - opp_y_int)
+			if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y_int >= _proj_y[i]:
+				_proj_active[i] = false
+				_proj_sprites[i].visible = false
+				var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_damage)
+				if registered:
+					_hitstop_ticks = HITSTOP_TICKS
+					emit_signal("hit_landed", false, 0)
+				continue
+
 			var s: Sprite = _proj_sprites[i]
-			s.visible = _proj_active[i]
-			if _proj_active[i]:
-				s.global_position = Vector2(_proj_x[i], _proj_y[i])
-				s.flip_h = (_proj_dir[i] < 0)
-				var hf := _proj_anim_hframes_kick if _proj_is_kick[i] else _proj_anim_hframes
-				var vf := _proj_anim_vframes_kick if _proj_is_kick[i] else _proj_anim_vframes
-				var fps := _proj_anim_fps_kick if _proj_is_kick[i] else _proj_anim_fps
-				if hf * vf > 1:
-					s.frame = (_proj_lifetime[i] * fps / Engine.iterations_per_second) % (hf * vf)
+			s.visible = true
+			s.global_position = Vector2(_proj_x[i], _proj_y[i])
+			s.flip_h = (_proj_dir[i] < 0)
+			var is_kick_p: bool  = _proj_is_kick[i]
+			var hf := _proj_anim_hframes_kick if is_kick_p else _proj_anim_hframes
+			var vf := _proj_anim_vframes_kick if is_kick_p else _proj_anim_vframes
+			var fps := _proj_anim_fps_kick if is_kick_p else _proj_anim_fps
+			if hf * vf > 1:
+				s.frame = (_proj_lifetime[i] * fps / phz) % (hf * vf)
 
 	if _hit_ticks > 0:
 		_hit_ticks -= 1
@@ -915,26 +947,24 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var direction := float(inp_right) - float(inp_left)
+	var is_walking_back := false
+	var dist_to_opp := abs(to_opp)
+	if direction != 0:
+		if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
+			is_walking_back = true
 
-	var is_opponent_attacking = _opponent._attacking
-	var is_walking_back = false
-
-	var dist_to_opp = abs(to_opp)
-	if (to_opp > 0 and direction < 0) or (to_opp < 0 and direction > 0):
-		is_walking_back = true
-
-	var should_block_visually = is_blocking_input and is_opponent_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
+	var should_block_visually := is_blocking_input and opp_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
 
 	if cur_state == State.HIT and should_block_visually and is_on_floor_t:
 		velocity.x = 0.0
 	elif _attacking and (is_on_floor_t or (_lunge_upwards_kick and _attack_is_kick)) and not fires_projectile:
-		var lunge = 1.0 if not anim.flip_h else -1.0
-		var lunge_scale = kick_lunge_scale if _attack_is_kick else punch_lunge_scale
+		var lunge := 1.0 if not anim.flip_h else -1.0
+		var lunge_scale := kick_lunge_scale if _attack_is_kick else punch_lunge_scale
 		velocity.x = lunge * (speed * 0.3 * lunge_scale)
 		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t:
 			velocity.y = -(speed * 0.7 * lunge_scale)
 	else:
-		var current_speed = speed
+		var current_speed := speed
 		if is_walking_back:
 			current_speed = speed * WALK_BACK_SPEED_MULT
 		if velocity.y != 0:
@@ -971,8 +1001,7 @@ func _physics_process(delta: float) -> void:
 
 	# Auto-face opponent when idle, walking, or blocking
 	if not _attacking and is_on_floor_t and (cur_state == State.NORMAL or cur_state == State.BLOCKING):
-		if _opponent:
-			if dist_to_opp > 50:
-				anim.flip_h = to_opp < 0
+		if _opponent and dist_to_opp > 50:
+			anim.flip_h = to_opp < 0
 
 	_prev_committed_keys = _committed_keys
