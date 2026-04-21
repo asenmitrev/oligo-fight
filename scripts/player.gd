@@ -152,6 +152,7 @@ var _lunge_upwards_kick: bool = false
 # Physics-tick animation end detection: replaces the render-loop animation_finished
 # signal so state transitions happen at the same exec_frame on both clients.
 var _anim_ticks_remaining: int = -1  # -1 = looping or not tracking
+var _anim_metadata: Dictionary = {}
 
 
 func _ready() -> void:
@@ -259,7 +260,69 @@ func apply_character(def: CharacterDef) -> void:
 	disable_attacks_airborne = def.disable_attacks_airborne
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
+	_cache_all_animation_data()
 	anim.play("idle")
+
+
+func _cache_all_animation_data() -> void:
+	_anim_metadata.clear()
+	if not anim.frames:
+		return
+
+	var phz := Engine.iterations_per_second
+
+	for anim_name in anim.frames.get_animation_names():
+		# Handle the potential for two variants of "punch" if airborne speed differs.
+		var variants := [["", 1.0]] # [suffix, speed_scale_override]
+		if (anim_name == "punch" or anim_name == "body_punch") and proj_fires_airborne:
+			variants = [["", punch_speed_scale], ["_air", flypunch_speed_scale]]
+		else:
+			var ss := 1.0
+			if anim_name == "kick": ss = kick_speed_scale
+			elif anim_name == "flykick": ss = flykick_speed_scale
+			elif anim_name == "punch" or anim_name == "body_punch": ss = punch_speed_scale
+			elif anim_name == "flypunch": ss = flypunch_speed_scale
+			variants = [["", ss]]
+
+		for v in variants:
+			var suffix: String = v[0]
+			var ss: float = v[1]
+			var data := {
+				"speed_scale": ss,
+				"hit_tick": -1,
+				"proj_tick": -1,
+				"total_ticks": -1,
+				"is_kick": false
+			}
+
+			var fps_raw := anim.frames.get_animation_speed(anim_name) * ss
+			var fps_int := max(1, int(round(fps_raw)))
+
+			var target_frame := -1
+			if anim_name == "punch" or anim_name == "flypunch":
+				target_frame = 1
+			elif anim_name == "bodypunch":
+				target_frame = 2
+			elif anim_name == "kick" or anim_name == "flykick":
+				target_frame = 2
+				data.is_kick = true
+
+			if target_frame >= 0:
+				data.hit_tick = (target_frame * phz + fps_int - 1) / fps_int
+
+			var _fires: bool = (fires_projectile and (
+				(_proj_fires_on_punch and anim_name == "punch") or
+				(_proj_fires_on_kick and anim_name == "kick")
+			))
+			if _fires:
+				var proj_frame := 3 if anim_name == "punch" else 2
+				data.proj_tick = (proj_frame * phz + fps_int - 1) / fps_int
+
+			if not anim.frames.get_animation_loop(anim_name):
+				var fc := anim.frames.get_frame_count(anim_name)
+				data.total_ticks = (fc * phz + fps_int - 1) / fps_int
+
+			_anim_metadata[anim_name + suffix] = data
 
 
 func reset_for_round() -> void:
@@ -317,52 +380,23 @@ func _play_anim(anim_name: String) -> void:
 		_proj_launch_tick = -1
 		_proj_launch_count = 0
 
-		var speed_scale: float
-		if anim_name == "kick":
-			speed_scale = kick_speed_scale
-		elif anim_name == "flykick":
-			speed_scale = flykick_speed_scale
-		elif anim_name == "punch" or anim_name == "body_punch":
-			if proj_fires_airborne and not is_on_floor():
-				speed_scale = flypunch_speed_scale
-			else:
-				speed_scale = punch_speed_scale
-		elif anim_name == "flypunch":
-			speed_scale = flypunch_speed_scale
-		else:
-			speed_scale = 1.0
-		anim.speed_scale = speed_scale
+		var lookup_key := anim_name
+		if (anim_name == "punch" or anim_name == "body_punch") and proj_fires_airborne and not is_on_floor():
+			lookup_key += "_air"
 
-		if anim.frames and anim.frames.has_animation(anim_name):
-			var fps_raw := anim.frames.get_animation_speed(anim_name) * speed_scale
-			var fps_int := max(1, int(round(fps_raw)))
-			var phz     := Engine.iterations_per_second
+		var data: Dictionary = _anim_metadata.get(lookup_key, {})
+		if not data.empty():
+			anim.speed_scale = data.speed_scale
+			_attack_hit_tick = data.hit_tick
+			_proj_launch_tick = data.proj_tick
+			_anim_ticks_remaining = data.total_ticks
+			_attack_is_kick = data.is_kick
 
-			# Hit-frame tick for attack animations (integer ceiling: no float ops).
-			var target_frame := -1
-			if anim_name == "punch" or anim_name == "flypunch":
-				target_frame = 1
-			elif anim_name == "bodypunch":
-				target_frame = 2
-			elif anim_name == "kick" or anim_name == "flykick":
-				target_frame = 2
-				_attack_is_kick = true
-			if target_frame >= 0:
-				_attack_hit_tick = (target_frame * phz + fps_int - 1) / fps_int
-
-			var _fires_this_anim := (fires_projectile and (
-				(_proj_fires_on_punch and anim_name == "punch") or
-				(_proj_fires_on_kick and anim_name == "kick")
-			))
-			if _fires_this_anim:
+			if _proj_launch_tick >= 0:
 				_proj_pending_is_kick = (anim_name == "kick")
-				var proj_frame := 3 if anim_name == "punch" else 2
-				_proj_launch_tick = (proj_frame * phz + fps_int - 1) / fps_int
-
-			# Animation-end tick for non-looping animations.
-			if not anim.frames.get_animation_loop(anim_name):
-				var fc := anim.frames.get_frame_count(anim_name)
-				_anim_ticks_remaining = (fc * phz + fps_int - 1) / fps_int
+		else:
+			# Fallback for dynamic animations or missing keys (should be rare)
+			anim.speed_scale = 1.0
 
 		anim.play(anim_name)
 
