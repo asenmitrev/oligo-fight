@@ -121,6 +121,7 @@ var _pending_whataboutism: bool = false
 var _pending_whataboutism_pos: Vector2 = Vector2.ZERO
 var _pending_whataboutism_damage: int = 0
 var _pending_whataboutism_knockback: float = 1.0
+var _veli_kick_icon: Sprite
 var _invis_ticks: int = 0
 const INVIS_MAX_TICKS: int = 180
 
@@ -218,6 +219,18 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_anim_fps = def.proj_anim_fps
 	
 	_init_projectile_pool(def.proj_pool)
+
+	if display_name == "Veli":
+		if not _veli_kick_icon:
+			_veli_kick_icon = Sprite.new()
+			_veli_kick_icon.texture = load("res://assets/veli/empathetic-kick.png")
+			_veli_kick_icon.visible = false
+			_veli_kick_icon.scale = Vector2(1.2, 1.2)
+			_veli_kick_icon.z_index = 5
+			add_child(_veli_kick_icon)
+		_veli_kick_icon.position = Vector2(0, -220)
+	elif _veli_kick_icon:
+		_veli_kick_icon.visible = false
 
 	fall_gravity_scale = def.fall_gravity_scale
 	invulnerable_when_airborne = def.invulnerable_when_airborne
@@ -326,6 +339,8 @@ func reset_for_round() -> void:
 	_prev_committed_keys = 0
 	_invis_ticks = 0
 	anim.modulate.a = 1.0
+	if _veli_kick_icon:
+		_veli_kick_icon.visible = false
 	_anim_hit_fired = false
 	_attack_hit_tick = -1
 	_attack_tick_count = 0
@@ -364,6 +379,9 @@ func _play_anim(anim_name: String) -> void:
 		else:
 			anim.speed_scale = 1.0
 		anim.play(anim_name)
+		
+		if _veli_kick_icon:
+			_veli_kick_icon.visible = false
 
 
 func _find_opponent() -> void:
@@ -583,6 +601,12 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var is_counter  = _opponent._attacking
 	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage, kick_knockback_multiplier if is_kick else 1.0)
 	if not hit_registered: return
+	
+	if is_kick and _veli_kick_icon:
+		_veli_kick_icon.visible = true
+		var side = -1.0 if anim.flip_h else 1.0
+		_veli_kick_icon.position = Vector2(side * 140, -220)
+		
 	_hitstop_ticks = HITSTOP_TICKS
 	if punch_makes_invisible and not is_kick:
 		_invis_ticks = INVIS_MAX_TICKS
