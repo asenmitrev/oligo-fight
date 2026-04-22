@@ -11,6 +11,7 @@ const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.t
 const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_frames.tres")
 const _rado_frames: SpriteFrames = preload("res://resources/rado_sprite_frames.tres")
 const _dani_frames: SpriteFrames = preload("res://resources/dani_sprite_frames.tres")
+const _yavor_frames: SpriteFrames = preload("res://resources/yavor_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
@@ -188,6 +189,16 @@ func _init() -> void:
 	dani.punch_speed_scale = 1.5
 	dani.punch_self_damages = true
 	_register(dani)
+
+	var yavor = _make_def("yavor", "Yavor", _yavor_frames, Color(1, 1, 1, 1))
+	yavor.speed = 350.0
+	yavor.jump_velocity = JUMP_VELOCITY
+	yavor.punch_damage = 13
+	yavor.kick_damage = 10
+	yavor.block_damage_modifier = 0.15
+	yavor.max_health = 105
+	yavor.punch_arm_extension = 160
+	_register(yavor)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
