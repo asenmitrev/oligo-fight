@@ -183,7 +183,7 @@ func _init() -> void:
 	dani.speed = 750.0
 	dani.jump_speed = 350.0
 	dani.jump_velocity = JUMP_VELOCITY
-	dani.punch_damage = 13
+	dani.punch_damage = 25
 	dani.kick_damage = 10
 	dani.block_damage_modifier = 0.15
 	dani.max_health = 105
