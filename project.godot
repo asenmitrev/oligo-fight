@@ -32,7 +32,7 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Simonka Boi"
+config/name="OLIGO FIGHT"
 run/main_scene="res://scenes/MainMenu.tscn"
 boot_splash/image="res://assets/bg_character-select.png"
 boot_splash/use_filter=false

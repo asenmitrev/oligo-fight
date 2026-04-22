@@ -1,7 +1,7 @@
 {
   "name": "simonka-boi-relay",
   "version": "1.0.0",
-  "description": "WebSocket relay server for Simonka Boi multiplayer",
+  "description": "WebSocket relay server for OLIGO FIGHT multiplayer",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

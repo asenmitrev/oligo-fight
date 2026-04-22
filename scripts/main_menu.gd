@@ -51,7 +51,7 @@ func _build_ui() -> void:
 	title_font.outline_color = Color(0, 0, 0, 1)
 
 	var title := Label.new()
-	title.text = "SIMONKA BOI"
+	title.text = "OLIGO FIGHT"
 	title.add_font_override("font", title_font)
 	title.add_color_override("font_color", Color(1, 0.88, 0.1, 1))
 	title.anchor_left = 0.0
