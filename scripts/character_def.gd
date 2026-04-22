@@ -7,6 +7,7 @@ export var modulate: Color = Color(1, 1, 1, 1)
 export var preview_frames: SpriteFrames
 export var punch_arm_extension: float = 120.0
 export var speed: float = 350.0
+export var jump_speed: float = 700.0
 export var jump_velocity: float = -1700.0
 export var punch_damage: int = 15
 export var kick_damage: int = 8

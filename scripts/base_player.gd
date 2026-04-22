@@ -3,6 +3,7 @@ extends KinematicBody2D
 const CharacterDef = preload("res://scripts/character_def.gd")
 
 var speed := 350.0
+var jump_speed := 350.0
 var jump_velocity := -1700.0
 const GRAVITY := 4800.0
 const FLOOR_SNAP := Vector2(0, 24)
@@ -177,6 +178,7 @@ func apply_character(def: CharacterDef) -> void:
 	anim.modulate = def.modulate
 	_punch_arm_extension = def.punch_arm_extension
 	speed = def.speed
+	jump_speed = def.jump_speed
 	jump_velocity = def.jump_velocity
 	punch_damage = def.punch_damage
 	kick_damage = def.kick_damage
@@ -803,7 +805,7 @@ func _physics_process(delta: float) -> void:
 		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t: velocity.y = -(speed * 0.7 * lunge_scale)
 	else:
 		var current_speed := speed * (WALK_BACK_SPEED_MULT if is_walking_back else 1.0)
-		if velocity.y != 0: current_speed = speed * 2
+		if velocity.y != 0: current_speed = jump_speed
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
