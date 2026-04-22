@@ -145,7 +145,7 @@ func _setup_select_grid() -> void:
 	var vp := get_viewport().size
 	var sprite_y := vp.y - FEET_FROM_BOTTOM
 	# one center-x per character — add an entry here if you add a character
-	var centers_x := [vp.x * 0.100, vp.x * 0.200, vp.x * 0.300, vp.x * 0.400, vp.x * 0.500, vp.x * 0.600, vp.x * 0.700, vp.x * 0.800]
+	var centers_x := [vp.x * 0.100, vp.x * 0.200, vp.x * 0.300, vp.x * 0.400, vp.x * 0.500, vp.x * 0.600, vp.x * 0.700, vp.x * 0.800, vp.x * 0.900]
 	assert(CharacterDB.all_characters.size() == centers_x.size(), "centers_x needs one entry per character")
 
 	for i in range(CharacterDB.all_characters.size()):

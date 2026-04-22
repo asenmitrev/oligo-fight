@@ -10,6 +10,7 @@ const _siyana_frames: SpriteFrames = preload("res://resources/siyana_sprite_fram
 const _itso_frames: SpriteFrames = preload("res://resources/itso_sprite_frames.tres")
 const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_frames.tres")
 const _rado_frames: SpriteFrames = preload("res://resources/rado_sprite_frames.tres")
+const _dani_frames: SpriteFrames = preload("res://resources/dani_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
@@ -174,6 +175,15 @@ func _init() -> void:
 	rado.kick_lunge_scale = 6.0
 	
 	_register(rado)
+
+	var dani = _make_def("dani", "Dani", _dani_frames, Color(1, 1, 1, 1))
+	dani.speed = 350.0
+	dani.jump_velocity = JUMP_VELOCITY
+	dani.punch_damage = 13
+	dani.kick_damage = 10
+	dani.block_damage_modifier = 0.15
+	dani.max_health = 105
+	_register(dani)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
