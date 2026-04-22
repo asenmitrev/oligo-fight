@@ -47,7 +47,7 @@ var punch_makes_invisible: bool = false
 var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
 var disable_attacks_airborne: bool = false
-
+var flykick_forward: bool = false
 # Projectile config (kept in base for netcode sync compatibility)
 var fires_projectile: bool = false
 var _proj_speed: int = 0
@@ -186,6 +186,7 @@ func apply_character(def: CharacterDef) -> void:
 	max_health = def.max_health
 	health = max_health
 	if _health_bar: _health_bar.max_value = max_health
+	flykick_forward = def.flykick_forward
 	launch_punch = def.launch_punch
 	combos_enabled = def.combos_enabled
 	body_punch_enabled = def.body_punch_enabled
@@ -744,7 +745,7 @@ func _physics_process(delta: float) -> void:
 		_attack_tick_count += 1
 		if _attack_tick_count >= _attack_hit_tick:
 			_anim_hit_fired = true
-			_try_hit_opponent(_attack_is_kick)
+			_try_hit_opponent(_attack_is_kick or _current_anim == "flykick")
 
 	if _attacking and not _proj_launch_fired and _proj_launch_tick >= 0:
 		_proj_launch_count += 1
@@ -803,6 +804,9 @@ func _physics_process(delta: float) -> void:
 		var lunge_scale := kick_lunge_scale if _attack_is_kick else punch_lunge_scale
 		velocity.x = lunge * (speed * 0.3 * lunge_scale)
 		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t: velocity.y = -(speed * 0.7 * lunge_scale)
+	elif _attacking and flykick_forward and _current_anim == "flykick":
+		var lunge := 1.0 if not anim.flip_h else -1.0
+		velocity.x = lunge * 2000.0
 	else:
 		var current_speed := speed * (WALK_BACK_SPEED_MULT if is_walking_back else 1.0)
 		if velocity.y != 0: current_speed = jump_speed
