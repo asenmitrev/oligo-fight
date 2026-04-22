@@ -62,6 +62,9 @@ var _proj_spawn_y_offset: int = 200
 var _proj_pending_is_kick: bool = false
 var _proj_fires_on_punch: bool = false
 var _proj_fires_on_kick: bool = false
+var _proj_fires_on_walk: bool = false
+var _proj_walk_fire_rate: int = 10
+var _proj_walk_fire_cooldown: int = 0
 var _proj_texture_punch: Texture
 var _proj_texture_kick_tex: Texture
 var _proj_scale_base: float = 3.0
@@ -203,6 +206,8 @@ func apply_character(def: CharacterDef) -> void:
 	fires_projectile = def.fires_projectile
 	_proj_fires_on_punch = def.proj_fires_on_punch
 	_proj_fires_on_kick = def.proj_fires_on_kick
+	_proj_fires_on_walk = def.proj_fires_on_walk
+	_proj_walk_fire_rate = def.proj_walk_fire_rate
 	_proj_texture_punch = def.proj_texture
 	_proj_texture_kick_tex = def.proj_texture_kick
 	_proj_scale_base = def.proj_scale
@@ -762,6 +767,9 @@ func _physics_process(delta: float) -> void:
 
 	_process_ability_logic(opp_pos)
 
+	if _proj_fires_on_walk and _proj_walk_fire_cooldown > 0:
+		_proj_walk_fire_cooldown -= 1
+
 	if _hit_ticks > 0:
 		_hit_ticks -= 1
 		if _hit_ticks == 0:
@@ -884,6 +892,10 @@ func _update_animation_state(direction: float, is_on_floor_t: bool, should_block
 				anim.frame = 2
 		elif direction != 0:
 			_play_anim("walk")
+			if _proj_fires_on_walk and _proj_walk_fire_cooldown == 0:
+				_proj_pending_is_kick = false
+				_launch_projectile()
+				_proj_walk_fire_cooldown = _proj_walk_fire_rate
 		else:
 			_play_anim("idle")
 	if state == State.BLOCKING and _current_anim != "block":

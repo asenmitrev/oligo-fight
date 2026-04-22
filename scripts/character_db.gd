@@ -17,6 +17,8 @@ const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.p
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
 const _crunch_pigeon_tex: Texture = preload("res://assets/crunch/pigeon.png")
 
+const _yavor_proj_tex: Texture = preload("res://assets/yavor/fas.png")
+
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
 
@@ -198,6 +200,19 @@ func _init() -> void:
 	yavor.block_damage_modifier = 0.15
 	yavor.max_health = 105
 	yavor.punch_arm_extension = 160
+	yavor.fires_projectile = true
+	yavor.proj_fires_on_walk = true
+	yavor.proj_walk_fire_rate = 50
+	yavor.proj_damage = 10
+	yavor.proj_speed = 0
+	yavor.proj_hit_radius = 20
+	yavor.proj_y_tolerance = 220
+	yavor.proj_lifetime_ticks = 300
+	yavor.proj_pool = 3
+	yavor.proj_texture = _yavor_proj_tex
+	yavor.proj_scale = 0.2
+	yavor.proj_spawn_x_offset = 70
+	yavor.proj_spawn_y_offset = -50
 	_register(yavor)
 
 

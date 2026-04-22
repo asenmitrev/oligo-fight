@@ -27,7 +27,7 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 
 		var dx := abs(_proj_x[i] - opp_x_int)
 		var dy := abs(_proj_y[i] - opp_y_int)
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y_int >= _proj_y[i]:
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y_int + 50 >= _proj_y[i]:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
 			var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_damage)
