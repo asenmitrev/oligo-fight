@@ -176,6 +176,7 @@ func _init() -> void:
 	rado.whataboutism_blocks = true
 	rado.lunge_upwards_kick = true
 	rado.kick_lunge_scale = 6.0
+	rado.walk_self_heal = 1
 	
 	_register(rado)
 

@@ -38,6 +38,7 @@ var flypunch_speed_scale: float = 1.0
 var kick_lunge_scale: float = 1.0
 var punch_lunge_scale: float = 1.0
 var kick_heals_self: int = 0
+var walk_self_heal: int = 0
 var kick_knockback_multiplier: float = 1.0
 var fall_gravity_scale: float = 1.0
 var invulnerable_when_airborne: bool = false
@@ -202,6 +203,7 @@ func apply_character(def: CharacterDef) -> void:
 	kick_lunge_scale = def.kick_lunge_scale
 	punch_lunge_scale = def.punch_lunge_scale
 	kick_heals_self = def.kick_heals_self
+	walk_self_heal = def.walk_self_heal
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	fires_projectile = def.fires_projectile
 	_proj_fires_on_punch = def.proj_fires_on_punch
@@ -892,6 +894,9 @@ func _update_animation_state(direction: float, is_on_floor_t: bool, should_block
 				anim.frame = 2
 		elif direction != 0:
 			_play_anim("walk")
+			if walk_self_heal > 0 and anim.frame == 2:
+				health = min(max_health, health + walk_self_heal)
+				if _health_bar: _health_bar.value = health
 			if _proj_fires_on_walk and _proj_walk_fire_cooldown == 0:
 				_proj_pending_is_kick = false
 				_launch_projectile()
