@@ -185,6 +185,8 @@ func _init() -> void:
 	dani.block_damage_modifier = 0.15
 	dani.max_health = 105
 	dani.flykick_forward = true
+	dani.punch_speed_scale = 1.5
+	dani.punch_self_damages = true
 	_register(dani)
 
 

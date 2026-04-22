@@ -44,6 +44,7 @@ var invulnerable_when_airborne: bool = false
 var partial_loop_jump: bool = false
 var punch_pulls_opponent: bool = false
 var punch_makes_invisible: bool = false
+var punch_self_damages: bool = false
 var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
 var disable_attacks_airborne: bool = false
@@ -240,6 +241,7 @@ func apply_character(def: CharacterDef) -> void:
 	partial_loop_jump = def.partial_loop_jump
 	punch_pulls_opponent = def.punch_pulls_opponent
 	punch_makes_invisible = def.punch_makes_invisible
+	punch_self_damages = def.punch_self_damages
 	proj_fires_airborne = def.proj_fires_airborne
 	whataboutism_blocks = def.whataboutism_blocks
 	disable_attacks_airborne = def.disable_attacks_airborne
@@ -614,6 +616,11 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if punch_makes_invisible and not is_kick:
 		_invis_ticks = INVIS_MAX_TICKS
 		anim.modulate.a = 0.0
+	elif punch_self_damages and not is_kick:
+		health -= 10
+		if _health_bar: _health_bar.value = health
+		if health <= 0 and not is_defeated: _enter_defeated()
+
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
 	if _pending_special:
