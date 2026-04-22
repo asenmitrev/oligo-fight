@@ -59,7 +59,7 @@ func _init() -> void:
 	simonka.punch_damage = 12
 	simonka.kick_damage = 8
 	simonka.block_damage_modifier = 0.12
-	simonka.max_health = 100
+	simonka.max_health = 100.0
 	simonka.sprite_scale = 0.9
 	# _register(simonka)
 
@@ -71,7 +71,7 @@ func _init() -> void:
 	veli.kick_damage = 20
 	veli.kick_knockback_multiplier = 3.667
 	veli.block_damage_modifier = 0.18
-	veli.max_health = 120
+	veli.max_health = 120.0
 	veli.fall_gravity_scale = 0.15
 	veli.invulnerable_when_airborne = true
 	veli.partial_loop_jump = true
@@ -94,7 +94,7 @@ func _init() -> void:
 	sasho.punch_damage = 14
 	sasho.kick_damage = 11
 	sasho.block_damage_modifier = 0.15
-	sasho.max_health = 110
+	sasho.max_health = 110.0
 	sasho.punch_makes_invisible = true
 	_register(sasho)
 
@@ -104,7 +104,7 @@ func _init() -> void:
 	siyana.punch_damage = 13
 	siyana.kick_damage = 10
 	siyana.block_damage_modifier = 0.15
-	siyana.max_health = 105
+	siyana.max_health = 105.0
 	siyana.fires_projectile = true
 	siyana.proj_fires_on_kick = true
 	siyana.proj_damage = 25
@@ -172,11 +172,11 @@ func _init() -> void:
 	rado.punch_damage = 13
 	rado.kick_damage = 11
 	rado.block_damage_modifier = 0.15
-	rado.max_health = 110
+	rado.max_health = 110.0
 	rado.whataboutism_blocks = true
 	rado.lunge_upwards_kick = true
 	rado.kick_lunge_scale = 6.0
-	rado.walk_self_heal = 1
+	rado.walk_self_heal = 0.2
 	
 	_register(rado)
 
@@ -187,7 +187,7 @@ func _init() -> void:
 	dani.punch_damage = 25
 	dani.kick_damage = 10
 	dani.block_damage_modifier = 0.15
-	dani.max_health = 105
+	dani.max_health = 105.0
 	dani.flykick_forward = true
 	dani.punch_speed_scale = 1.5
 	dani.punch_self_damages = true
@@ -199,7 +199,7 @@ func _init() -> void:
 	yavor.punch_damage = 13
 	yavor.kick_damage = 10
 	yavor.block_damage_modifier = 0.15
-	yavor.max_health = 105
+	yavor.max_health = 105.0
 	yavor.punch_arm_extension = 160
 	yavor.fires_projectile = true
 	yavor.proj_fires_on_walk = true

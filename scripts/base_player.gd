@@ -38,7 +38,8 @@ var flypunch_speed_scale: float = 1.0
 var kick_lunge_scale: float = 1.0
 var punch_lunge_scale: float = 1.0
 var kick_heals_self: int = 0
-var walk_self_heal: int = 0
+var walk_self_heal: float = 0
+var _has_healed_on_walk: bool = false
 var kick_knockback_multiplier: float = 1.0
 var fall_gravity_scale: float = 1.0
 var invulnerable_when_airborne: bool = false
@@ -98,8 +99,8 @@ signal special_combo_triggered
 signal whataboutism_triggered
 
 var state = State.NORMAL
-var max_health := 100
-var health := 100
+var max_health := 100.0
+var health: float = 100.0
 var is_defeated := false
 var hit_count := 0
 var _hit_ticks: int = 0
@@ -170,7 +171,7 @@ func _ready() -> void:
 	if health_bar_path:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.max_value = max_health
-		_health_bar.value = health
+		_health_bar.value = max_health
 	_action_bits = {
 		action_left: 1, action_right: 2, action_jump: 4,
 		action_down: 8, action_punch: 16, action_kick: 32,
@@ -894,9 +895,12 @@ func _update_animation_state(direction: float, is_on_floor_t: bool, should_block
 				anim.frame = 2
 		elif direction != 0:
 			_play_anim("walk")
-			if walk_self_heal > 0 and anim.frame == 2:
+			if walk_self_heal > 0 and anim.frame == 2 and not _has_healed_on_walk:
+				_has_healed_on_walk = true
 				health = min(max_health, health + walk_self_heal)
 				if _health_bar: _health_bar.value = health
+			elif walk_self_heal > 0:
+				_has_healed_on_walk = false
 			if _proj_fires_on_walk and _proj_walk_fire_cooldown == 0:
 				_proj_pending_is_kick = false
 				_launch_projectile()
