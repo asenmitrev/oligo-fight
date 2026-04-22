@@ -177,7 +177,7 @@ func _init() -> void:
 	_register(rado)
 
 	var dani = _make_def("dani", "Dani", _dani_frames, Color(1, 1, 1, 1))
-	dani.speed = 350.0
+	dani.speed = 750.0
 	dani.jump_velocity = JUMP_VELOCITY
 	dani.punch_damage = 13
 	dani.kick_damage = 10
