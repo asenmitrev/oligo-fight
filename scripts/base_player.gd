@@ -10,7 +10,7 @@ const FLOOR_SNAP := Vector2(0, 24)
 
 var punch_damage := 15
 var kick_damage := 8
-const HIT_COMBO_THRESHOLD := 2
+const HIT_COMBO_THRESHOLD := 5
 const HIT_WINDOW_TICKS     := 120
 const PUNCH_ARM_EXTENSION  := 120.0
 const KICK_LEG_EXTENSION   := 150.0
@@ -24,8 +24,6 @@ const PROXIMITY_BLOCK_RANGE := 500.0
 const BLOCK_STUN_TICKS     := 12
 const WALK_BACK_SPEED_MULT := 0.65
 const COMBO_INPUT_WINDOW_TICKS := 30
-const SPECIAL_COMBO_DAMAGE := 35
-const SPECIAL_COMBO_SEQUENCE := ["punch", "punch", "kick"]
 
 # Shared character config flags
 var launch_punch: bool = false
@@ -95,7 +93,7 @@ enum State { NORMAL, HIT, FALLEN, GETUP, BLOCKING }
 
 signal defeated
 signal hit_landed(is_heavy, combo_count)
-signal special_combo_triggered
+
 signal whataboutism_triggered
 
 var state = State.NORMAL
@@ -118,10 +116,7 @@ var _blocked_punch: bool = false
 var _current_anim: String = ""
 var stay_down: bool = false
 var input_disabled: bool = false
-var _input_buffer: Array = []
-var _input_buffer_ticks: int = 0
 var _current_combo_count: int = 0
-var _pending_special: bool = false
 var _whataboutism_block_count: int = 0
 var _whataboutism_window_ticks: int = 0
 var _pending_whataboutism: bool = false
@@ -338,10 +333,7 @@ func reset_for_round() -> void:
 	_current_anim = ""
 	stay_down = false
 	input_disabled = false
-	_input_buffer.clear()
-	_input_buffer_ticks = 0
 	_current_combo_count = 0
-	_pending_special = false
 	_blocked_punch = false
 	_proj_next = 0
 	for i in range(_proj_pool):
@@ -631,34 +623,9 @@ func _try_hit_opponent(is_kick: bool) -> void:
 
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
-	if _pending_special:
-		_pending_special = false
-		var bonus = SPECIAL_COMBO_DAMAGE - (kick_damage if is_kick else punch_damage)
-		_opponent.health = max(0, _opponent.health - bonus)
-		if _opponent._health_bar: _opponent._health_bar.value = _opponent.health
-		if _opponent.health <= 0 and not _opponent.is_defeated: _opponent._enter_defeated()
 	if combos_enabled: _current_combo_count += 1
-	var show_combo = combos_enabled and (_opponent.state == State.FALLEN)
+	var show_combo = combos_enabled and _current_combo_count >= 2
 	emit_signal("hit_landed", is_kick, _current_combo_count if show_combo else 0)
-
-
-func _record_input(input_type: String) -> void:
-	_input_buffer_ticks = COMBO_INPUT_WINDOW_TICKS
-	_input_buffer.append(input_type)
-	var seq_len = SPECIAL_COMBO_SEQUENCE.size()
-	if _input_buffer.size() > seq_len:
-		_input_buffer = _input_buffer.slice(_input_buffer.size() - seq_len, _input_buffer.size() - 1)
-	_check_special_combo()
-
-
-func _check_special_combo() -> void:
-	if _input_buffer.size() < SPECIAL_COMBO_SEQUENCE.size(): return
-	for i in range(SPECIAL_COMBO_SEQUENCE.size()):
-		if _input_buffer[i] != SPECIAL_COMBO_SEQUENCE[i]: return
-	_input_buffer.clear()
-	_input_buffer_ticks = 0
-	_pending_special = true
-	emit_signal("special_combo_triggered")
 
 
 func _launch_projectile() -> void:
@@ -737,16 +704,10 @@ func _physics_process(delta: float) -> void:
 				_attacking = true
 				if not is_on_floor_t: _play_anim("punch" if proj_fires_airborne else "flypunch")
 				else: _play_anim("bodypunch" if body_punch_enabled else "punch")
-				if combos_enabled: _record_input("punch")
 			elif inp.kick_jp:
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor_t else "kick")
-				if combos_enabled: _record_input("kick")
 		if inp.jump_jp and is_on_floor_t and not _attacking: velocity.y = jump_velocity
-
-	if _input_buffer_ticks > 0:
-		_input_buffer_ticks -= 1
-		if _input_buffer_ticks == 0: _input_buffer.clear()
 
 	if _anim_ticks_remaining > 0:
 		_anim_ticks_remaining -= 1

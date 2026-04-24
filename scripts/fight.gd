@@ -84,11 +84,9 @@ func _ready() -> void:
 	
 	_p1.connect("defeated", self, "_on_player_defeated")
 	_p1.connect("hit_landed", self, "_on_p1_hit_landed")
-	_p1.connect("special_combo_triggered", self, "_on_special_combo")
 	_p1.connect("whataboutism_triggered", self, "_on_whataboutism")
 	_p2.connect("defeated", self, "_on_player_defeated")
 	_p2.connect("hit_landed", self, "_on_p2_hit_landed")
-	_p2.connect("special_combo_triggered", self, "_on_special_combo")
 	_p2.connect("whataboutism_triggered", self, "_on_whataboutism")
 
 	_setup_combo_labels()
@@ -228,9 +226,6 @@ func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	if combo_count >= 2:
 		_show_combo(_p2_combo_root, _p2_combo_label, combo_count)
 		_p2_combo_timer = COMBO_DISPLAY_DURATION
-
-func _on_special_combo() -> void:
-	shake_camera(12.0, 0.3)
 
 func _on_whataboutism() -> void:
 	shake_camera(10.0, 0.25)
