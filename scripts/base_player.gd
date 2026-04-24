@@ -834,6 +834,16 @@ func _physics_process(delta: float) -> void:
 	global_position.x = round(global_position.x)
 	global_position.y = round(global_position.y)
 
+	# Attraction to IpMan - all non-IpMan characters drift towards him
+	if display_name != "IpMan":
+		for p in get_tree().get_nodes_in_group("players"):
+			var other: KinematicBody2D = p
+			if other != self and other.display_name == "IpMan":
+				var to_ipman: Vector2 = other.global_position - global_position
+				if to_ipman.length() > 1.0:
+					global_position += to_ipman.normalized() * 0.5
+				break
+
 	_update_animation_state(direction, is_on_floor_t, should_block_visually, to_opp, dist_to_opp)
 	_prev_committed_keys = _committed_keys
 
