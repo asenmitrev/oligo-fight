@@ -199,7 +199,7 @@ sync_debug={
 
 [physics]
 
-common/physics_ticks_per_second=60
+common/physics_ticks_per_second=30
 CharacterDB="*res://scripts/character_db.gd"
 ControllerMapper="*res://scripts/controller_mapper.gd"
 NetworkManager="*res://scripts/network_manager.gd"
