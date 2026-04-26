@@ -616,10 +616,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if punch_makes_invisible and not is_kick:
 		_invis_ticks = INVIS_MAX_TICKS
 		anim.modulate.a = 0.0
-	elif punch_self_damages and not is_kick:
-		health -= 10
-		if _health_bar: _health_bar.value = health
-		if health <= 0 and not is_defeated: _enter_defeated()
+
 
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
@@ -721,7 +718,12 @@ func _physics_process(delta: float) -> void:
 		_attack_tick_count += 1
 		if _attack_tick_count >= _attack_hit_tick:
 			_anim_hit_fired = true
-			_try_hit_opponent(_attack_is_kick or _current_anim == "flykick")
+			var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
+			if punch_self_damages and not _is_kick_attack:
+				health -= 5
+				if _health_bar: _health_bar.value = health
+				if health <= 0 and not is_defeated: _enter_defeated()
+			_try_hit_opponent(_is_kick_attack)
 
 	if _attacking and not _proj_launch_fired and _proj_launch_tick >= 0:
 		_proj_launch_count += 1
