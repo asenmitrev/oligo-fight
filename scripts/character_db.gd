@@ -12,6 +12,7 @@ const _crunch_frames: SpriteFrames = preload("res://resources/crunch_sprite_fram
 const _rado_frames: SpriteFrames = preload("res://resources/rado_sprite_frames.tres")
 const _dani_frames: SpriteFrames = preload("res://resources/dani_sprite_frames.tres")
 const _yavor_frames: SpriteFrames = preload("res://resources/yavor_sprite_frames.tres")
+const _drago_frames: SpriteFrames = preload("res://resources/drago_sprite_frames.tres")
 const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.png")
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
@@ -218,6 +219,15 @@ func _init() -> void:
 	yavor.proj_spawn_x_offset = 70
 	yavor.proj_spawn_y_offset = -50
 	_register(yavor)
+
+	var drago = _make_def("drago", "Drago", _drago_frames, Color(1, 1, 1, 1))
+	drago.speed = 350.0
+	drago.jump_velocity = JUMP_VELOCITY
+	drago.punch_damage = 13
+	drago.kick_damage = 10
+	drago.block_damage_modifier = 0.15
+	drago.max_health = 105.0
+	_register(drago)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
