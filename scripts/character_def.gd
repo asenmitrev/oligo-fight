@@ -61,6 +61,7 @@ export var kick_knockback_multiplier: float = 1.0
 export var punch_makes_invisible: bool = false
 export var proj_fires_airborne: bool = false
 export var whataboutism_blocks: bool = false
+export var whataboutism_window_ticks: int = 30
 export var disable_attacks_airborne: bool = false
 
 

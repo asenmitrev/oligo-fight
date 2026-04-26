@@ -119,6 +119,7 @@ var input_disabled: bool = false
 var _current_combo_count: int = 0
 var _whataboutism_block_count: int = 0
 var _whataboutism_window_ticks: int = 0
+var _whataboutism_window_ticks_max: int = COMBO_INPUT_WINDOW_TICKS
 var _pending_whataboutism: bool = false
 var _pending_whataboutism_pos: Vector2 = Vector2.ZERO
 var _pending_whataboutism_damage: int = 0
@@ -247,6 +248,7 @@ func apply_character(def: CharacterDef) -> void:
 	punch_self_damages = def.punch_self_damages
 	proj_fires_airborne = def.proj_fires_airborne
 	whataboutism_blocks = def.whataboutism_blocks
+	_whataboutism_window_ticks_max = def.whataboutism_window_ticks
 	disable_attacks_airborne = def.disable_attacks_airborne
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
@@ -503,7 +505,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 
 func _handle_whataboutism_on_block() -> void:
 	if whataboutism_blocks:
-		_whataboutism_window_ticks = COMBO_INPUT_WINDOW_TICKS
+		_whataboutism_window_ticks = _whataboutism_window_ticks_max
 		_whataboutism_block_count += 1
 		if _whataboutism_block_count >= 3:
 			_whataboutism_block_count = 0

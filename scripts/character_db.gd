@@ -92,7 +92,7 @@ func _init() -> void:
 	sasho.speed = 340.0
 	sasho.jump_velocity = JUMP_VELOCITY
 	sasho.punch_damage = 11
-	sasho.kick_damage = 14
+	sasho.kick_damage = 16
 	sasho.block_damage_modifier = 0.15
 	sasho.max_health = 110.0
 	sasho.punch_makes_invisible = true
@@ -103,6 +103,7 @@ func _init() -> void:
 	siyana.jump_velocity = JUMP_VELOCITY
 	siyana.punch_damage = 13
 	siyana.kick_damage = 10
+	
 	siyana.block_damage_modifier = 0.15
 	siyana.max_health = 105.0
 	siyana.fires_projectile = true
@@ -117,7 +118,7 @@ func _init() -> void:
 	siyana.proj_scale = 1.0
 	siyana.proj_spawn_x_offset = 80
 	siyana.proj_spawn_y_offset = 0
-	siyana.kick_speed_scale = 0.40
+	siyana.kick_speed_scale = 0.70
 	siyana.proj_anim_hframes = 2
 	siyana.proj_anim_vframes = 2
 	siyana.proj_anim_fps = 8
@@ -170,10 +171,11 @@ func _init() -> void:
 	rado.speed = 340.0
 	rado.jump_velocity = JUMP_VELOCITY
 	rado.punch_damage = 13
-	rado.kick_damage = 11
+	rado.kick_damage = 20 
 	rado.block_damage_modifier = 0.25
 	rado.max_health = 115.0
 	rado.whataboutism_blocks = true
+	rado.whataboutism_window_ticks = 100
 	rado.lunge_upwards_kick = true
 	rado.kick_lunge_scale = 6.0
 	rado.walk_self_heal = 0.2
