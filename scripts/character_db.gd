@@ -85,14 +85,14 @@ func _init() -> void:
 	bobe.kick_damage = 10
 	bobe.block_damage_modifier = 0.18
 	bobe.max_health = 115
-	bobe.kick_heals_self = 5
+	bobe.kick_heals_self = 8
 	_register(bobe)
 
 	var sasho = _make_def("sasho", "Sasho", _sasho_frames, Color(1, 1, 1, 1))
 	sasho.speed = 340.0
 	sasho.jump_velocity = JUMP_VELOCITY
-	sasho.punch_damage = 14
-	sasho.kick_damage = 11
+	sasho.punch_damage = 11
+	sasho.kick_damage = 14
 	sasho.block_damage_modifier = 0.15
 	sasho.max_health = 110.0
 	sasho.punch_makes_invisible = true
@@ -129,8 +129,8 @@ func _init() -> void:
 	itso.punch_damage = 14
 	itso.kick_damage = 11
 	itso.block_damage_modifier = 0.15
-	itso.max_health = 110
-	itso.kick_lunge_scale = 6.0
+	itso.max_health = 130
+	itso.kick_lunge_scale = 8.0
 	_register(itso)
 
 	var crunch = _make_def("crunch", "Crunch", _crunch_frames, Color(1, 1, 1, 1))
@@ -140,8 +140,8 @@ func _init() -> void:
 	crunch.kick_damage = 11
 	crunch.block_damage_modifier = 0.15
 	crunch.max_health = 105
-	crunch.punch_speed_scale = 0.75
-	crunch.kick_speed_scale = 0.75
+	crunch.punch_speed_scale = 0.65
+	crunch.kick_speed_scale = 0.78
 	crunch.fires_projectile = true
 	crunch.proj_fires_on_punch = true
 	crunch.proj_fires_on_kick = true
@@ -171,8 +171,8 @@ func _init() -> void:
 	rado.jump_velocity = JUMP_VELOCITY
 	rado.punch_damage = 13
 	rado.kick_damage = 11
-	rado.block_damage_modifier = 0.15
-	rado.max_health = 110.0
+	rado.block_damage_modifier = 0.25
+	rado.max_health = 115.0
 	rado.whataboutism_blocks = true
 	rado.lunge_upwards_kick = true
 	rado.kick_lunge_scale = 6.0
