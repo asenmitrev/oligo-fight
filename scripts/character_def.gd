@@ -59,6 +59,7 @@ export var partial_loop_jump: bool = false
 export var punch_pulls_opponent: bool = false
 export var kick_knockback_multiplier: float = 1.0
 export var punch_makes_invisible: bool = false
+export var invis_damage_multiplier: float = 1.0
 export var proj_fires_airborne: bool = false
 export var whataboutism_blocks: bool = false
 export var whataboutism_window_ticks: int = 30

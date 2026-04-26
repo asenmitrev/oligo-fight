@@ -46,6 +46,7 @@ CharacterDB="*res://scripts/character_db.gd"
 ControllerMapper="*res://scripts/controller_mapper.gd"
 NetworkManager="*res://scripts/network_manager.gd"
 SyncManager="*res://addons/godot-rollback-netcode/SyncManager.gd"
+ControlsSave="*res://scripts/controls_save.gd"
 
 [display]
 

@@ -44,6 +44,7 @@ var invulnerable_when_airborne: bool = false
 var partial_loop_jump: bool = false
 var punch_pulls_opponent: bool = false
 var punch_makes_invisible: bool = false
+var invis_damage_multiplier: float = 1.0
 var punch_self_damages: bool = false
 var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
@@ -245,6 +246,7 @@ func apply_character(def: CharacterDef) -> void:
 	partial_loop_jump = def.partial_loop_jump
 	punch_pulls_opponent = def.punch_pulls_opponent
 	punch_makes_invisible = def.punch_makes_invisible
+	invis_damage_multiplier = def.invis_damage_multiplier
 	punch_self_damages = def.punch_self_damages
 	proj_fires_airborne = def.proj_fires_airborne
 	whataboutism_blocks = def.whataboutism_blocks
@@ -606,7 +608,8 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var fist_to_opp := abs(hit_x - _opponent.global_position.x)
 	if fist_to_opp > HIT_TARGET_RADIUS: return
 	var is_counter  = _opponent._attacking
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage, kick_knockback_multiplier if is_kick else 1.0)
+	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else 1.0)
 	if not hit_registered: return
 	
 	if is_kick and _veli_kick_icon:

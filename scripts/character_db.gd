@@ -96,6 +96,7 @@ func _init() -> void:
 	sasho.block_damage_modifier = 0.15
 	sasho.max_health = 110.0
 	sasho.punch_makes_invisible = true
+	sasho.invis_damage_multiplier = 1.5
 	_register(sasho)
 
 	var siyana = _make_def("siyana", "Siyana", _siyana_frames, Color(1, 1, 1, 1))
