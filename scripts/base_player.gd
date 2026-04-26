@@ -49,6 +49,7 @@ var punch_self_damages: bool = false
 var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
 var disable_attacks_airborne: bool = false
+var flypunch_teleports: bool = false
 var flykick_forward: bool = false
 # Projectile config (kept in base for netcode sync compatibility)
 var fires_projectile: bool = false
@@ -252,6 +253,7 @@ func apply_character(def: CharacterDef) -> void:
 	whataboutism_blocks = def.whataboutism_blocks
 	_whataboutism_window_ticks_max = def.whataboutism_window_ticks
 	disable_attacks_airborne = def.disable_attacks_airborne
+	flypunch_teleports = def.flypunch_teleports
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	_cache_all_animation_data()
@@ -584,6 +586,17 @@ func _end_invisibility() -> void:
 		anim.modulate.a = 1.0
 
 
+func _do_flypunch_teleport() -> void:
+	if _opponent == null: _find_opponent()
+	if _opponent == null: return
+	# "behind" = the side the opponent is NOT facing
+	var opp_facing := -1.0 if _opponent.anim.flip_h else 1.0
+	global_position.x = _opponent.global_position.x - opp_facing * 120.0
+	global_position.y = _opponent.global_position.y
+	velocity.y = 0.0
+	anim.flip_h = _opponent.anim.flip_h
+
+
 func _try_hit_opponent(is_kick: bool) -> void:
 	if is_kick and kick_heals_self > 0:
 		health = min(max_health, health + kick_heals_self)
@@ -723,12 +736,15 @@ func _physics_process(delta: float) -> void:
 		_attack_tick_count += 1
 		if _attack_tick_count >= _attack_hit_tick:
 			_anim_hit_fired = true
-			var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
-			if punch_self_damages and not _is_kick_attack:
-				health -= 5
-				if _health_bar: _health_bar.value = health
-				if health <= 0 and not is_defeated: _enter_defeated()
-			_try_hit_opponent(_is_kick_attack)
+			if flypunch_teleports and _current_anim == "flypunch":
+				_do_flypunch_teleport()
+			else:
+				var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
+				if punch_self_damages and not _is_kick_attack:
+					health -= 5
+					if _health_bar: _health_bar.value = health
+					if health <= 0 and not is_defeated: _enter_defeated()
+				_try_hit_opponent(_is_kick_attack)
 
 	if _attacking and not _proj_launch_fired and _proj_launch_tick >= 0:
 		_proj_launch_count += 1

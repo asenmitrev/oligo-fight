@@ -222,11 +222,14 @@ func _init() -> void:
 
 	var drago = _make_def("drago", "Drago", _drago_frames, Color(1, 1, 1, 1))
 	drago.speed = 350.0
+	drago.punch_arm_extension = 190.0  # punch animation extends 20px further than Veli's
 	drago.jump_velocity = JUMP_VELOCITY
 	drago.punch_damage = 13
 	drago.kick_damage = 10
 	drago.block_damage_modifier = 0.15
 	drago.max_health = 105.0
+	drago.flypunch_teleports = true
+	drago.punch_speed_scale = 0.7
 	_register(drago)
 
 

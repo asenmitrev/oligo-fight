@@ -64,6 +64,7 @@ export var proj_fires_airborne: bool = false
 export var whataboutism_blocks: bool = false
 export var whataboutism_window_ticks: int = 30
 export var disable_attacks_airborne: bool = false
+export var flypunch_teleports: bool = false
 
 
 func get_preview_sprite_frames() -> SpriteFrames:
