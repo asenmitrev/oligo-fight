@@ -10,18 +10,18 @@ const FLOOR_SNAP := Vector2(0, 24)
 var punch_damage := 15
 var kick_damage := 8
 const HIT_COMBO_THRESHOLD := 2
-const HIT_WINDOW_TICKS     := 120  # 2.0 s at 60 Hz
-const PUNCH_ARM_EXTENSION  := 120.0
-const KICK_LEG_EXTENSION   := 150.0
-const HIT_TARGET_RADIUS    := 85.0
-const KNOCKBACK_FORCE      := 500.0
+const HIT_WINDOW_SECONDS  := 2.0
+const PUNCH_ARM_EXTENSION := 120.0
+const KICK_LEG_EXTENSION  := 150.0
+const HIT_TARGET_RADIUS   := 85.0
+const KNOCKBACK_FORCE     := 500.0
 var block_damage_modifier := 0.15
-const HITSTOP_TICKS        := 6    # 0.1 s at 60 Hz
-const COUNTER_HIT_BONUS    := 1.5
+const HITSTOP_SECONDS     := 0.1
+const COUNTER_HIT_BONUS   := 1.5
 const PROXIMITY_BLOCK_RANGE := 500.0
-const BLOCK_STUN_TICKS     := 12   # 0.2 s at 60 Hz
+const BLOCK_STUN_SECONDS  := 0.2
 const WALK_BACK_SPEED_MULT := 0.65
-const COMBO_INPUT_WINDOW_TICKS := 30  # 0.5 s at 60 Hz
+const COMBO_INPUT_WINDOW_SECONDS := 0.5
 const SPECIAL_COMBO_DAMAGE := 35
 const SPECIAL_COMBO_SEQUENCE := ["punch", "punch", "kick"]
 
@@ -49,7 +49,7 @@ var max_health := 100
 var health := 100
 var is_defeated := false
 var hit_count := 0
-var _hit_ticks: int = 0
+var _hit_timer: float = 0.0
 var _attacking := false
 var _opponent: KinematicBody2D
 var _health_bar: ProgressBar
@@ -57,9 +57,9 @@ var frozen: bool = false setget _set_frozen
 var _punch_arm_extension: float = PUNCH_ARM_EXTENSION
 var _start_position: Vector2
 var velocity: Vector2 = Vector2.ZERO
-var _hitstop_ticks: int = 0
-var _knockback_x: int = 0          # integer px/s — no float drift
-var _block_stun_ticks: int = 0
+var _hitstop_timer: float = 0.0
+var _knockback_x: float = 0.0
+var _block_stun_timer: float = 0.0
 var _blocked_punch: bool = false
 var _current_anim: String = ""
 var launch_punch: bool = false
@@ -69,48 +69,28 @@ var kick_speed_scale: float = 1.0
 var stay_down: bool = false
 var input_disabled: bool = false
 var _input_buffer: Array = []
-var _input_buffer_ticks: int = 0
+var _input_buffer_timer: float = 0.0
 var _current_combo_count: int = 0
 var _pending_special: bool = false
 
-# Networked input — set by fight.gd each frame in online mode.
-var is_networked: bool = false
-var _committed_keys: int = 0
-var _prev_committed_keys: int = 0
-var _action_bits: Dictionary = {}
-
-# Physics-tick hit detection: fires after a fixed tick count from animation FPS.
-# Both clients compute the same integer and start from the same exec_frame.
+# Frame-based hit detection: fires when animation reaches target frame.
 var _anim_hit_fired: bool = false
-var _attack_hit_tick: int = -1
-var _attack_tick_count: int = 0
+var _hit_target_frame: int = -1
 var _attack_is_kick: bool = false
-
-# Physics-tick animation end detection: replaces the render-loop animation_finished
-# signal so state transitions happen at the same exec_frame on both clients.
-var _anim_ticks_remaining: int = -1  # -1 = looping or not tracking
 
 
 func _ready() -> void:
 	_start_position = global_position
 	add_to_group("players")
 	collision_mask |= 2
-	# animation_finished is intentionally NOT connected — we drive state transitions
-	# from _physics_process via _anim_ticks_remaining to stay deterministic.
+	anim.connect("frame_changed", self, "_on_anim_frame_changed")
+	anim.connect("animation_finished", self, "_on_animation_finished")
 	if face_left:
 		anim.flip_h = true
 	if health_bar_path:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.max_value = max_health
 		_health_bar.value = health
-	_action_bits = {
-		action_left: 1,
-		action_right: 2,
-		action_jump: 4,
-		action_down: 8,
-		action_punch: 16,
-		action_kick: 32,
-	}
 
 
 func apply_character(def: CharacterDef) -> void:
@@ -141,27 +121,23 @@ func reset_for_round() -> void:
 	is_defeated = false
 	state = State.NORMAL
 	hit_count = 0
-	_hit_ticks = 0
+	_hit_timer = 0.0
 	_attacking = false
 	velocity = Vector2.ZERO
-	_knockback_x = 0
-	_hitstop_ticks = 0
-	_block_stun_ticks = 0
+	_knockback_x = 0.0
+	_hitstop_timer = 0.0
+	_block_stun_timer = 0.0
 	_current_anim = ""
 	stay_down = false
 	input_disabled = false
 	_input_buffer.clear()
-	_input_buffer_ticks = 0
+	_input_buffer_timer = 0.0
 	_current_combo_count = 0
 	_pending_special = false
 	_blocked_punch = false
-	_committed_keys = 0
-	_prev_committed_keys = 0
 	_anim_hit_fired = false
-	_attack_hit_tick = -1
-	_attack_tick_count = 0
+	_hit_target_frame = -1
 	_attack_is_kick = false
-	_anim_ticks_remaining = -1
 	global_position = _start_position
 	if _health_bar:
 		_health_bar.value = health
@@ -172,37 +148,32 @@ func _play_anim(anim_name: String) -> void:
 	if _current_anim != anim_name:
 		_current_anim = anim_name
 		_anim_hit_fired = false
-		_attack_tick_count = 0
-		_attack_hit_tick = -1
+		_hit_target_frame = -1
 		_attack_is_kick = false
-		_anim_ticks_remaining = -1
 
 		var speed_scale := kick_speed_scale if anim_name in ["kick", "flykick"] else 1.0
 		anim.speed_scale = speed_scale
 
-		if anim.frames and anim.frames.has_animation(anim_name):
-			var fps_raw := anim.frames.get_animation_speed(anim_name) * speed_scale
-			var fps_int := max(1, int(round(fps_raw)))
-			var phz     := Engine.iterations_per_second
-
-			# Hit-frame tick for attack animations (integer ceiling: no float ops).
-			var target_frame := -1
-			if anim_name == "punch" or anim_name == "flypunch":
-				target_frame = 1
-			elif anim_name == "bodypunch":
-				target_frame = 2
-			elif anim_name == "kick" or anim_name == "flykick":
-				target_frame = 2
-				_attack_is_kick = true
-			if target_frame >= 0:
-				_attack_hit_tick = (target_frame * phz + fps_int - 1) / fps_int
-
-			# Animation-end tick for non-looping animations.
-			if not anim.frames.get_animation_loop(anim_name):
-				var fc := anim.frames.get_frame_count(anim_name)
-				_anim_ticks_remaining = (fc * phz + fps_int - 1) / fps_int
+		if anim_name == "punch" or anim_name == "flypunch":
+			_hit_target_frame = 1
+		elif anim_name == "bodypunch":
+			_hit_target_frame = 2
+		elif anim_name == "kick" or anim_name == "flykick":
+			_hit_target_frame = 2
+			_attack_is_kick = true
 
 		anim.play(anim_name)
+
+
+func _on_anim_frame_changed() -> void:
+	if _attacking and not _anim_hit_fired and _hit_target_frame >= 0:
+		if anim.frame == _hit_target_frame:
+			_anim_hit_fired = true
+			_try_hit_opponent(_attack_is_kick)
+
+
+func _on_animation_finished() -> void:
+	_handle_animation_finished()
 
 
 func _find_opponent() -> void:
@@ -239,8 +210,7 @@ func _separate_from_opponent() -> void:
 				global_position.x += push_dir * 6.0
 
 
-# Called from _physics_process when _anim_ticks_remaining hits zero.
-# Replaces the render-loop animation_finished signal for deterministic state transitions.
+# Called from _on_animation_finished when a non-looping animation ends.
 func _handle_animation_finished() -> void:
 	match state:
 		State.HIT:
@@ -309,14 +279,14 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			damage = int(damage * block_damage_modifier)
 			_apply_impact(attacker_pos, 0.5)
 			state = State.BLOCKING
-			_block_stun_ticks = BLOCK_STUN_TICKS
+			_block_stun_timer = BLOCK_STUN_SECONDS
 			_blocked_punch = true
 			if _opponent:
 				_opponent._current_combo_count = 0
 	else:
 		_apply_impact(attacker_pos, 1.0)
 		hit_count += 1
-		_hit_ticks = HIT_WINDOW_TICKS
+		_hit_timer = HIT_WINDOW_SECONDS
 		_current_combo_count = 0
 
 	health = max(0, health - damage)
@@ -329,20 +299,20 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 
 	if not is_blocking or block_broken:
 		if state == State.FALLEN:
-			anim.stop()
-			anim.frame = 2
+			_current_anim = ""
+			_play_anim("falls")
 			velocity.y = -500.0
 		elif block_broken or not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
 			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD and not block_broken
 			hit_count = 0
-			_hit_ticks = 0
+			_hit_timer = 0.0
 			_enter_fallen()
 			if launch:
 				velocity.y = -900.0
 		else:
 			_enter_hit()
 
-	_hitstop_ticks = HITSTOP_TICKS
+	_hitstop_timer = HITSTOP_SECONDS
 	return true
 
 
@@ -359,7 +329,7 @@ func _apply_impact(attacker_pos: Vector2, multiplier: float) -> void:
 	var dir = (global_position.x - attacker_pos.x)
 	if dir == 0: dir = -1.0 if anim.flip_h else 1.0
 	dir = sign(dir)
-	_knockback_x = int(dir * KNOCKBACK_FORCE * multiplier)
+	_knockback_x = dir * KNOCKBACK_FORCE * multiplier
 
 
 func _enter_hit() -> void:
@@ -379,7 +349,7 @@ func _enter_fallen() -> void:
 func _enter_launched(attacker_pos: Vector2) -> void:
 	state = State.FALLEN
 	_attacking = false
-	_block_stun_ticks = 0
+	_block_stun_timer = 0.0
 	_blocked_punch = false
 	_apply_impact(attacker_pos, 3)
 	velocity.y = -1100.0
@@ -423,7 +393,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, kick_damage if is_kick else punch_damage)
 	if not hit_registered:
 		return
-	_hitstop_ticks = HITSTOP_TICKS
+	_hitstop_timer = HITSTOP_SECONDS
 
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
@@ -444,7 +414,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 
 
 func _record_input(input_type: String) -> void:
-	_input_buffer_ticks = COMBO_INPUT_WINDOW_TICKS
+	_input_buffer_timer = COMBO_INPUT_WINDOW_SECONDS
 	_input_buffer.append(input_type)
 	var seq_len = SPECIAL_COMBO_SEQUENCE.size()
 	if _input_buffer.size() > seq_len:
@@ -459,31 +429,18 @@ func _check_special_combo() -> void:
 		if _input_buffer[i] != SPECIAL_COMBO_SEQUENCE[i]:
 			return
 	_input_buffer.clear()
-	_input_buffer_ticks = 0
+	_input_buffer_timer = 0.0
 	_pending_special = true
 	emit_signal("special_combo_triggered")
 
 
-func set_committed_keys(keys: int) -> void:
-	_committed_keys = keys
-
-
-func _get_bit(keys: int, bit: int) -> bool:
-	return bool(keys & bit)
-
-
 func _action_pressed(action: String) -> bool:
-	if is_networked:
-		return bool(_committed_keys & int(_action_bits.get(action, 0)))
 	if input_disabled:
 		return false
 	return Input.is_action_pressed(action)
 
 
 func _action_just_pressed(action: String) -> bool:
-	if is_networked:
-		var bit := int(_action_bits.get(action, 0))
-		return bool(_committed_keys & bit) and not bool(_prev_committed_keys & bit)
 	if input_disabled:
 		return false
 	return Input.is_action_just_pressed(action)
@@ -502,15 +459,15 @@ func _physics_process(delta: float) -> void:
 		to_opp = _opponent.global_position.x - global_position.x
 		is_blocking_input = _check_blocking(to_opp)
 
-	if state == State.BLOCKING and _blocked_punch and (not input_disabled or is_networked):
+	if state == State.BLOCKING and _blocked_punch and not input_disabled:
 		if _action_just_pressed(action_jump) and is_on_floor_t:
-			_block_stun_ticks = 0
+			_block_stun_timer = 0.0
 			_blocked_punch = false
 			state = State.NORMAL
 			velocity.y = jump_velocity
 
-	if state == State.NORMAL and _hitstop_ticks == 0 and (not input_disabled or is_networked):
-		if not _attacking and not is_blocking_input:
+	if state == State.NORMAL and _hitstop_timer <= 0.0 and not input_disabled:
+		if not _attacking:
 			if _action_just_pressed(action_punch):
 				_attacking = true
 				if not is_on_floor_t:
@@ -529,49 +486,33 @@ func _physics_process(delta: float) -> void:
 		if _action_just_pressed(action_jump) and is_on_floor_t and not _attacking:
 			velocity.y = jump_velocity
 
-	if _input_buffer_ticks > 0:
-		_input_buffer_ticks -= 1
-		if _input_buffer_ticks == 0:
+	if _input_buffer_timer > 0.0:
+		_input_buffer_timer -= delta
+		if _input_buffer_timer <= 0.0:
 			_input_buffer.clear()
 
-	# Advance animation-end counter before hitstop so it keeps pace with the
-	# visual animation (AnimatedSprite runs in the render loop regardless of hitstop).
-	if _anim_ticks_remaining > 0:
-		_anim_ticks_remaining -= 1
-		if _anim_ticks_remaining == 0:
-			_handle_animation_finished()
-
-	if _hitstop_ticks > 0:
-		_hitstop_ticks -= 1
+	if _hitstop_timer > 0.0:
+		_hitstop_timer -= delta
 		return  # freeze all movement
 
-	# Physics-deterministic hit detection: same exec_frame on both clients.
-	if _attacking and not _anim_hit_fired and _attack_hit_tick >= 0:
-		_attack_tick_count += 1
-		if _attack_tick_count >= _attack_hit_tick:
-			_anim_hit_fired = true
-			_try_hit_opponent(_attack_is_kick)
-
-	if _hit_ticks > 0:
-		_hit_ticks -= 1
-		if _hit_ticks == 0:
+	if _hit_timer > 0.0:
+		_hit_timer -= delta
+		if _hit_timer <= 0.0:
 			hit_count = 0
 			if _opponent:
 				_opponent._current_combo_count = 0
 
-	# Integer multiply-divide: no float FMA non-determinism across platforms.
-	_knockback_x = _knockback_x * 5 / 6
+	_knockback_x *= 0.833
 
-	if _block_stun_ticks > 0:
-		_block_stun_ticks -= 1
-		if _block_stun_ticks == 0:
+	if _block_stun_timer > 0.0:
+		_block_stun_timer -= delta
+		if _block_stun_timer <= 0.0:
 			state = State.NORMAL
 			_blocked_punch = false
 
 	if not is_on_floor_t:
 		var fast_fall = _action_pressed(action_down)
-		# Round gravity accumulation to prevent float drift between clients.
-		velocity.y = round(velocity.y + GRAVITY * (3.0 if fast_fall else 1.0) * delta)
+		velocity.y += GRAVITY * (3.0 if fast_fall else 1.0) * delta
 
 	# Launched players play looping "jump"; switch to non-looping "falls" once descending.
 	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
@@ -581,8 +522,6 @@ func _physics_process(delta: float) -> void:
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
-		global_position.x = round(global_position.x)
-		global_position.y = round(global_position.y)
 		return
 
 	var left      := _action_pressed(action_left)
@@ -613,10 +552,6 @@ func _physics_process(delta: float) -> void:
 
 	velocity = _move_with_floor_snap()
 
-
-	global_position.x = round(global_position.x)
-	global_position.y = round(global_position.y)
-
 	# Animation updates
 	if state == State.NORMAL and not _attacking:
 		if should_block_visually and is_on_floor_t:
@@ -643,4 +578,3 @@ func _physics_process(delta: float) -> void:
 			if abs(to_opp) > 50:
 				anim.flip_h = to_opp < 0
 
-	_prev_committed_keys = _committed_keys

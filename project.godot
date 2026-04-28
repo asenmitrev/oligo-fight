@@ -8,32 +8,10 @@
 
 config_version=4
 
-_global_script_classes=[ {
-"base": "AnimationPlayer",
-"class": "NetworkAnimationPlayer",
-"language": "GDScript",
-"path": "res://addons/godot-rollback-netcode/NetworkAnimationPlayer.gd"
-}, {
-"base": "Node",
-"class": "NetworkRandomNumberGenerator",
-"language": "GDScript",
-"path": "res://addons/godot-rollback-netcode/NetworkRandomNumberGenerator.gd"
-}, {
-"base": "Node",
-"class": "NetworkTimer",
-"language": "GDScript",
-"path": "res://addons/godot-rollback-netcode/NetworkTimer.gd"
-} ]
-_global_script_class_icons={
-"NetworkAnimationPlayer": "",
-"NetworkRandomNumberGenerator": "",
-"NetworkTimer": ""
-}
-
 [application]
 
-config/name="Simonka Boi"
-run/main_scene="res://scenes/MainMenu.tscn"
+config/name="OLIGO FIGHT"
+run/main_scene="res://scenes/CharacterSelect.tscn"
 boot_splash/image="res://assets/bg_character-select.png"
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
@@ -46,6 +24,7 @@ CharacterDB="*res://scripts/character_db.gd"
 ControllerMapper="*res://scripts/controller_mapper.gd"
 NetworkManager="*res://scripts/network_manager.gd"
 SyncManager="*res://addons/godot-rollback-netcode/SyncManager.gd"
+ControlsSave="*res://scripts/controls_save.gd"
 
 [display]
 
@@ -58,7 +37,7 @@ window/fullscreen=true
 
 [editor_plugins]
 
-enabled=PoolStringArray( "res://addons/godot-rollback-netcode/plugin.cfg" )
+enabled=PoolStringArray(  )
 
 [input]
 
@@ -199,7 +178,7 @@ sync_debug={
 
 [physics]
 
-common/physics_ticks_per_second=60
+common/physics_ticks_per_second=30
 CharacterDB="*res://scripts/character_db.gd"
 ControllerMapper="*res://scripts/controller_mapper.gd"
 NetworkManager="*res://scripts/network_manager.gd"
