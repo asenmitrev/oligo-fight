@@ -53,7 +53,7 @@ func _setup_background() -> void:
 	var viewport: Viewport = $PreviewViewportContainer/PreviewViewport
 	viewport.transparent_bg = true
 	$PreviewViewportContainer/PreviewViewport/Background.visible = false
-	$PreviewViewportContainer/PreviewViewport/BgCharacter-select.visible = false
+	get_node("PreviewViewportContainer/PreviewViewport/BgCharacter-select").visible = false
 
 	var bg := TextureRect.new()
 	bg.texture = load("res://assets/bg_character-select.png") as Texture
