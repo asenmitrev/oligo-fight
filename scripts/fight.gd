@@ -83,6 +83,8 @@ func _ready() -> void:
 	_setup_health_bars()
 	_build_pause_menu()
 	_apply_character_selections()
+	_p1.set_opponent(_p2)
+	_p2.set_opponent(_p1)
 	_camera_origin = camera.position
 	_init_shake_table()
 	
@@ -628,4 +630,6 @@ func _on_player_defeated() -> void:
 		current_round += 1
 		_p1.reset_for_round()
 		_p2.reset_for_round()
+		_p1.set_opponent(_p2)
+		_p2.set_opponent(_p1)
 		_start_round()

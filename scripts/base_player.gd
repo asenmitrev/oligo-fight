@@ -109,7 +109,6 @@ var hit_count := 0
 var _hit_ticks: int = 0
 var _attacking := false
 var _opponent: KinematicBody2D
-var _opponent_found: bool = false
 var _ipman_target: KinematicBody2D
 var _ipman_lookup_done: bool = false
 var _health_bar: ProgressBar
@@ -237,7 +236,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_anim_vframes = def.proj_anim_vframes
 	_proj_anim_fps = def.proj_anim_fps
 	_proj_lottery_mode = def.proj_lottery_mode
-	
+
 	_init_projectile_pool(def.proj_pool)
 
 	if display_name == "Veli":
@@ -379,7 +378,7 @@ func reset_for_round() -> void:
 	input_disabled = false
 	_current_combo_count = 0
 	_blocked_punch = false
-	_opponent_found = false
+	_opponent = null
 	_proj_next = 0
 	for i in range(_proj_pool):
 		_proj_active[i] = false
@@ -431,18 +430,13 @@ func _play_anim(anim_name: String) -> void:
 		else:
 			anim.speed_scale = 1.0
 		anim.play(anim_name)
-		
+
 		if _veli_kick_icon:
 			_veli_kick_icon.visible = false
 
 
-func _find_opponent() -> void:
-	if _opponent_found: return
-	for p in get_tree().get_nodes_in_group("players"):
-		if p != self:
-			_opponent = p as KinematicBody2D
-			_opponent_found = true
-			return
+func set_opponent(opp: KinematicBody2D) -> void:
+	_opponent = opp
 
 
 func _set_frozen(value: bool) -> void:
@@ -487,7 +481,6 @@ func force_getup() -> void:
 
 
 func force_punch() -> void:
-	if _opponent == null: _find_opponent()
 	_attacking = true
 	_play_anim("punch")
 
@@ -635,7 +628,6 @@ func _do_kick_teleport_behind() -> void:
 
 
 func _do_flypunch_teleport() -> void:
-	if _opponent == null: _find_opponent()
 	if _opponent == null: return
 	# "behind" = the side the opponent is NOT facing
 	var opp_facing := -1.0 if _opponent.anim.flip_h else 1.0
@@ -650,7 +642,6 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		health = min(max_health, health + kick_heals_self)
 		if _health_bar: _health_bar.value = health
 		return
-	if _opponent == null: _find_opponent()
 	if _opponent == null: return
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
 	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
@@ -672,12 +663,12 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
 	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier)
 	if not hit_registered: return
-	
+
 	if is_kick and _veli_kick_icon:
 		_veli_kick_icon.visible = true
 		var side = -1.0 if anim.flip_h else 1.0
 		_veli_kick_icon.position = Vector2(side * 140, -220)
-		
+
 	_hitstop_ticks = HITSTOP_TICKS
 	if punch_makes_invisible and not is_kick:
 		_invis_ticks = INVIS_MAX_TICKS
@@ -740,12 +731,11 @@ func _action_just_pressed(action: String) -> bool:
 
 func _physics_process(delta: float) -> void:
 	if frozen: return
-	
+
 	var is_on_floor_t = is_on_floor()
 	_handle_pending_abilities(is_on_floor_t)
 	if state == State.NORMAL and _pending_whataboutism: return # already handled or waiting
-	
-	_find_opponent()
+
 	var opp_pos := Vector2.ZERO
 	var opp_attacking := false
 	if _opponent:
@@ -901,7 +891,7 @@ func _handle_pending_abilities(is_on_floor_t: bool) -> void:
 			_hitstop_ticks = HITSTOP_TICKS
 
 
-# Reusable input struct — avoids Dictionary allocation every physics tick (Pi 3 GC pressure)
+# Reusable input struct - avoids Dictionary allocation every physics tick (Pi 3 GC pressure)
 class InputSnapshot:
 	var left: bool = false
 	var right: bool = false
