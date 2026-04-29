@@ -109,6 +109,8 @@ var hit_count := 0
 var _hit_ticks: int = 0
 var _attacking := false
 var _opponent: KinematicBody2D
+var _ipman_target: KinematicBody2D
+var _ipman_lookup_done: bool = false
 var _health_bar: ProgressBar
 var frozen: bool = false setget _set_frozen
 var _punch_arm_extension: float = PUNCH_ARM_EXTENSION
@@ -262,7 +264,8 @@ func apply_character(def: CharacterDef) -> void:
 
 func _init_projectile_pool(pool_size: int) -> void:
 	for s in _proj_sprites: s.queue_free()
-	for l in _proj_labels: l.queue_free()
+	for l in _proj_labels:
+		if l: l.queue_free()
 	_proj_sprites.clear()
 	_proj_labels.clear()
 	_proj_active.clear()
@@ -276,6 +279,15 @@ func _init_projectile_pool(pool_size: int) -> void:
 	_proj_is_heal.clear()
 	_proj_next = 0
 	_proj_pool = pool_size
+	# Lottery mode is the only path that actually renders text on projectiles;
+	# build a single shared DynamicFont so we don't rasterize the TTF per slot.
+	var shared_font: DynamicFont = null
+	if _proj_lottery_mode and _proj_pool > 0:
+		shared_font = DynamicFont.new()
+		var fd := DynamicFontData.new()
+		fd.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+		shared_font.font_data = fd
+		shared_font.size = 28
 	for i in range(_proj_pool):
 		_proj_active.append(false)
 		_proj_x.append(0.0)
@@ -291,17 +303,15 @@ func _init_projectile_pool(pool_size: int) -> void:
 		s.visible = false
 		add_child(s)
 		_proj_sprites.append(s)
-		var l := Label.new()
-		l.set_as_toplevel(true)
-		l.visible = false
-		var f := DynamicFont.new()
-		var fd := DynamicFontData.new()
-		fd.font_path = "res://assets/fonts/Lobster-Regular.ttf"
-		f.font_data = fd
-		f.size = 28
-		l.add_font_override("font", f)
-		add_child(l)
-		_proj_labels.append(l)
+		if shared_font != null:
+			var l := Label.new()
+			l.set_as_toplevel(true)
+			l.visible = false
+			l.add_font_override("font", shared_font)
+			add_child(l)
+			_proj_labels.append(l)
+		else:
+			_proj_labels.append(null)
 
 
 func _cache_all_animation_data() -> void:
@@ -365,7 +375,7 @@ func reset_for_round() -> void:
 		_proj_active[i] = false
 		_proj_lifetime[i] = 0
 		_proj_sprites[i].visible = false
-		_proj_labels[i].visible = false
+		if _proj_labels[i]: _proj_labels[i].visible = false
 	_invis_ticks = 0
 	anim.modulate.a = 1.0
 	if _veli_kick_icon:
@@ -849,15 +859,20 @@ func _physics_process(delta: float) -> void:
 
 	velocity = _move_with_floor_snap()
 
-	# Attraction to IpMan - all non-IpMan characters drift towards him
+	# Attraction to IpMan - all non-IpMan characters drift towards him.
+	# Resolve the target once per round; subsequent ticks just check the cached ref.
 	if display_name != "IpMan":
-		for p in get_tree().get_nodes_in_group("players"):
-			var other: KinematicBody2D = p
-			if other != self and other.display_name == "IpMan":
-				var to_ipman: Vector2 = other.global_position - global_position
-				if to_ipman.length() > 1.0:
-					global_position += to_ipman.normalized() * 0.5
-				break
+		if not _ipman_lookup_done:
+			_ipman_lookup_done = true
+			for p in get_tree().get_nodes_in_group("players"):
+				var other: KinematicBody2D = p
+				if other != self and other.display_name == "IpMan":
+					_ipman_target = other
+					break
+		if _ipman_target != null and is_instance_valid(_ipman_target):
+			var to_ipman: Vector2 = _ipman_target.global_position - global_position
+			if to_ipman.length() > 1.0:
+				global_position += to_ipman.normalized() * 0.5
 
 	_update_animation_state(direction, is_on_floor_t, should_block_visually, to_opp, dist_to_opp)
 

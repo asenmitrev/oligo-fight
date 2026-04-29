@@ -8,10 +8,13 @@ const FIGHT_BACKGROUNDS := [
 ]
 
 const FIGHT_MUSIC := [
-	"res://assets/music/thrift-shop.mp3",
-	"res://assets/music/cinema.mp3",
-	"res://assets/music/picnic.mp3",
-	"res://assets/music/bar.mp3",
+	"res://assets/music/thrift-shop.ogg",
+
+	"res://assets/music/cinema.ogg",
+
+	"res://assets/music/picnic.ogg",
+
+	"res://assets/music/bar.ogg",
 ]
 
 onready var _music: AudioStreamPlayer = $Music
@@ -86,7 +89,7 @@ func _ready() -> void:
 	_start_round()
 
 	var music_idx: int = int(clamp(GameState.fight_background_index, 0, FIGHT_MUSIC.size() - 1))
-	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamMP3
+	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamOGGVorbis
 	stream.loop = true
 	_music.stream = stream
 	_music.play()
@@ -131,13 +134,9 @@ func _setup_health_bars() -> void:
 	p2_bar.add_stylebox_override("bg", bg_style)
 	p2_bar.add_stylebox_override("fg", p2_fg)
 	
-	# Make them taller and add shadow
+	# Make them taller (shadow dropped — extra fragment work each frame on Pi 3)
 	p1_bar.margin_bottom = p1_bar.margin_top + 44
 	p2_bar.margin_bottom = p2_bar.margin_top + 44
-	
-	bg_style.shadow_color = Color(0, 0, 0, 0.5)
-	bg_style.shadow_size = 4
-	bg_style.shadow_offset = Vector2(2, 2)
 	
 	# Add name labels above bars
 	var p1_name = Label.new()

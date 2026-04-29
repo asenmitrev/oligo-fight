@@ -41,7 +41,7 @@ func _ready() -> void:
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
 
-	var stream := load("res://assets/music/character-select.mp3") as AudioStreamMP3
+	var stream := load("res://assets/music/character-select.ogg") as AudioStream
 	stream.loop = true
 	_music.stream = stream
 	_music.play()

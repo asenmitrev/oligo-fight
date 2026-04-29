@@ -15,8 +15,7 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 
 	for i in range(_proj_pool):
 		if not _proj_active[i]:
-			_proj_sprites[i].visible = false
-			_proj_labels[i].visible = false
+			# Sprite/label were already hidden when the slot deactivated.
 			continue
 
 		_proj_x[i] += _proj_dir[i] * _proj_speed
@@ -26,7 +25,7 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
-			_proj_labels[i].visible = false
+			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
 			continue
 
 		# Self-pickup: 5q walks over their own + ticket
@@ -36,7 +35,7 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
 				_proj_active[i] = false
 				_proj_sprites[i].visible = false
-				_proj_labels[i].visible = false
+				if _proj_labels[i]: _proj_labels[i].visible = false
 				health = min(max_health, health + _proj_value[i])
 				if _health_bar:
 					_health_bar.value = health
@@ -47,7 +46,7 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
-			_proj_labels[i].visible = false
+			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
 			if _proj_lottery_mode:
 				var val: int = _proj_value[i]
 				if _proj_is_heal[i]:
@@ -71,10 +70,11 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 		s.global_position = Vector2(_proj_x[i], _proj_y[i])
 		s.flip_h = (_proj_dir[i] < 0)
 
-		var l: Label = _proj_labels[i]
 		if _proj_lottery_mode:
-			l.visible = true
-			l.rect_global_position = Vector2(_proj_x[i], _proj_y[i] - 30)
+			var l: Label = _proj_labels[i]
+			if l:
+				l.visible = true
+				l.rect_global_position = Vector2(_proj_x[i], _proj_y[i] - 30)
 
 		var is_kick_p: bool  = _proj_is_kick[i]
 		var hf := _proj_anim_hframes_kick if is_kick_p else _proj_anim_hframes
