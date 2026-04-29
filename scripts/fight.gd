@@ -280,10 +280,10 @@ func _apply_fight_background() -> void:
 	_fit_background_to_screen()
 
 func _fit_background_to_screen() -> void:
-	var viewport_size = get_viewport_rect().size
+	var world_size = get_viewport_rect().size * camera.zoom
 	var tex_size = _background.texture.get_size()
-	var sx = viewport_size.x / tex_size.x
-	var sy = viewport_size.y / tex_size.y
+	var sx = world_size.x / tex_size.x
+	var sy = world_size.y / tex_size.y
 	var scale = max(sx, sy) * 1.1
 	_background.scale = Vector2(scale, scale)
 
