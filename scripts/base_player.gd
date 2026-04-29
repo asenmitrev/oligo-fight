@@ -51,6 +51,7 @@ var proj_fires_airborne: bool = false
 var whataboutism_blocks: bool = false
 var disable_attacks_airborne: bool = false
 var flypunch_teleports: bool = false
+var kick_teleports_behind: bool = false
 var flykick_forward: bool = false
 # Projectile config (kept in base for netcode sync compatibility)
 var fires_projectile: bool = false
@@ -143,6 +144,10 @@ var _proj_lifetime: Array = []
 var _proj_next: int = 0
 var _proj_sprites: Array = []
 var _proj_is_kick: Array = []
+var _proj_value: Array = []
+var _proj_is_heal: Array = []
+var _proj_labels: Array = []
+var _proj_lottery_mode: bool = false
 
 # Networked input
 var is_networked: bool = false
@@ -231,6 +236,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_anim_hframes = def.proj_anim_hframes
 	_proj_anim_vframes = def.proj_anim_vframes
 	_proj_anim_fps = def.proj_anim_fps
+	_proj_lottery_mode = def.proj_lottery_mode
 	
 	_init_projectile_pool(def.proj_pool)
 
@@ -258,6 +264,7 @@ func apply_character(def: CharacterDef) -> void:
 	_whataboutism_window_ticks_max = def.whataboutism_window_ticks
 	disable_attacks_airborne = def.disable_attacks_airborne
 	flypunch_teleports = def.flypunch_teleports
+	kick_teleports_behind = def.kick_teleports_behind
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	_cache_all_animation_data()
@@ -266,7 +273,9 @@ func apply_character(def: CharacterDef) -> void:
 
 func _init_projectile_pool(pool_size: int) -> void:
 	for s in _proj_sprites: s.queue_free()
+	for l in _proj_labels: l.queue_free()
 	_proj_sprites.clear()
+	_proj_labels.clear()
 	_proj_active.clear()
 	_proj_x.clear()
 	_proj_y.clear()
@@ -274,6 +283,8 @@ func _init_projectile_pool(pool_size: int) -> void:
 	_proj_dir.clear()
 	_proj_lifetime.clear()
 	_proj_is_kick.clear()
+	_proj_value.clear()
+	_proj_is_heal.clear()
 	_proj_next = 0
 	_proj_pool = pool_size
 	for i in range(_proj_pool):
@@ -284,11 +295,24 @@ func _init_projectile_pool(pool_size: int) -> void:
 		_proj_dir.append(1)
 		_proj_lifetime.append(0)
 		_proj_is_kick.append(false)
+		_proj_value.append(0)
+		_proj_is_heal.append(false)
 		var s := Sprite.new()
 		s.set_as_toplevel(true)
 		s.visible = false
 		add_child(s)
 		_proj_sprites.append(s)
+		var l := Label.new()
+		l.set_as_toplevel(true)
+		l.visible = false
+		var f := DynamicFont.new()
+		var fd := DynamicFontData.new()
+		fd.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+		f.font_data = fd
+		f.size = 28
+		l.add_font_override("font", f)
+		add_child(l)
+		_proj_labels.append(l)
 
 
 func _cache_all_animation_data() -> void:
@@ -352,6 +376,7 @@ func reset_for_round() -> void:
 		_proj_active[i] = false
 		_proj_lifetime[i] = 0
 		_proj_sprites[i].visible = false
+		_proj_labels[i].visible = false
 	_committed_keys = 0
 	_prev_committed_keys = 0
 	_invis_ticks = 0
@@ -595,6 +620,14 @@ func _end_invisibility() -> void:
 		anim.modulate.a = 1.0
 
 
+func _do_kick_teleport_behind() -> void:
+	if _opponent == null: return
+	var my_facing = -1.0 if anim.flip_h else 1.0
+	_opponent.global_position.x = global_position.x - my_facing * 300.0
+	_opponent.global_position.y = global_position.y
+	_opponent.velocity.x = 0.0
+
+
 func _do_flypunch_teleport() -> void:
 	if _opponent == null: _find_opponent()
 	if _opponent == null: return
@@ -645,6 +678,8 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		anim.modulate.a = 0.0
 
 
+	if kick_teleports_behind and is_kick and not _opponent.is_defeated:
+		_do_kick_teleport_behind()
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
 	if combos_enabled: _current_combo_count += 1
@@ -666,6 +701,13 @@ func _launch_projectile() -> void:
 		_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
 	_proj_vy[i] = -_proj_speed if _proj_kick_upwards and _proj_pending_is_kick else 0
 	_proj_lifetime[i] = 0
+	if _proj_lottery_mode:
+		var values = [5, 10, 20, 30]
+		_proj_value[i] = values[randi() % 4]
+		_proj_is_heal[i] = randi() % 2 == 0
+		var l: Label = _proj_labels[i]
+		l.text = ("+" if _proj_is_heal[i] else "-") + str(_proj_value[i])
+		l.add_color_override("font_color", Color(0.2, 1.0, 0.2, 1.0) if _proj_is_heal[i] else Color(1.0, 0.2, 0.2, 1.0))
 	var s: Sprite = _proj_sprites[i]
 	if _proj_pending_is_kick and _proj_texture_kick_tex:
 		s.texture = _proj_texture_kick_tex

@@ -239,6 +239,7 @@ func _init() -> void:
 	q5.jump_velocity = JUMP_VELOCITY
 	q5.punch_damage = 13
 	q5.kick_damage = 10
+	q5.kick_teleports_behind = true
 	q5.block_damage_modifier = 0.15
 	q5.max_health = 105.0
 	q5.punch_knockback_multiplier = 4.0
@@ -253,7 +254,8 @@ func _init() -> void:
 	q5.proj_texture = _q5_lottery_tex
 	q5.proj_scale = 0.5
 	q5.proj_spawn_x_offset = 80
-	q5.proj_spawn_y_offset = -150
+	q5.proj_spawn_y_offset = -125
+	q5.proj_lottery_mode = true
 	_register(q5)
 
 
