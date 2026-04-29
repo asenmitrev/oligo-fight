@@ -39,6 +39,7 @@ var kick_heals_self: int = 0
 var walk_self_heal: float = 0
 var _has_healed_on_walk: bool = false
 var kick_knockback_multiplier: float = 1.0
+var punch_knockback_multiplier: float = 1.0
 var fall_gravity_scale: float = 1.0
 var invulnerable_when_airborne: bool = false
 var partial_loop_jump: bool = false
@@ -62,9 +63,11 @@ var _proj_pool: int = 0
 var _proj_spawn_x_offset: int = 70
 var _proj_spawn_y_offset: int = 200
 var _proj_pending_is_kick: bool = false
+var _proj_pending_is_flypunch: bool = false
 var _proj_fires_on_punch: bool = false
 var _proj_fires_on_kick: bool = false
 var _proj_fires_on_walk: bool = false
+var _proj_fires_on_flypunch: bool = false
 var _proj_walk_fire_rate: int = 10
 var _proj_walk_fire_cooldown: int = 0
 var _proj_texture_punch: Texture
@@ -208,6 +211,7 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_fires_on_punch = def.proj_fires_on_punch
 	_proj_fires_on_kick = def.proj_fires_on_kick
 	_proj_fires_on_walk = def.proj_fires_on_walk
+	_proj_fires_on_flypunch = def.proj_fires_on_flypunch
 	_proj_walk_fire_rate = def.proj_walk_fire_rate
 	_proj_texture_punch = def.proj_texture
 	_proj_texture_kick_tex = def.proj_texture_kick
@@ -295,6 +299,8 @@ func _cache_all_animation_data() -> void:
 		var variants := [["", 1.0]]
 		if (anim_name == "punch" or anim_name == "body_punch") and proj_fires_airborne:
 			variants = [["", punch_speed_scale], ["_air", flypunch_speed_scale]]
+		elif anim_name == "flypunch" and _proj_fires_on_flypunch:
+			variants = [["", flypunch_speed_scale]]
 		else:
 			var ss := 1.0
 			if anim_name == "kick": ss = kick_speed_scale
@@ -315,7 +321,7 @@ func _cache_all_animation_data() -> void:
 				target_frame = 2
 				data.is_kick = true
 			if target_frame >= 0: data.hit_tick = (target_frame * phz + fps_int - 1) / fps_int
-			var _fires: bool = (fires_projectile and ((_proj_fires_on_punch and anim_name == "punch") or (_proj_fires_on_kick and anim_name == "kick")))
+			var _fires: bool = (fires_projectile and ((_proj_fires_on_punch and anim_name == "punch") or (_proj_fires_on_kick and anim_name == "kick") or (_proj_fires_on_flypunch and anim_name == "flypunch")))
 			if _fires:
 				var proj_frame := 3 if anim_name == "punch" else 2
 				data.proj_tick = (proj_frame * phz + fps_int - 1) / fps_int
@@ -360,6 +366,7 @@ func reset_for_round() -> void:
 	_proj_launch_fired = false
 	_proj_launch_tick = -1
 	_proj_launch_count = 0
+	_proj_pending_is_flypunch = false
 	global_position = _start_position
 	if _health_bar: _health_bar.value = health
 	_play_anim("idle")
@@ -386,7 +393,9 @@ func _play_anim(anim_name: String) -> void:
 			_proj_launch_tick = data.proj_tick
 			_anim_ticks_remaining = data.total_ticks
 			_attack_is_kick = data.is_kick
-			if _proj_launch_tick >= 0: _proj_pending_is_kick = (anim_name == "kick")
+			if _proj_launch_tick >= 0:
+				_proj_pending_is_kick = (anim_name == "kick")
+				_proj_pending_is_flypunch = (anim_name == "flypunch")
 		else:
 			anim.speed_scale = 1.0
 		anim.play(anim_name)
@@ -622,7 +631,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if fist_to_opp > HIT_TARGET_RADIUS: return
 	var is_counter  = _opponent._attacking
 	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else 1.0)
+	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier)
 	if not hit_registered: return
 	
 	if is_kick and _veli_kick_icon:
@@ -651,7 +660,10 @@ func _launch_projectile() -> void:
 	_proj_is_kick[i] = _proj_pending_is_kick
 	_proj_dir[i] = facing_dir
 	_proj_x[i] = int(global_position.x) + facing_dir * _proj_spawn_x_offset
-	_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
+	if _proj_pending_is_flypunch:
+		_proj_y[i] = int(_start_position.y) - _proj_spawn_y_offset
+	else:
+		_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
 	_proj_vy[i] = -_proj_speed if _proj_kick_upwards and _proj_pending_is_kick else 0
 	_proj_lifetime[i] = 0
 	var s: Sprite = _proj_sprites[i]
@@ -738,6 +750,8 @@ func _physics_process(delta: float) -> void:
 			_anim_hit_fired = true
 			if flypunch_teleports and _current_anim == "flypunch":
 				_do_flypunch_teleport()
+			elif _proj_fires_on_flypunch and _current_anim == "flypunch":
+				pass
 			else:
 				var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
 				if punch_self_damages and not _is_kick_attack:

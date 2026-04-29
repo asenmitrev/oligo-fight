@@ -219,58 +219,58 @@ region = Rect2( 128, 128, 128, 128 )
 
 [resource]
 animations = [ {
-  "frames": [ SubResource( 1 ), SubResource( 2 ), SubResource( 3 ), SubResource( 4 ) ],
-  "loop": true,
-  "name": "block",
-  "speed": 8.0
+"frames": [ SubResource( 1 ), SubResource( 2 ), SubResource( 3 ), SubResource( 4 ) ],
+"loop": true,
+"name": "block",
+"speed": 8.0
 }, {
-  "frames": [ SubResource( 5 ), SubResource( 6 ), SubResource( 7 ), SubResource( 8 ) ],
-  "loop": false,
-  "name": "falls",
-  "speed": 7.0
+"frames": [ SubResource( 5 ), SubResource( 6 ), SubResource( 7 ), SubResource( 8 ) ],
+"loop": false,
+"name": "falls",
+"speed": 7.0
 }, {
-  "frames": [ SubResource( 9 ), SubResource( 10 ), SubResource( 11 ), SubResource( 12 ) ],
-  "loop": false,
-  "name": "flykick",
-  "speed": 10.0
+"frames": [ SubResource( 9 ), SubResource( 10 ), SubResource( 11 ), SubResource( 12 ) ],
+"loop": false,
+"name": "flykick",
+"speed": 10.0
 }, {
-  "frames": [ SubResource( 13 ), SubResource( 14 ), SubResource( 15 ), SubResource( 16 ) ],
-  "loop": false,
-  "name": "flypunch",
-  "speed": 10.0
+"frames": [ SubResource( 13 ), SubResource( 14 ), SubResource( 15 ), SubResource( 16 ) ],
+"loop": false,
+"name": "flypunch",
+"speed": 10.0
 }, {
-  "frames": [ SubResource( 17 ), SubResource( 18 ), SubResource( 19 ), SubResource( 20 ) ],
-  "loop": false,
-  "name": "gets_hit",
-  "speed": 12.0
+"frames": [ SubResource( 17 ), SubResource( 18 ), SubResource( 19 ), SubResource( 20 ) ],
+"loop": false,
+"name": "gets_hit",
+"speed": 12.0
 }, {
-  "frames": [ SubResource( 21 ), SubResource( 22 ), SubResource( 23 ), SubResource( 24 ) ],
-  "loop": false,
-  "name": "getup",
-  "speed": 5.0
+"frames": [ SubResource( 21 ), SubResource( 22 ), SubResource( 23 ), SubResource( 24 ) ],
+"loop": false,
+"name": "getup",
+"speed": 5.0
 }, {
-  "frames": [ SubResource( 25 ), SubResource( 25 ), SubResource( 25 ), SubResource( 25 ) ],
-  "loop": true,
-  "name": "idle",
-  "speed": 8.0
+"frames": [ SubResource( 25 ), SubResource( 25 ), SubResource( 25 ), SubResource( 25 ) ],
+"loop": true,
+"name": "idle",
+"speed": 8.0
 }, {
-  "frames": [ SubResource( 26 ), SubResource( 27 ), SubResource( 28 ), SubResource( 29 ) ],
-  "loop": true,
-  "name": "jump",
-  "speed": 8.0
+"frames": [ SubResource( 26 ), SubResource( 27 ), SubResource( 28 ), SubResource( 29 ) ],
+"loop": true,
+"name": "jump",
+"speed": 8.0
 }, {
-  "frames": [ SubResource( 30 ), SubResource( 31 ), SubResource( 32 ), SubResource( 33 ) ],
-  "loop": false,
-  "name": "kick",
-  "speed": 10.0
+"frames": [ SubResource( 30 ), SubResource( 31 ), SubResource( 32 ), SubResource( 33 ) ],
+"loop": false,
+"name": "kick",
+"speed": 10.0
 }, {
-  "frames": [ SubResource( 34 ), SubResource( 35 ), SubResource( 36 ), SubResource( 37 ) ],
-  "loop": false,
-  "name": "punch",
-  "speed": 10.0
+"frames": [ SubResource( 34 ), SubResource( 35 ), SubResource( 36 ), SubResource( 37 ) ],
+"loop": false,
+"name": "punch",
+"speed": 10.0
 }, {
-  "frames": [ SubResource( 38 ), SubResource( 39 ), SubResource( 40 ), SubResource( 41 ) ],
-  "loop": true,
-  "name": "walk",
-  "speed": 8.0
+"frames": [ SubResource( 38 ), SubResource( 39 ), SubResource( 40 ), SubResource( 41 ) ],
+"loop": true,
+"name": "walk",
+"speed": 8.0
 } ]

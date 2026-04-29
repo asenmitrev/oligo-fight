@@ -20,6 +20,7 @@ const _crunch_pigeon_tex: Texture = preload("res://assets/crunch/pigeon.png")
 
 const _yavor_proj_tex: Texture = preload("res://assets/yavor/fas.png")
 const _q5_frames: SpriteFrames = preload("res://resources/5q_sprite_frames.tres")
+const _q5_lottery_tex: Texture = preload("res://assets/5q/lottery-ticket.png")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -240,6 +241,19 @@ func _init() -> void:
 	q5.kick_damage = 10
 	q5.block_damage_modifier = 0.15
 	q5.max_health = 105.0
+	q5.punch_knockback_multiplier = 4.0
+	q5.fires_projectile = true
+	q5.proj_fires_on_flypunch = true
+	q5.proj_damage = 15
+	q5.proj_speed = 0
+	q5.proj_hit_radius = 30
+	q5.proj_y_tolerance = 50
+	q5.proj_lifetime_ticks = 600
+	q5.proj_pool = 3
+	q5.proj_texture = _q5_lottery_tex
+	q5.proj_scale = 0.5
+	q5.proj_spawn_x_offset = 80
+	q5.proj_spawn_y_offset = -150
 	_register(q5)
 
 
