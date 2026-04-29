@@ -8,10 +8,10 @@ const FIGHT_BACKGROUNDS := [
 ]
 
 const FIGHT_MUSIC := [
-	"res://assets/music/thrift-shop.mp3",
-	"res://assets/music/cinema.mp3",
-	"res://assets/music/picnic.mp3",
-	"res://assets/music/bar.mp3",
+	"res://assets/music/thrift-shop.ogg",
+	"res://assets/music/cinema.ogg",
+	"res://assets/music/picnic.ogg",
+	"res://assets/music/bar.ogg",
 ]
 
 onready var _music: AudioStreamPlayer = $Music
@@ -49,6 +49,9 @@ var _shake_intensity: float = 0.0
 var _shake_duration: float = 0.0
 var _camera_origin: Vector2
 
+# Shared font data (loaded once, reused for all DynamicFont instances)
+var _lobster_font_data: DynamicFontData
+
 # Combo HUD
 var _p1_combo_root: Control = null
 var _p2_combo_root: Control = null
@@ -81,7 +84,7 @@ func _ready() -> void:
 	_start_round()
 
 	var music_idx: int = int(clamp(GameState.fight_background_index, 0, FIGHT_MUSIC.size() - 1))
-	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamMP3
+	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamOGGVorbis
 	stream.loop = true
 	_music.stream = stream
 	_music.volume_db = -8.0
@@ -103,6 +106,9 @@ func _setup_health_bars() -> void:
 	bg_style.expand_margin_right = 2
 	bg_style.expand_margin_top = 2
 	bg_style.expand_margin_bottom = 2
+	bg_style.shadow_color = Color(0, 0, 0, 0.5)
+	bg_style.shadow_size = 4
+	bg_style.shadow_offset = Vector2(2, 2)
 	
 	# P1 Fill Style
 	var p1_fg = StyleBoxFlat.new()
@@ -111,7 +117,7 @@ func _setup_health_bars() -> void:
 	p1_fg.border_width_right = 2
 	p1_fg.border_width_top = 2
 	p1_fg.border_width_bottom = 2
-	p1_fg.border_color = Color(1, 1, 1, 0.5) # Slight highlight
+	p1_fg.border_color = Color(1, 1, 1, 0.5)
 	
 	# P2 Fill Style
 	var p2_fg = StyleBoxFlat.new()
@@ -120,22 +126,16 @@ func _setup_health_bars() -> void:
 	p2_fg.border_width_right = 2
 	p2_fg.border_width_top = 2
 	p2_fg.border_width_bottom = 2
-	p2_fg.border_color = Color(1, 1, 1, 0.5) # Slight highlight
+	p2_fg.border_color = Color(1, 1, 1, 0.5)
 	
 	p1_bar.add_stylebox_override("bg", bg_style)
 	p1_bar.add_stylebox_override("fg", p1_fg)
 	p2_bar.add_stylebox_override("bg", bg_style)
 	p2_bar.add_stylebox_override("fg", p2_fg)
 	
-	# Make them taller and add shadow
 	p1_bar.margin_bottom = p1_bar.margin_top + 44
 	p2_bar.margin_bottom = p2_bar.margin_top + 44
 	
-	bg_style.shadow_color = Color(0, 0, 0, 0.5)
-	bg_style.shadow_size = 4
-	bg_style.shadow_offset = Vector2(2, 2)
-	
-	# Add name labels above bars
 	var p1_name = Label.new()
 	p1_name.text = GameState.p1_character
 	p1_name.rect_position = Vector2(p1_bar.rect_position.x, p1_bar.rect_position.y - 25)
@@ -148,11 +148,10 @@ func _setup_health_bars() -> void:
 	p2_name.rect_size.x = p2_bar.rect_size.x
 	$HUD.add_child(p2_name)
 	
-	# Wins display is handled by circle nodes built in _setup_win_circles()
 	p1_wins_label.visible = false
 	p2_wins_label.visible = false
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if _shake_duration > 0:
 		_shake_duration -= delta
 		var offset = Vector2(
@@ -163,6 +162,7 @@ func _process(delta: float) -> void:
 		if _shake_duration <= 0:
 			camera.position = _camera_origin
 
+func _process(delta: float) -> void:
 	_p1_combo_timer = max(0.0, _p1_combo_timer - delta)
 	_p2_combo_timer = max(0.0, _p2_combo_timer - delta)
 	if _p1_combo_root:
@@ -200,10 +200,11 @@ func _on_special_combo() -> void:
 	shake_camera(12.0, 0.3)
 
 func _setup_combo_labels() -> void:
-	var font_data = DynamicFontData.new()
-	font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	if _lobster_font_data == null:
+		_lobster_font_data = DynamicFontData.new()
+		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
 	var font = DynamicFont.new()
-	font.font_data = font_data
+	font.font_data = _lobster_font_data
 	font.size = 28
 	font.outline_size = 4
 	font.outline_color = Color(0, 0, 0, 1)
@@ -276,15 +277,15 @@ func _apply_fight_background() -> void:
 			0,
 			FIGHT_BACKGROUNDS.size() - 1))
 	_background.texture = load(FIGHT_BACKGROUNDS[idx])
-	_fit_background()
-	get_viewport().connect("size_changed", self, "_fit_background")
+	_fit_background_to_screen()
 
-func _fit_background() -> void:
-	var vp: Vector2 = get_viewport().size
-	var visible: Vector2 = vp * camera.zoom
-	var tex: Vector2 = _background.texture.get_size()
-	var cover: float = max(visible.x / tex.x, visible.y / tex.y)
-	_background.scale = Vector2(cover, cover)
+func _fit_background_to_screen() -> void:
+	var viewport_size = get_viewport_rect().size
+	var tex_size = _background.texture.get_size()
+	var sx = viewport_size.x / tex_size.x
+	var sy = viewport_size.y / tex_size.y
+	var scale = max(sx, sy) * 1.1
+	_background.scale = Vector2(scale, scale)
 
 func _build_pause_menu() -> void:
 	_pause_menu = CanvasLayer.new()

@@ -64,7 +64,7 @@ shape = SubResource( 1 )
 [node name="AnimatedSprite" type="AnimatedSprite" parent="Player2"]
 modulate = Color( 1, 0.75, 0.85, 1 )
 position = Vector2( 0, 77 )
-scale = Vector2( 3.0, 3.0 )
+scale = Vector2( 2.0, 2.0 )
 offset = Vector2( 0, -64 )
 
 [node name="Ground" type="StaticBody2D" parent="."]

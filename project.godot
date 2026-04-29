@@ -17,6 +17,10 @@ boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
 config/icon="res://icon.svg"
 
+[audio]
+
+mixer/output_rate=44100
+
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
@@ -195,3 +199,4 @@ vram_compression/import_etc2=false
 2d/options/batching=true
 quality/2d/use_pixel_snap=true
 quality/framerate/fps=30
+environment/ssl_enabled=false

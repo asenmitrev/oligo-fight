@@ -177,6 +177,8 @@ func _on_animation_finished() -> void:
 
 
 func _find_opponent() -> void:
+	if _opponent != null:
+		return
 	for p in get_tree().get_nodes_in_group("players"):
 		if p != self:
 			_opponent = p as KinematicBody2D

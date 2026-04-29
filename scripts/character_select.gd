@@ -27,6 +27,9 @@ var _resume_btn: Button
 var _quit_btn: Button
 var _is_paused: bool = false
 
+# Shared font data (loaded once, reused for all DynamicFont instances)
+var _lobster_font_data: DynamicFontData
+
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
 onready var p2_tween: Tween = Tween.new()
@@ -42,7 +45,7 @@ func _ready() -> void:
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
 
-	var stream := load("res://assets/music/character-select.mp3") as AudioStreamMP3
+	var stream := load("res://assets/music/character-select.ogg") as AudioStreamOGGVorbis
 	stream.loop = true
 	_music.stream = stream
 	_music.volume_db = -8.0
@@ -67,10 +70,11 @@ func _setup_background() -> void:
 
 
 func _make_lobster_font(size: int) -> DynamicFont:
-	var data := DynamicFontData.new()
-	data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	if _lobster_font_data == null:
+		_lobster_font_data = DynamicFontData.new()
+		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
 	var font := DynamicFont.new()
-	font.font_data = data
+	font.font_data = _lobster_font_data
 	font.size = size
 	font.outline_size = 4
 	font.outline_color = Color(0, 0, 0, 1)
