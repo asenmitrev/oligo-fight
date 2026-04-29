@@ -109,6 +109,7 @@ var hit_count := 0
 var _hit_ticks: int = 0
 var _attacking := false
 var _opponent: KinematicBody2D
+var _opponent_found: bool = false
 var _ipman_target: KinematicBody2D
 var _ipman_lookup_done: bool = false
 var _health_bar: ProgressBar
@@ -138,6 +139,10 @@ const INVIS_MAX_TICKS: int = 180
 # Cached input snapshot to avoid redundant Input.is_action_pressed() calls
 var _inp_left: bool = false
 var _inp_right: bool = false
+var _inp_down: bool = false
+var _inp_jump_jp: bool = false
+var _inp_punch_jp: bool = false
+var _inp_kick_jp: bool = false
 
 # Projectile state
 var _proj_active: Array = []
@@ -374,6 +379,7 @@ func reset_for_round() -> void:
 	input_disabled = false
 	_current_combo_count = 0
 	_blocked_punch = false
+	_opponent_found = false
 	_proj_next = 0
 	for i in range(_proj_pool):
 		_proj_active[i] = false
@@ -431,10 +437,11 @@ func _play_anim(anim_name: String) -> void:
 
 
 func _find_opponent() -> void:
-	if _opponent != null and is_instance_valid(_opponent): return
+	if _opponent_found: return
 	for p in get_tree().get_nodes_in_group("players"):
 		if p != self:
 			_opponent = p as KinematicBody2D
+			_opponent_found = true
 			return
 
 
@@ -894,24 +901,112 @@ func _handle_pending_abilities(is_on_floor_t: bool) -> void:
 			_hitstop_ticks = HITSTOP_TICKS
 
 
-func _get_input_snapshot() -> Dictionary:
-	var snapshot := {}
+# Reusable input struct — avoids Dictionary allocation every physics tick (Pi 3 GC pressure)
+class InputSnapshot:
+	var left: bool = false
+	var right: bool = false
+	var down: bool = false
+	var jump_jp: bool = false
+	var punch_jp: bool = false
+	var kick_jp: bool = false
+
+var _input_cache = InputSnapshot.new()
+
+func _get_input_snapshot() -> InputSnapshot:
 	if input_disabled:
-		snapshot.left = false; snapshot.right = false; snapshot.down = false
-		snapshot.jump_jp = false; snapshot.punch_jp = false; snapshot.kick_jp = false
+		_input_cache.left = false; _input_cache.right = false; _input_cache.down = false
+		_input_cache.jump_jp = false; _input_cache.punch_jp = false; _input_cache.kick_jp = false
 	else:
-		snapshot.left     = Input.is_action_pressed(action_left)
-		snapshot.right    = Input.is_action_pressed(action_right)
-		snapshot.down     = Input.is_action_pressed(action_down)
-		snapshot.jump_jp  = Input.is_action_just_pressed(action_jump)
-		snapshot.punch_jp = Input.is_action_just_pressed(action_punch)
-		snapshot.kick_jp  = Input.is_action_just_pressed(action_kick)
-	return snapshot
+		_input_cache.left     = Input.is_action_pressed(action_left)
+		_input_cache.right    = Input.is_action_pressed(action_right)
+		_input_cache.down     = Input.is_action_pressed(action_down)
+		_input_cache.jump_jp  = Input.is_action_just_pressed(action_jump)
+		_input_cache.punch_jp = Input.is_action_just_pressed(action_punch)
+		_input_cache.kick_jp  = Input.is_action_just_pressed(action_kick)
+	return _input_cache
 
 
 # Virtual methods to be overridden for performance
-func _process_ability_logic(_opp_pos: Vector2) -> void:
-	pass
+func _process_ability_logic(opp_pos: Vector2) -> void:
+	if fires_projectile:
+		_process_projectiles(opp_pos)
+
+func _process_projectiles(opp_pos: Vector2) -> void:
+	var phz := Engine.iterations_per_second
+	var opp_x: float = opp_pos.x
+	var opp_y: float = opp_pos.y
+	var self_x: float = global_position.x
+	var self_y: float = global_position.y
+
+	for i in range(_proj_pool):
+		if not _proj_active[i]:
+			# Sprite/label were already hidden when the slot deactivated.
+			continue
+
+		_proj_x[i] += _proj_dir[i] * _proj_speed
+		_proj_y[i] += _proj_vy[i]
+		_proj_lifetime[i] += 1
+
+		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
+			_proj_active[i] = false
+			_proj_sprites[i].visible = false
+			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
+			continue
+
+		# Self-pickup: 5q walks over their own + ticket
+		if _proj_lottery_mode and _proj_is_heal[i]:
+			var sdx := abs(_proj_x[i] - self_x)
+			var sdy := abs(_proj_y[i] - self_y)
+			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
+				_proj_active[i] = false
+				_proj_sprites[i].visible = false
+				if _proj_labels[i]: _proj_labels[i].visible = false
+				health = min(max_health, health + _proj_value[i])
+				if _health_bar:
+					_health_bar.value = health
+				continue
+
+		var dx := abs(_proj_x[i] - opp_x)
+		var dy := abs(_proj_y[i] - opp_y)
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
+			_proj_active[i] = false
+			_proj_sprites[i].visible = false
+			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
+			if _proj_lottery_mode:
+				var val: int = _proj_value[i]
+				if _proj_is_heal[i]:
+					_opponent.health = min(_opponent.max_health, _opponent.health + val)
+					if _opponent._health_bar:
+						_opponent._health_bar.value = _opponent.health
+				else:
+					var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, val)
+					if registered:
+						_hitstop_ticks = HITSTOP_TICKS
+						emit_signal("hit_landed", false, 0)
+			else:
+				var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_damage)
+				if registered:
+					_hitstop_ticks = HITSTOP_TICKS
+					emit_signal("hit_landed", false, 0)
+			continue
+
+		var s: Sprite = _proj_sprites[i]
+		s.visible = true
+		s.global_position = Vector2(_proj_x[i], _proj_y[i])
+		s.flip_h = (_proj_dir[i] < 0)
+
+		if _proj_lottery_mode:
+			var l: Label = _proj_labels[i]
+			if l:
+				l.visible = true
+				l.rect_global_position = Vector2(_proj_x[i], _proj_y[i] - 30)
+
+		var is_kick_p: bool  = _proj_is_kick[i]
+		var hf := _proj_anim_hframes_kick if is_kick_p else _proj_anim_hframes
+		var vf := _proj_anim_vframes_kick if is_kick_p else _proj_anim_vframes
+		var fps := _proj_anim_fps_kick if is_kick_p else _proj_anim_fps
+		if hf * vf > 1:
+			s.frame = (_proj_lifetime[i] * fps / phz) % (hf * vf)
 
 
 func _update_animation_state(direction: float, is_on_floor_t: bool, should_block_visually: bool, to_opp: float, dist_to_opp: float) -> void:

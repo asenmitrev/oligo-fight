@@ -27,11 +27,13 @@ var _resume_btn: Button
 var _quit_btn: Button
 var _is_paused: bool = false
 
+# Shared font data — created once, reused everywhere (saves RAM + rasterization on Pi 3)
+var _lobster_font_data: DynamicFontData
+
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
 onready var p2_tween: Tween = Tween.new()
 onready var _music: AudioStreamPlayer = $Music
-
 
 func _ready() -> void:
 	add_child(p1_tween)
@@ -46,15 +48,16 @@ func _ready() -> void:
 	_music.stream = stream
 	_music.play()
 
-
 func _make_lobster_font(size: int) -> DynamicFont:
-	var data := DynamicFontData.new()
-	data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	if not _lobster_font_data:
+		_lobster_font_data = DynamicFontData.new()
+		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
 	var font := DynamicFont.new()
-	font.font_data = data
+	font.font_data = _lobster_font_data
 	font.size = size
 	font.outline_size = 4
 	font.outline_color = Color(0, 0, 0, 1)
+	return font
 	return font
 
 
@@ -101,6 +104,8 @@ func _setup_select_grid() -> void:
 			preview.frame = 0
 		else:
 			preview.play("idle")
+			preview.playing = false
+			preview.frame = 0
 		slot.add_child(preview)
 		char_previews.append(preview)
 

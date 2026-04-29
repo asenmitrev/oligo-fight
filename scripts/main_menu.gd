@@ -4,6 +4,15 @@ onready var _music: AudioStreamPlayer = $Music
 
 var _local_btn: Button
 
+# Shared font data — created once, reused for title + buttons (saves RAM on Pi 3)
+var _lobster_font_data: DynamicFontData
+
+func _get_lobster_font_data() -> DynamicFontData:
+	if not _lobster_font_data:
+		_lobster_font_data = DynamicFontData.new()
+		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	return _lobster_font_data
+
 
 func _ready() -> void:
 	if OS.get_name() == "X11":
@@ -39,10 +48,8 @@ func _build_ui() -> void:
 	add_child(bg_tex)
 
 	# Title
-	var font_data := DynamicFontData.new()
-	font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
 	var title_font := DynamicFont.new()
-	title_font.font_data = font_data
+	title_font.font_data = _get_lobster_font_data()
 	title_font.size = 52
 	title_font.outline_size = 6
 	title_font.outline_color = Color(0, 0, 0, 1)
@@ -62,7 +69,7 @@ func _build_ui() -> void:
 
 	# Button font
 	var btn_font := DynamicFont.new()
-	btn_font.font_data = font_data
+	btn_font.font_data = _get_lobster_font_data()
 	btn_font.size = 24
 	btn_font.outline_size = 3
 	btn_font.outline_color = Color(0, 0, 0, 1)

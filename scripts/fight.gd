@@ -50,6 +50,13 @@ var _was_round_in_progress: bool = false
 var _shake_intensity: float = 0.0
 var _shake_duration: float = 0.0
 var _camera_origin: Vector2
+var _shake_tick: int = 0
+
+# Pre-computed pseudo-random shake offsets (120 entries = 4 seconds at 30fps)
+# Generated once at startup, no sin/cos per frame on Pi 3
+const _SHAKE_TABLE_SIZE := 120
+var _shake_table_x: Array = []
+var _shake_table_y: Array = []
 
 # Combo HUD
 var _p1_combo_root: Control = null
@@ -60,6 +67,9 @@ var _p1_combo_timer: float = 0.0
 var _p2_combo_timer: float = 0.0
 const COMBO_DISPLAY_DURATION := 2.5
 const COMBO_FADE_START := 1.0
+
+# Shared font data for combo labels (avoids per-frame rasterization overhead on Pi 3)
+var _combo_font_data: DynamicFontData
 
 # Whataboutism HUD
 var _whataboutism_node: Control = null
@@ -74,6 +84,7 @@ func _ready() -> void:
 	_build_pause_menu()
 	_apply_character_selections()
 	_camera_origin = camera.position
+	_init_shake_table()
 	
 	_p1.connect("defeated", self, "_on_player_defeated")
 	_p1.connect("hit_landed", self, "_on_p1_hit_landed")
@@ -93,6 +104,12 @@ func _ready() -> void:
 	stream.loop = true
 	_music.stream = stream
 	_music.play()
+
+func _init_shake_table() -> void:
+	# Fill lookup table with pseudo-random normalized offsets
+	for i in range(_SHAKE_TABLE_SIZE):
+		_shake_table_x.append(randf() * 2.0 - 1.0)
+		_shake_table_y.append(randf() * 2.0 - 1.0)
 
 func _setup_health_bars() -> void:
 	var p1_bar = $HUD/P1HealthBar
@@ -156,15 +173,20 @@ func _setup_health_bars() -> void:
 	p2_wins_label.visible = false
 
 func _process(delta: float) -> void:
+	if _shake_duration <= 0 and _p1_combo_timer <= 0.0 and _p2_combo_timer <= 0.0 and _whataboutism_timer <= 0.0:
+		return
+	
 	if _shake_duration > 0:
 		_shake_duration -= delta
+		_shake_tick = (_shake_tick + 1) % _SHAKE_TABLE_SIZE
 		var offset = Vector2(
-			rand_range(-_shake_intensity, _shake_intensity),
-			rand_range(-_shake_intensity, _shake_intensity)
+			_shake_table_x[_shake_tick] * _shake_intensity,
+			_shake_table_y[_shake_tick] * _shake_intensity
 		)
 		camera.position = _camera_origin + offset
 		if _shake_duration <= 0:
 			camera.position = _camera_origin
+			_shake_tick = 0
 
 	_p1_combo_timer = max(0.0, _p1_combo_timer - delta)
 	_p2_combo_timer = max(0.0, _p2_combo_timer - delta)
@@ -232,12 +254,13 @@ func _setup_whataboutism() -> void:
 	$HUD.add_child(_whataboutism_node)
 
 func _setup_combo_labels() -> void:
-	var font_data = DynamicFontData.new()
-	font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
+	if not _combo_font_data:
+		_combo_font_data = DynamicFontData.new()
+		_combo_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
 	var font = DynamicFont.new()
-	font.font_data = font_data
+	font.font_data = _combo_font_data
 	font.size = 28
-	font.outline_size = 4
+	font.outline_size = 3  # Reduced from 4 for Pi 3 performance
 	font.outline_color = Color(0, 0, 0, 1)
 
 	var combo_tex = load("res://assets/combo.png")
@@ -416,40 +439,8 @@ func _configure_player(player: KinematicBody2D, char_name: String, is_mirror: bo
 	if def == null:
 		def = CharacterDB.all_characters[0]
 	
-	# Save exported variables before script swap
-	var actions = {
-		"left": player.action_left,
-		"right": player.action_right,
-		"jump": player.action_jump,
-		"down": player.action_down,
-		"punch": player.action_punch,
-		"kick": player.action_kick,
-		"face_left": player.face_left,
-		"hb_path": player.health_bar_path,
-		"dname": player.display_name
-	}
+	player.set_script(preload("res://scripts/player.gd"))
 
-	# Performance Optimization for Raspberry Pi:
-	if def.fires_projectile:
-		player.set_script(preload("res://scripts/shooter_player.gd"))
-	elif def.whataboutism_blocks or def.punch_makes_invisible or def.invulnerable_when_airborne:
-		player.set_script(preload("res://scripts/special_player.gd"))
-	else:
-		player.set_script(preload("res://scripts/player.gd"))
-	
-	# Restore exported variables
-	player.action_left = actions.left
-	player.action_right = actions.right
-	player.action_jump = actions.jump
-	player.action_down = actions.down
-	player.action_punch = actions.punch
-	player.action_kick = actions.kick
-	player.face_left = actions.face_left
-	player.health_bar_path = actions.hb_path
-	player.display_name = actions.dname
-
-	# After set_script and restoration, re-initialize
-	player._ready()
 	player.apply_character(def)
 	
 	if is_mirror:
