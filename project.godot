@@ -33,11 +33,15 @@ _global_script_class_icons={
 [application]
 
 config/name="OLIGO FIGHT"
-run/main_scene="res://scenes/MainMenu.tscn"
+run/main_scene="res://scenes/CharacterSelect.tscn"
 boot_splash/image="res://assets/bg_character-select.png"
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
 config/icon="res://icon.svg"
+
+[audio]
+
+mixer/output_rate=44100
 
 [autoload]
 
@@ -59,7 +63,7 @@ window/fullscreen=true
 
 [editor_plugins]
 
-enabled=PoolStringArray( "res://addons/godot-rollback-netcode/plugin.cfg" )
+enabled=PoolStringArray(  )
 
 [input]
 
@@ -217,3 +221,4 @@ vram_compression/import_etc2=false
 2d/options/batching=true
 quality/2d/use_pixel_snap=true
 quality/framerate/fps=30
+environment/ssl_enabled=false

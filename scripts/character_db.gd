@@ -19,6 +19,7 @@ const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
 const _crunch_pigeon_tex: Texture = preload("res://assets/crunch/pigeon.png")
 
 const _yavor_proj_tex: Texture = preload("res://assets/yavor/fas.png")
+const _q5_frames: SpriteFrames = preload("res://resources/5q_sprite_frames.tres")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -231,6 +232,15 @@ func _init() -> void:
 	drago.flypunch_teleports = true
 	drago.punch_speed_scale = 0.7
 	_register(drago)
+
+	var q5 = _make_def("5q", "5q", _q5_frames, Color(1, 1, 1, 1))
+	q5.speed = 350.0
+	q5.jump_velocity = JUMP_VELOCITY
+	q5.punch_damage = 13
+	q5.kick_damage = 10
+	q5.block_damage_modifier = 0.15
+	q5.max_health = 105.0
+	_register(q5)
 
 
 func _make_def(id: String, display_name: String, frames: SpriteFrames, mod: Color):
