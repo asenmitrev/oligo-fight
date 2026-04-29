@@ -53,7 +53,6 @@ var disable_attacks_airborne: bool = false
 var flypunch_teleports: bool = false
 var kick_teleports_behind: bool = false
 var flykick_forward: bool = false
-# Projectile config (kept in base for netcode sync compatibility)
 var fires_projectile: bool = false
 var _proj_speed: int = 0
 var _proj_damage: int = 10
@@ -116,7 +115,7 @@ var _punch_arm_extension: float = PUNCH_ARM_EXTENSION
 var _start_position: Vector2
 var velocity: Vector2 = Vector2.ZERO
 var _hitstop_ticks: int = 0
-var _knockback_x: int = 0
+var _knockback_x: float = 0.0
 var _block_stun_ticks: int = 0
 var _blocked_punch: bool = false
 var _current_anim: String = ""
@@ -149,12 +148,6 @@ var _proj_is_heal: Array = []
 var _proj_labels: Array = []
 var _proj_lottery_mode: bool = false
 
-# Networked input
-var is_networked: bool = false
-var _committed_keys: int = 0
-var _prev_committed_keys: int = 0
-var _action_bits: Dictionary = {}
-
 # Physics-tick timing
 var _anim_hit_fired: bool = false
 var _attack_hit_tick: int = -1
@@ -178,10 +171,6 @@ func _ready() -> void:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.max_value = max_health
 		_health_bar.value = max_health
-	_action_bits = {
-		action_left: 1, action_right: 2, action_jump: 4,
-		action_down: 8, action_punch: 16, action_kick: 32,
-	}
 
 
 func apply_character(def: CharacterDef) -> void:
@@ -289,9 +278,9 @@ func _init_projectile_pool(pool_size: int) -> void:
 	_proj_pool = pool_size
 	for i in range(_proj_pool):
 		_proj_active.append(false)
-		_proj_x.append(0)
-		_proj_y.append(0)
-		_proj_vy.append(0)
+		_proj_x.append(0.0)
+		_proj_y.append(0.0)
+		_proj_vy.append(0.0)
 		_proj_dir.append(1)
 		_proj_lifetime.append(0)
 		_proj_is_kick.append(false)
@@ -363,7 +352,7 @@ func reset_for_round() -> void:
 	_hit_ticks = 0
 	_attacking = false
 	velocity = Vector2.ZERO
-	_knockback_x = 0
+	_knockback_x = 0.0
 	_hitstop_ticks = 0
 	_block_stun_ticks = 0
 	_current_anim = ""
@@ -377,8 +366,6 @@ func reset_for_round() -> void:
 		_proj_lifetime[i] = 0
 		_proj_sprites[i].visible = false
 		_proj_labels[i].visible = false
-	_committed_keys = 0
-	_prev_committed_keys = 0
 	_invis_ticks = 0
 	anim.modulate.a = 1.0
 	if _veli_kick_icon:
@@ -445,7 +432,7 @@ func _set_frozen(value: bool) -> void:
 func _move_with_floor_snap() -> Vector2:
 	var snap := Vector2.ZERO
 	if velocity.y >= 0.0: snap = FLOOR_SNAP
-	return move_and_slide_with_snap(velocity + Vector2(_knockback_x, 0), snap, Vector2.UP)
+	return move_and_slide_with_snap(velocity + Vector2(_knockback_x, 0.0), snap, Vector2.UP)
 
 
 func _handle_animation_finished() -> void:
@@ -568,14 +555,14 @@ func _apply_impact(attacker_pos: Vector2, multiplier: float) -> void:
 	var dir = (global_position.x - attacker_pos.x)
 	if dir == 0: dir = -1.0 if anim.flip_h else 1.0
 	dir = sign(dir)
-	_knockback_x = int(dir * KNOCKBACK_FORCE * multiplier)
+	_knockback_x = dir * KNOCKBACK_FORCE * multiplier
 
 
 func _apply_pull(attacker_pos: Vector2) -> void:
 	if is_defeated or state == State.GETUP: return
 	if invulnerable_when_airborne and not is_on_floor(): return
 	var dir = sign(attacker_pos.x - global_position.x)
-	_knockback_x = int(dir * KNOCKBACK_FORCE)
+	_knockback_x = dir * KNOCKBACK_FORCE
 	_hitstop_ticks = HITSTOP_TICKS
 	_enter_hit()
 
@@ -694,12 +681,12 @@ func _launch_projectile() -> void:
 	_proj_active[i] = true
 	_proj_is_kick[i] = _proj_pending_is_kick
 	_proj_dir[i] = facing_dir
-	_proj_x[i] = int(global_position.x) + facing_dir * _proj_spawn_x_offset
+	_proj_x[i] = global_position.x + facing_dir * _proj_spawn_x_offset
 	if _proj_pending_is_flypunch:
-		_proj_y[i] = int(_start_position.y) - _proj_spawn_y_offset
+		_proj_y[i] = _start_position.y - _proj_spawn_y_offset
 	else:
-		_proj_y[i] = int(global_position.y) - _proj_spawn_y_offset
-	_proj_vy[i] = -_proj_speed if _proj_kick_upwards and _proj_pending_is_kick else 0
+		_proj_y[i] = global_position.y - _proj_spawn_y_offset
+	_proj_vy[i] = float(-_proj_speed) if _proj_kick_upwards and _proj_pending_is_kick else 0.0
 	_proj_lifetime[i] = 0
 	if _proj_lottery_mode:
 		var values = [5, 10, 20, 30]
@@ -722,20 +709,12 @@ func _launch_projectile() -> void:
 		s.scale = Vector2(_proj_scale_base, _proj_scale_base)
 
 
-func set_committed_keys(keys: int) -> void:
-	_committed_keys = keys
-
-
 func _action_pressed(action: String) -> bool:
-	if is_networked: return bool(_committed_keys & int(_action_bits.get(action, 0)))
 	if input_disabled: return false
 	return Input.is_action_pressed(action)
 
 
 func _action_just_pressed(action: String) -> bool:
-	if is_networked:
-		var bit := int(_action_bits.get(action, 0))
-		return bool(_committed_keys & bit) and not bool(_prev_committed_keys & bit)
 	if input_disabled: return false
 	return Input.is_action_just_pressed(action)
 
@@ -823,7 +802,7 @@ func _physics_process(delta: float) -> void:
 		_invis_ticks -= 1
 		if _invis_ticks == 0: anim.modulate.a = 1.0
 
-	_knockback_x = _knockback_x * 5 / 6
+	_knockback_x *= 5.0 / 6.0
 
 	if _block_stun_ticks > 0:
 		_block_stun_ticks -= 1
@@ -837,7 +816,7 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor_t:
 		var grav_scale := fall_gravity_scale if state == State.NORMAL else 1.0
-		velocity.y = round(velocity.y + GRAVITY * (3.0 if inp.down else 1.0) * grav_scale * delta)
+		velocity.y += GRAVITY * (3.0 if inp.down else 1.0) * grav_scale * delta
 
 	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
 		_current_anim = ""
@@ -846,8 +825,6 @@ func _physics_process(delta: float) -> void:
 	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
 		velocity.x = 0.0
 		velocity = _move_with_floor_snap()
-		global_position.x = round(global_position.x)
-		global_position.y = round(global_position.y)
 		return
 
 	var direction := float(inp.right) - float(inp.left)
@@ -871,8 +848,6 @@ func _physics_process(delta: float) -> void:
 		velocity.x = direction * current_speed
 
 	velocity = _move_with_floor_snap()
-	global_position.x = round(global_position.x)
-	global_position.y = round(global_position.y)
 
 	# Attraction to IpMan - all non-IpMan characters drift towards him
 	if display_name != "IpMan":
@@ -885,7 +860,6 @@ func _physics_process(delta: float) -> void:
 				break
 
 	_update_animation_state(direction, is_on_floor_t, should_block_visually, to_opp, dist_to_opp)
-	_prev_committed_keys = _committed_keys
 
 
 func _handle_pending_abilities(is_on_floor_t: bool) -> void:
@@ -903,26 +877,16 @@ func _handle_pending_abilities(is_on_floor_t: bool) -> void:
 
 func _get_input_snapshot() -> Dictionary:
 	var snapshot := {}
-	if is_networked:
-		var k := _committed_keys
-		var pk := _prev_committed_keys
-		snapshot.left     = bool(k & 1)
-		snapshot.right    = bool(k & 2)
-		snapshot.jump_jp  = bool(k & 4) and not bool(pk & 4)
-		snapshot.down     = bool(k & 8)
-		snapshot.punch_jp = bool(k & 16) and not bool(pk & 16)
-		snapshot.kick_jp  = bool(k & 32) and not bool(pk & 32)
+	if input_disabled:
+		snapshot.left = false; snapshot.right = false; snapshot.down = false
+		snapshot.jump_jp = false; snapshot.punch_jp = false; snapshot.kick_jp = false
 	else:
-		if input_disabled:
-			snapshot.left = false; snapshot.right = false; snapshot.down = false
-			snapshot.jump_jp = false; snapshot.punch_jp = false; snapshot.kick_jp = false
-		else:
-			snapshot.left     = Input.is_action_pressed(action_left)
-			snapshot.right    = Input.is_action_pressed(action_right)
-			snapshot.down     = Input.is_action_pressed(action_down)
-			snapshot.jump_jp  = Input.is_action_just_pressed(action_jump)
-			snapshot.punch_jp = Input.is_action_just_pressed(action_punch)
-			snapshot.kick_jp  = Input.is_action_just_pressed(action_kick)
+		snapshot.left     = Input.is_action_pressed(action_left)
+		snapshot.right    = Input.is_action_pressed(action_right)
+		snapshot.down     = Input.is_action_pressed(action_down)
+		snapshot.jump_jp  = Input.is_action_just_pressed(action_jump)
+		snapshot.punch_jp = Input.is_action_just_pressed(action_punch)
+		snapshot.kick_jp  = Input.is_action_just_pressed(action_kick)
 	return snapshot
 
 

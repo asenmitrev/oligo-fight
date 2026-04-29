@@ -8,10 +8,10 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 		return
 
 	var phz := Engine.iterations_per_second
-	var opp_x_int := int(opp_pos.x)
-	var opp_y_int := int(opp_pos.y)
-	var self_x_int := int(global_position.x)
-	var self_y_int := int(global_position.y)
+	var opp_x: float = opp_pos.x
+	var opp_y: float = opp_pos.y
+	var self_x: float = global_position.x
+	var self_y: float = global_position.y
 
 	for i in range(_proj_pool):
 		if not _proj_active[i]:
@@ -31,9 +31,9 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 
 		# Self-pickup: 5q walks over their own + ticket
 		if _proj_lottery_mode and _proj_is_heal[i]:
-			var sdx := abs(_proj_x[i] - self_x_int)
-			var sdy := abs(_proj_y[i] - self_y_int)
-			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y_int + 50 >= _proj_y[i]:
+			var sdx := abs(_proj_x[i] - self_x)
+			var sdy := abs(_proj_y[i] - self_y)
+			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
 				_proj_active[i] = false
 				_proj_sprites[i].visible = false
 				_proj_labels[i].visible = false
@@ -42,9 +42,9 @@ func _process_ability_logic(opp_pos: Vector2) -> void:
 					_health_bar.value = health
 				continue
 
-		var dx := abs(_proj_x[i] - opp_x_int)
-		var dy := abs(_proj_y[i] - opp_y_int)
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y_int + 50 >= _proj_y[i]:
+		var dx := abs(_proj_x[i] - opp_x)
+		var dy := abs(_proj_y[i] - opp_y)
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
 			_proj_labels[i].visible = false

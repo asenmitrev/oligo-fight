@@ -3,12 +3,9 @@ extends Control
 onready var _music: AudioStreamPlayer = $Music
 
 var _local_btn: Button
-var _online_btn: Button
 
 
 func _ready() -> void:
-	GameState.is_online = false
-
 	if OS.get_name() == "X11":
 		_on_local_play()
 		return
@@ -79,19 +76,9 @@ func _build_ui() -> void:
 	vbox.add_constant_override("separation", 16)
 	add_child(vbox)
 
-	_local_btn = _make_button("Local Play", btn_font)
+	_local_btn = _make_button("Play", btn_font)
 	_local_btn.connect("pressed", self, "_on_local_play")
 	vbox.add_child(_local_btn)
-
-	_online_btn = _make_button("Online Play", btn_font)
-	_online_btn.connect("pressed", self, "_on_online_play")
-	vbox.add_child(_online_btn)
-
-	# Focus navigation
-	_local_btn.focus_neighbour_bottom = _local_btn.get_path_to(_online_btn)
-	_local_btn.focus_neighbour_top = _local_btn.get_path_to(_online_btn)
-	_online_btn.focus_neighbour_top = _online_btn.get_path_to(_local_btn)
-	_online_btn.focus_neighbour_bottom = _online_btn.get_path_to(_local_btn)
 
 	_local_btn.call_deferred("grab_focus")
 
@@ -129,12 +116,5 @@ func _make_button(text: String, font: DynamicFont) -> Button:
 
 
 func _on_local_play() -> void:
-	GameState.is_online = false
 	_music.stop()
 	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
-
-
-func _on_online_play() -> void:
-	GameState.is_online = true
-	_music.stop()
-	get_tree().change_scene("res://scenes/OnlineLobby.tscn")

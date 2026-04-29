@@ -7,9 +7,6 @@ var p2_is_mirror: bool = false
 const FIGHT_BACKGROUND_COUNT := 4
 var fight_background_index: int = 0
 
-# Set to true when playing online (web multiplayer)
-var is_online: bool = false
-
 const P1_COLOR := Color(0.2, 0.6, 1.0, 1.0) # Blue
 const P2_COLOR := Color(0.9, 0.15, 0.15, 1.0) # Red
 

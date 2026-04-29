@@ -28,16 +28,6 @@ var p2_wins: int = 0
 var current_round: int = 1
 var round_in_progress: bool = false
 
-# Online mode
-var is_online: bool = false
-var _local_role: String = ""
-var _local_player: KinematicBody2D = null
-var _remote_player: KinematicBody2D = null
-var _real_frame: int = 0   # Increments every physics tick (always advances)
-var _exec_frame: int = 0   # Next game frame to execute (advances only when both inputs available)
-var _is_stalled: bool = false
-var _stall_frames: int = 0  # Counts consecutive frames stalled; triggers disconnect after timeout
-
 # Win circles HUD
 var _p1_circles: Array = []       # Panel nodes
 var _p2_circles: Array = []
@@ -92,9 +82,6 @@ func _ready() -> void:
 	_setup_combo_labels()
 	_setup_win_circles()
 	_update_wins_display()
-
-	if GameState.is_online:
-		_setup_online()
 
 	_start_round()
 
@@ -168,11 +155,6 @@ func _setup_health_bars() -> void:
 	# Wins display is handled by circle nodes built in _setup_win_circles()
 	p1_wins_label.visible = false
 	p2_wins_label.visible = false
-
-func _physics_process(_delta: float) -> void:
-	if is_online:
-		_process_online_frame()
-
 
 func _process(delta: float) -> void:
 	if _shake_duration > 0:
@@ -321,142 +303,6 @@ func _tick_combo_label(root: Control, t: float, delta: float) -> void:
 	else:
 		root.modulate.a = 1.0
 
-func _setup_online() -> void:
-	is_online = true
-	_local_role = NetworkManager.local_role
-	_local_player = _p1 if _local_role == "p1" else _p2
-	_remote_player = _p2 if _local_role == "p1" else _p1
-	_local_player.is_networked = true
-	_remote_player.is_networked = true
-	_reset_online_state()
-	NetworkManager.connect("opponent_disconnected", self, "_on_opponent_disconnected")
-
-func _reset_online_state() -> void:
-	NetworkManager.remote_input_buffer.clear()
-	NetworkManager.local_input_buffer.clear()
-	NetworkManager.remote_state_hash_buffer.clear()
-	_real_frame = 0
-	_exec_frame = 0
-	_is_stalled = false
-	_stall_frames = 0
-
-
-func _state_hash() -> int:
-	var s := ""
-	for p in [_p1, _p2]:
-		s += "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;" % [
-			int(round(p.global_position.x)), int(round(p.global_position.y)),
-			p.health, p.state as int,
-			p._knockback_x, p._hitstop_ticks, p._hit_ticks, p._block_stun_ticks,
-			p._anim_ticks_remaining,
-			1 if p._attacking else 0,
-			1 if p._anim_hit_fired else 0,
-			p._attack_tick_count, p._attack_hit_tick
-		]
-		for i in range(p._proj_pool):
-			s += "%d,%d,%d;" % [
-				1 if p._proj_active[i] else 0,
-				p._proj_x[i], p._proj_lifetime[i]
-			]
-		s += "%d,%d,%d;" % [
-			1 if p._proj_launch_fired else 0,
-			p._proj_launch_tick, p._proj_launch_count
-		]
-	return s.hash()
-
-
-func _print_state_detail(label: String) -> void:
-	print("[%s exec=%d]" % [label, _exec_frame])
-	for p in [_p1, _p2]:
-		print("  %s pos=(%d,%d) hp=%d st=%d kb=%d hs=%d ht=%d bs=%d rem=%d atk=%s fired=%s cnt=%d htick=%d proj=%s(%d,%d)" % [
-			p.display_name,
-			int(round(p.global_position.x)), int(round(p.global_position.y)),
-			p.health, p.state as int,
-			p._knockback_x, p._hitstop_ticks, p._hit_ticks, p._block_stun_ticks,
-			p._anim_ticks_remaining,
-			str(p._attacking), str(p._anim_hit_fired),
-			p._attack_tick_count, p._attack_hit_tick,
-			str(p._proj_active), p._proj_x, p._proj_y
-		])
-
-
-func _process_online_frame() -> void:
-	var delay := NetworkManager.input_delay_frames
-
-	# Compute state hash and send with local input for this real-time frame.
-	# The hash represents state BEFORE this exec_frame (i.e. after exec_frame-1).
-	# We use real_frame as the index — both machines advance real_frame in lockstep.
-	var my_hash := _state_hash()
-	var local_keys := _sample_local_input()
-	NetworkManager.local_input_buffer[_real_frame] = local_keys
-	NetworkManager.send_input_frame(_real_frame, local_keys, my_hash)
-
-	# Compare our hash with the remote's hash for the same real_frame.
-	# Both machines should have identical state at the same real_frame when in sync.
-	if NetworkManager.remote_state_hash_buffer.has(_real_frame):
-		var remote_hash: int = NetworkManager.remote_state_hash_buffer[_real_frame]
-		if remote_hash != my_hash:
-			print("[DESYNC detected at real_frame=%d exec_frame=%d]" % [_real_frame, _exec_frame])
-			_print_state_detail("LOCAL")
-
-	_real_frame += 1
-
-	# Wait until we have buffered enough frames to start executing
-	if _real_frame <= delay:
-		return
-
-	# Check if remote input for the next execute frame has arrived
-	if not NetworkManager.remote_input_buffer.has(_exec_frame):
-		if round_in_progress:
-			if not _is_stalled:
-				_is_stalled = true
-				_set_players_frozen(true)
-			_stall_frames += 1
-			# 10 seconds at 60 fps — silent disconnect fallback
-			if _stall_frames >= 600:
-				print("[Fight] Stall timeout: no remote input for exec_frame=%d after 10s, treating as disconnect" % _exec_frame)
-				_on_opponent_disconnected()
-				return
-		return
-
-	# Remote input arrived — unstall if needed
-	if _is_stalled:
-		_is_stalled = false
-		_stall_frames = 0
-		if round_in_progress:
-			_set_players_frozen(false)
-
-	# Apply both players' committed inputs for this game frame
-	var local_exec: int = NetworkManager.local_input_buffer.get(_exec_frame, 0)
-	var remote_exec: int = NetworkManager.remote_input_buffer[_exec_frame]
-	_local_player.set_committed_keys(local_exec)
-	_remote_player.set_committed_keys(remote_exec)
-
-	_exec_frame += 1
-
-
-func _sample_local_input() -> int:
-	var prefix := "p1_"
-	var keys := 0
-	if Input.is_action_pressed(prefix + "left"):       keys |= 1
-	if Input.is_action_pressed(prefix + "right"):      keys |= 2
-	if Input.is_action_just_pressed(prefix + "jump"):  keys |= 4
-	if Input.is_action_pressed(prefix + "down"):       keys |= 8
-	if Input.is_action_just_pressed(prefix + "punch"): keys |= 16
-	if Input.is_action_just_pressed(prefix + "kick"):  keys |= 32
-	return keys
-
-
-func _on_opponent_disconnected() -> void:
-	_set_players_frozen(true)
-	round_in_progress = false
-	win_label.text = "Opponent disconnected"
-	win_screen.visible = true
-	yield(get_tree().create_timer(3.0), "timeout")
-	_music.stop()
-	get_tree().change_scene("res://scenes/MainMenu.tscn")
-
-
 func _apply_fight_background() -> void:
 	var idx: int = int(clamp(
 			GameState.fight_background_index,
@@ -556,12 +402,7 @@ func _resume_game() -> void:
 func _on_pause_character_select() -> void:
 	_is_paused = false
 	_music.stop()
-	if is_online:
-		NetworkManager.disconnect_from_server()
-		GameState.is_online = false
-		get_tree().change_scene("res://scenes/MainMenu.tscn")
-	else:
-		get_tree().change_scene("res://scenes/CharacterSelect.tscn")
+	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
 
 func _on_pause_quit() -> void:
 	_music.stop()
@@ -752,12 +593,11 @@ func _on_player_defeated() -> void:
 	else:
 		_flash_circle(_p2_circles[p2_wins - 1])
 
-	var veli_beat_simonka: bool = (not is_online) and winner_name == "Veli" and loser_name == "Simonka"
+	var veli_beat_simonka: bool = winner_name == "Veli" and loser_name == "Simonka"
 	var win_text: String = "Veli thinks he's won!" if veli_beat_simonka else winner_name + " Wins!"
 	var round_text: String = "Veli thinks he's won Round %d!" % current_round if veli_beat_simonka else winner_name + " wins Round %d!" % current_round
 
 	if veli_beat_simonka:
-		# Special sequence for Veli's "fake" win (offline only — real-time timers would desync online)
 		win_label.text = win_text
 		win_screen.visible = true
 
@@ -798,7 +638,4 @@ func _on_player_defeated() -> void:
 		current_round += 1
 		_p1.reset_for_round()
 		_p2.reset_for_round()
-		if is_online:
-			_is_stalled = false
-			_stall_frames = 0
 		_start_round()
