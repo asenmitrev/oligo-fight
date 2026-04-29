@@ -19,7 +19,7 @@ config/icon="res://icon.svg"
 
 [audio]
 
-mixer/output_rate=44100
+mixer/output_rate=22050
 
 [autoload]
 

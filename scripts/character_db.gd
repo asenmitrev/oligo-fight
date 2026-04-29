@@ -1,7 +1,7 @@
 extends Node
 
 const CharacterDef = preload("res://scripts/character_def.gd")
-const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
+#const _simonka_frames: SpriteFrames = preload("res://resources/simonka_sprite_frames.tres")
 const _veli_frames: SpriteFrames = preload("res://resources/veli_sprite_frames.tres")
 const _bobe_frames: SpriteFrames = preload("res://resources/bobe_sprite_frames.tres")
 const _ipman_frames: SpriteFrames = preload("res://resources/ipman_sprite_frames.tres")
@@ -17,7 +17,6 @@ const _ipman_proj_tex: Texture = preload("res://assets/ipman/money-projectile.pn
 const _siyana_proj_tex: Texture = preload("res://assets/siyana/baby-projectile.png")
 const _crunch_cupcake_tex: Texture = preload("res://assets/crunch/cupcake.png")
 const _crunch_pigeon_tex: Texture = preload("res://assets/crunch/pigeon.png")
-
 const _yavor_proj_tex: Texture = preload("res://assets/yavor/fas.png")
 const _q5_frames: SpriteFrames = preload("res://resources/5q_sprite_frames.tres")
 const _q5_lottery_tex: Texture = preload("res://assets/5q/lottery-ticket.png")
@@ -55,15 +54,15 @@ func _init() -> void:
 	ipman.proj_fires_airborne = true
 	_register(ipman)
 
-	var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
-	simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Veli's
-	simonka.speed = 380.0
-	simonka.jump_velocity = JUMP_VELOCITY * 1.4
-	simonka.punch_damage = 12
-	simonka.kick_damage = 8
-	simonka.block_damage_modifier = 0.12
-	simonka.max_health = 100.0
-	simonka.sprite_scale = 0.9
+	#var simonka = _make_def("simonka", "Simonka", _simonka_frames, Color(1, 1, 1, 1))
+	#simonka.punch_arm_extension = 140.0  # punch animation extends 20px further than Veli's
+	#simonka.speed = 380.0
+	#simonka.jump_velocity = JUMP_VELOCITY * 1.4
+	#simonka.punch_damage = 12
+	#simonka.kick_damage = 8
+	#simonka.block_damage_modifier = 0.12
+	#simonka.max_health = 100.0
+	#simonka.sprite_scale = 0.9
 	# _register(simonka)
 
 	var veli = _make_def("veli", "Veli", _veli_frames, Color(1, 1, 1, 1))
