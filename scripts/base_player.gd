@@ -185,7 +185,7 @@ func _ready() -> void:
 
 func apply_character(def: CharacterDef) -> void:
 	display_name = def.display_name
-	anim.frames = def.sprite_frames
+	anim.frames = def.get_sprite_frames()
 	anim.modulate = def.modulate
 	_punch_arm_extension = def.punch_arm_extension
 	speed = def.speed
@@ -217,8 +217,8 @@ func apply_character(def: CharacterDef) -> void:
 	_proj_fires_on_walk = def.proj_fires_on_walk
 	_proj_fires_on_flypunch = def.proj_fires_on_flypunch
 	_proj_walk_fire_rate = def.proj_walk_fire_rate
-	_proj_texture_punch = def.proj_texture
-	_proj_texture_kick_tex = def.proj_texture_kick
+	_proj_texture_punch = def.get_proj_texture()
+	_proj_texture_kick_tex = def.get_proj_texture_kick()
 	_proj_scale_base = def.proj_scale
 	_proj_scale_kick = def.proj_scale_kick
 	_proj_anim_hframes_kick = def.proj_anim_hframes_kick
