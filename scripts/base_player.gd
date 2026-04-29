@@ -135,6 +135,10 @@ var _veli_kick_icon: Sprite
 var _invis_ticks: int = 0
 const INVIS_MAX_TICKS: int = 180
 
+# Cached input snapshot to avoid redundant Input.is_action_pressed() calls
+var _inp_left: bool = false
+var _inp_right: bool = false
+
 # Projectile state
 var _proj_active: Array = []
 var _proj_x: Array = []
@@ -554,10 +558,8 @@ func _handle_whataboutism_on_block() -> void:
 
 
 func _check_blocking(to_opp: float) -> bool:
-	var input_left  = _action_pressed(action_left)
-	var input_right = _action_pressed(action_right)
-	if to_opp > 0 and input_left: return true
-	if to_opp < 0 and input_right: return true
+	if to_opp > 0 and _inp_left: return true
+	if to_opp < 0 and _inp_right: return true
 	return false
 
 
@@ -744,6 +746,8 @@ func _physics_process(delta: float) -> void:
 		opp_attacking = _opponent._attacking
 
 	var inp := _get_input_snapshot()
+	_inp_left = inp.left
+	_inp_right = inp.right
 	var to_opp := 0.0
 	var is_blocking_input := false
 	if _opponent:
