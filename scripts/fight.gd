@@ -8,13 +8,10 @@ const FIGHT_BACKGROUNDS := [
 ]
 
 const FIGHT_MUSIC := [
-	"res://assets/music/thrift-shop.ogg",
-
-	"res://assets/music/cinema.ogg",
-
-	"res://assets/music/picnic.ogg",
-
-	"res://assets/music/bar.ogg",
+	preload("res://assets/music/thrift-shop.ogg"),
+	preload("res://assets/music/cinema.ogg"),
+	preload("res://assets/music/picnic.ogg"),
+	preload("res://assets/music/bar.ogg"),
 ]
 
 onready var _music: AudioStreamPlayer = $Music
@@ -100,7 +97,7 @@ func _ready() -> void:
 	_start_round()
 
 	var music_idx: int = int(clamp(GameState.fight_background_index, 0, FIGHT_MUSIC.size() - 1))
-	var stream := load(FIGHT_MUSIC[music_idx]) as AudioStreamOGGVorbis
+	var stream: AudioStreamOGGVorbis = FIGHT_MUSIC[music_idx]
 	stream.loop = true
 	_music.stream = stream
 	_music.play()

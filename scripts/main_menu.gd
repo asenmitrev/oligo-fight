@@ -15,7 +15,7 @@ func _ready() -> void:
 
 	_build_ui()
 
-	var stream := load("res://assets/music/character-select.ogg") as AudioStream
+	var stream: AudioStream = preload("res://assets/music/character-select.ogg")
 	stream.loop = true
 	_music.stream = stream
 	_music.play()
