@@ -93,19 +93,13 @@ func _setup_select_grid() -> void:
 		slot.add_child(p2_b)
 		p2_borders.append(p2_b)
 
-		var preview := AnimatedSprite.new()
-		preview.position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH)
-		preview.offset = PREVIEW_OFFSET
-		preview.scale = Vector2(ps, ps)
+		var preview := TextureRect.new()
+		preview.rect_position = Vector2(SLOT_WIDTH / 2.0, SLOT_WIDTH) + PREVIEW_OFFSET - sprite_rendered_size / 2.0
+		preview.rect_size = sprite_rendered_size
 		preview.flip_h = (i >= centers_x.size() / 2)
-		preview.frames = char_def.get_preview_sprite_frames()
-		if char_def.id == "kraska":
-			preview.animation = "idle"
-			preview.frame = 0
-		else:
-			preview.play("idle")
-			preview.playing = false
-			preview.frame = 0
+		preview.texture = tex
+		preview.expand = true
+		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		slot.add_child(preview)
 		char_previews.append(preview)
 
