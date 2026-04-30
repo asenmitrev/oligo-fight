@@ -157,6 +157,7 @@ var _proj_value: Array = []
 var _proj_is_heal: Array = []
 var _proj_labels: Array = []
 var _proj_lottery_mode: bool = false
+var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 # Physics-tick timing
 var _anim_hit_fired: bool = false
@@ -288,14 +289,10 @@ func _init_projectile_pool(pool_size: int) -> void:
 	_proj_next = 0
 	_proj_pool = pool_size
 	# Lottery mode is the only path that actually renders text on projectiles;
-	# build a single shared DynamicFont so we don't rasterize the TTF per slot.
-	var shared_font: DynamicFont = null
+	# use a shared BitmapFont (no runtime rasterization).
+	var shared_font: BitmapFont = null
 	if _proj_lottery_mode and _proj_pool > 0:
-		shared_font = DynamicFont.new()
-		var fd := DynamicFontData.new()
-		fd.font_path = "res://assets/fonts/Lobster-Regular.ttf"
-		shared_font.font_data = fd
-		shared_font.size = 28
+		shared_font = LOBSTER_FONT_28
 	for i in range(_proj_pool):
 		_proj_active.append(false)
 		_proj_x.append(0.0)

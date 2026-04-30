@@ -32,10 +32,8 @@ var current_round: int = 1
 var round_in_progress: bool = false
 
 # Win circles HUD
-var _p1_circles: Array = []       # Panel nodes
+var _p1_circles: Array = []       # TextureRect nodes
 var _p2_circles: Array = []
-var _p1_circle_styles: Array = [] # StyleBoxFlat refs
-var _p2_circle_styles: Array = []
 var _win_tween: Tween
 const CIRCLE_SIZE := 26
 const CIRCLE_GAP := 10
@@ -68,8 +66,8 @@ var _p2_combo_timer: float = 0.0
 const COMBO_DISPLAY_DURATION := 2.5
 const COMBO_FADE_START := 1.0
 
-# Shared font data for combo labels (avoids per-frame rasterization overhead on Pi 3)
-var _combo_font_data: DynamicFontData
+var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
+var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 # Whataboutism HUD
 var _whataboutism_node: Control = null
@@ -161,6 +159,8 @@ func _setup_health_bars() -> void:
 	var p1_name = Label.new()
 	p1_name.text = GameState.p1_character
 	p1_name.rect_position = Vector2(p1_bar.rect_position.x, p1_bar.rect_position.y - 25)
+	p1_name.add_font_override("font", LOBSTER_FONT_28)
+	p1_name.add_color_override("font_color", Color.white)
 	$HUD.add_child(p1_name)
 	
 	var p2_name = Label.new()
@@ -168,6 +168,8 @@ func _setup_health_bars() -> void:
 	p2_name.align = Label.ALIGN_RIGHT
 	p2_name.rect_position = Vector2(p2_bar.rect_position.x, p2_bar.rect_position.y - 25)
 	p2_name.rect_size.x = p2_bar.rect_size.x
+	p2_name.add_font_override("font", LOBSTER_FONT_28)
+	p2_name.add_color_override("font_color", Color.white)
 	$HUD.add_child(p2_name)
 	
 	# Wins display is handled by circle nodes built in _setup_win_circles()
@@ -194,12 +196,8 @@ func _process(delta: float) -> void:
 	_p2_combo_timer = max(0.0, _p2_combo_timer - delta)
 	if _p1_combo_root:
 		_tick_combo_label(_p1_combo_root, _p1_combo_timer, delta)
-		if _p1_combo_timer > 0.0:
-			_update_combo_pos(_p1_combo_root, _p1, _p2)
 	if _p2_combo_root:
 		_tick_combo_label(_p2_combo_root, _p2_combo_timer, delta)
-		if _p2_combo_timer > 0.0:
-			_update_combo_pos(_p2_combo_root, _p2, _p1)
 
 	if _whataboutism_timer > 0.0:
 		_whataboutism_timer = max(0.0, _whataboutism_timer - delta)
@@ -220,7 +218,7 @@ func _on_p1_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	else:
 		shake_camera(3.0, 0.1)
 	if combo_count >= 2:
-		_show_combo(_p1_combo_root, _p1_combo_label, combo_count)
+		_show_combo(_p1_combo_root, _p1_combo_label, combo_count, _p1, _p2)
 		_p1_combo_timer = COMBO_DISPLAY_DURATION
 
 func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
@@ -229,7 +227,7 @@ func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	else:
 		shake_camera(3.0, 0.1)
 	if combo_count >= 2:
-		_show_combo(_p2_combo_root, _p2_combo_label, combo_count)
+		_show_combo(_p2_combo_root, _p2_combo_label, combo_count, _p2, _p1)
 		_p2_combo_timer = COMBO_DISPLAY_DURATION
 
 func _on_whataboutism() -> void:
@@ -256,26 +254,17 @@ func _setup_whataboutism() -> void:
 	$HUD.add_child(_whataboutism_node)
 
 func _setup_combo_labels() -> void:
-	if not _combo_font_data:
-		_combo_font_data = DynamicFontData.new()
-		_combo_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
-	var font = DynamicFont.new()
-	font.font_data = _combo_font_data
-	font.size = 28
-	font.outline_size = 3  # Reduced from 4 for Pi 3 performance
-	font.outline_color = Color(0, 0, 0, 1)
-
 	var combo_tex = load("res://assets/combo.png")
 
-	_p1_combo_root = _make_combo_widget(combo_tex, font)
+	_p1_combo_root = _make_combo_widget(combo_tex)
 	_p1_combo_label = _p1_combo_root.get_child(1)
 	$HUD.add_child(_p1_combo_root)
 
-	_p2_combo_root = _make_combo_widget(combo_tex, font)
+	_p2_combo_root = _make_combo_widget(combo_tex)
 	_p2_combo_label = _p2_combo_root.get_child(1)
 	$HUD.add_child(_p2_combo_root)
 
-func _make_combo_widget(tex: Texture, font: DynamicFont) -> Control:
+func _make_combo_widget(tex: Texture) -> Control:
 	var root = Control.new()
 	root.rect_position = Vector2(0, 0)
 	root.rect_size = Vector2(150, 90)
@@ -289,7 +278,7 @@ func _make_combo_widget(tex: Texture, font: DynamicFont) -> Control:
 	root.add_child(img)
 
 	var lbl = Label.new()
-	lbl.add_font_override("font", font)
+	lbl.add_font_override("font", LOBSTER_FONT_28)
 	lbl.rect_position = Vector2(95, 0)
 	lbl.rect_size = Vector2(55, 90)
 	lbl.valign = Label.VALIGN_CENTER
@@ -312,8 +301,9 @@ func _update_combo_pos(root: Control, attacker: KinematicBody2D, opponent: Kinem
 	var y = screen_pos.y - 80
 	root.rect_position = Vector2(clamp(x, 0, 490), clamp(y, 0, 270))
 
-func _show_combo(root: Control, label: Label, count: int) -> void:
+func _show_combo(root: Control, label: Label, count: int, attacker: KinematicBody2D, opponent: KinematicBody2D) -> void:
 	label.text = str(count)
+	_update_combo_pos(root, attacker, opponent)
 	root.modulate.a = 1.0
 	root.rect_scale = Vector2(1.3, 1.3)
 
@@ -367,15 +357,19 @@ func _build_pause_menu() -> void:
 	var title = Label.new()
 	title.text = "PAUSED"
 	title.align = Label.ALIGN_CENTER
+	title.add_font_override("font", LOBSTER_FONT_28)
+	title.add_color_override("font_color", Color.white)
 	vbox.add_child(title)
 
 	_pause_char_btn = Button.new()
 	_pause_char_btn.text = "Character Select"
+	_pause_char_btn.add_font_override("font", LOBSTER_FONT_28)
 	_pause_char_btn.connect("pressed", self, "_on_pause_character_select")
 	vbox.add_child(_pause_char_btn)
 
 	_pause_quit_btn = Button.new()
 	_pause_quit_btn.text = "Quit Game"
+	_pause_quit_btn.add_font_override("font", LOBSTER_FONT_28)
 	_pause_quit_btn.connect("pressed", self, "_on_pause_quit")
 	vbox.add_child(_pause_quit_btn)
 
@@ -449,6 +443,8 @@ func _configure_player(player: KinematicBody2D, char_name: String, is_mirror: bo
 		player.anim.modulate = Color(1, 0.75, 0.85, 1)
 
 func _setup_win_circles() -> void:
+	var circle_tex := load("res://assets/win_circle.png") as Texture
+
 	# P1 circles – anchored to left side under health bar
 	var p1_hbox := HBoxContainer.new()
 	p1_hbox.anchor_left = 0.0
@@ -463,14 +459,14 @@ func _setup_win_circles() -> void:
 	$HUD.add_child(p1_hbox)
 
 	for _i in range(2):
-		var style := _make_circle_style(false)
-		var panel := Panel.new()
-		panel.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
-		panel.add_stylebox_override("panel", style)
-		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		p1_hbox.add_child(panel)
-		_p1_circles.append(panel)
-		_p1_circle_styles.append(style)
+		var tr := TextureRect.new()
+		tr.texture = circle_tex
+		tr.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
+		tr.expand = true
+		tr.modulate = Color(0.35, 0.35, 0.35, 1.0) # empty = dim gray
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p1_hbox.add_child(tr)
+		_p1_circles.append(tr)
 
 	# P2 circles – anchored to right side
 	var p2_hbox := HBoxContainer.new()
@@ -487,55 +483,32 @@ func _setup_win_circles() -> void:
 	$HUD.add_child(p2_hbox)
 
 	for _i in range(2):
-		var style := _make_circle_style(false)
-		var panel := Panel.new()
-		panel.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
-		panel.add_stylebox_override("panel", style)
-		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		p2_hbox.add_child(panel)
-		_p2_circles.append(panel)
-		_p2_circle_styles.append(style)
+		var tr := TextureRect.new()
+		tr.texture = circle_tex
+		tr.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
+		tr.expand = true
+		tr.modulate = Color(0.35, 0.35, 0.35, 1.0) # empty = dim gray
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p2_hbox.add_child(tr)
+		_p2_circles.append(tr)
 
 	_win_tween = Tween.new()
 	add_child(_win_tween)
 
-func _make_circle_style(filled: bool) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	var r := CIRCLE_SIZE / 2
-	style.corner_radius_top_left = r
-	style.corner_radius_top_right = r
-	style.corner_radius_bottom_left = r
-	style.corner_radius_bottom_right = r
-	if filled:
-		style.bg_color = Color(1, 1, 1, 1)
-	else:
-		style.bg_color = Color(0, 0, 0, 0)
-		style.border_width_left = 2
-		style.border_width_right = 2
-		style.border_width_top = 2
-		style.border_width_bottom = 2
-		style.border_color = Color(1, 1, 1, 0.55)
-	return style
+func _set_circle_filled(circle: TextureRect, filled: bool) -> void:
+	circle.modulate = Color(1, 1, 1, 1) if filled else Color(0.35, 0.35, 0.35, 1.0)
 
-func _set_circle_filled(style: StyleBoxFlat, filled: bool) -> void:
-	style.bg_color = Color(1, 1, 1, 1) if filled else Color(0, 0, 0, 0)
-	var bw := 0 if filled else 2
-	style.border_width_left = bw
-	style.border_width_right = bw
-	style.border_width_top = bw
-	style.border_width_bottom = bw
-
-func _flash_circle(panel: Panel) -> void:
-	panel.modulate = Color(3.0, 3.0, 3.0, 1.0)
-	_win_tween.interpolate_property(panel, "modulate",
+func _flash_circle(circle: TextureRect) -> void:
+	circle.modulate = Color(3.0, 3.0, 3.0, 1.0)
+	_win_tween.interpolate_property(circle, "modulate",
 		Color(3.0, 3.0, 3.0, 1.0), Color(1.0, 1.0, 1.0, 1.0),
 		0.9, Tween.TRANS_SINE, Tween.EASE_OUT)
 	_win_tween.start()
 
 func _update_wins_display() -> void:
 	for i in range(2):
-		_set_circle_filled(_p1_circle_styles[i], i < p1_wins)
-		_set_circle_filled(_p2_circle_styles[i], i < p2_wins)
+		_set_circle_filled(_p1_circles[i], i < p1_wins)
+		_set_circle_filled(_p2_circles[i], i < p2_wins)
 
 func _set_players_frozen(frozen: bool) -> void:
 	for player in get_tree().get_nodes_in_group("players"):

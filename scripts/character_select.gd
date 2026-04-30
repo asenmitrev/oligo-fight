@@ -9,7 +9,8 @@ const UI_TEXT_SCALE := 1.55
 const PREVIEW_SCALE := 1.80
 const SLOT_WIDTH := 256
 const PREVIEW_OFFSET := Vector2(0, -25)
-const FEET_FROM_BOTTOM := 50  # px from bottom of screen where character feet sit
+const FEET_FROM_BOTTOM := 75  # px from bottom of screen where character feet sit
+const NAME_LABEL_STAGGER := 30  # vertical offset between adjacent fighter name rows
 const BORDER_WIDTH_NORMAL := 5
 const BORDER_WIDTH_CONFIRMED := 12
 const P2_BORDER_INSET := 7  # P2 border is drawn inset inside P1's border
@@ -27,8 +28,8 @@ var _resume_btn: Button
 var _quit_btn: Button
 var _is_paused: bool = false
 
-# Shared font data — created once, reused everywhere (saves RAM + rasterization on Pi 3)
-var _lobster_font_data: DynamicFontData
+var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
+var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 onready var select_grid: Control = $SelectGrid
 onready var p1_tween: Tween = Tween.new()
@@ -48,17 +49,10 @@ func _ready() -> void:
 	_music.stream = stream
 	_music.play()
 
-func _make_lobster_font(size: int) -> DynamicFont:
-	if not _lobster_font_data:
-		_lobster_font_data = DynamicFontData.new()
-		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
-	var font := DynamicFont.new()
-	font.font_data = _lobster_font_data
-	font.size = size
-	font.outline_size = 4
-	font.outline_color = Color(0, 0, 0, 1)
-	return font
-	return font
+func _make_lobster_font(size: int) -> BitmapFont:
+	# We have two atlases (28px and 52px); pick the closer one.
+	# Godot will not resample the bitmap, so the actual rendered size matches the atlas.
+	return LOBSTER_FONT_28 if size <= 40 else LOBSTER_FONT
 
 
 func _setup_select_grid() -> void:
@@ -104,11 +98,14 @@ func _setup_select_grid() -> void:
 		char_previews.append(preview)
 
 		var name_lbl := Label.new()
-		name_lbl.rect_position = Vector2(0, SLOT_WIDTH + 4)
+		# Stagger odd-indexed names downward so adjacent names (slots overlap horizontally)
+		# don't visually collide.
+		var name_y := SLOT_WIDTH + 4 + (NAME_LABEL_STAGGER if i % 2 == 1 else 0)
+		name_lbl.rect_position = Vector2(0, name_y)
 		name_lbl.rect_size = Vector2(SLOT_WIDTH, 30)
 		name_lbl.align = Label.ALIGN_CENTER
 		name_lbl.text = char_def.display_name
-		name_lbl.add_font_override("font", _make_lobster_font(16))
+		name_lbl.add_font_override("font", LOBSTER_FONT_28)
 		name_lbl.add_color_override("font_color", Color.white)
 		slot.add_child(name_lbl)
 
@@ -182,15 +179,19 @@ func _build_pause_menu() -> void:
 	var title = Label.new()
 	title.text = "PAUSED"
 	title.align = Label.ALIGN_CENTER
+	title.add_font_override("font", LOBSTER_FONT_28)
+	title.add_color_override("font_color", Color.white)
 	vbox.add_child(title)
 
 	_resume_btn = Button.new()
 	_resume_btn.text = "Resume"
+	_resume_btn.add_font_override("font", LOBSTER_FONT_28)
 	_resume_btn.connect("pressed", self, "_resume_game")
 	vbox.add_child(_resume_btn)
 
 	_quit_btn = Button.new()
 	_quit_btn.text = "Quit Game"
+	_quit_btn.add_font_override("font", LOBSTER_FONT_28)
 	_quit_btn.connect("pressed", self, "_on_pause_quit")
 	vbox.add_child(_quit_btn)
 

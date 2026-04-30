@@ -4,14 +4,8 @@ onready var _music: AudioStreamPlayer = $Music
 
 var _local_btn: Button
 
-# Shared font data — created once, reused for title + buttons (saves RAM on Pi 3)
-var _lobster_font_data: DynamicFontData
-
-func _get_lobster_font_data() -> DynamicFontData:
-	if not _lobster_font_data:
-		_lobster_font_data = DynamicFontData.new()
-		_lobster_font_data.font_path = "res://assets/fonts/Lobster-Regular.ttf"
-	return _lobster_font_data
+const LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
+const LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 
 func _ready() -> void:
@@ -48,15 +42,9 @@ func _build_ui() -> void:
 	add_child(bg_tex)
 
 	# Title
-	var title_font := DynamicFont.new()
-	title_font.font_data = _get_lobster_font_data()
-	title_font.size = 52
-	title_font.outline_size = 6
-	title_font.outline_color = Color(0, 0, 0, 1)
-
 	var title := Label.new()
 	title.text = "OLIGO FIGHT"
-	title.add_font_override("font", title_font)
+	title.add_font_override("font", LOBSTER_FONT)
 	title.add_color_override("font_color", Color(1, 0.88, 0.1, 1))
 	title.anchor_left = 0.0
 	title.anchor_right = 1.0
@@ -67,13 +55,6 @@ func _build_ui() -> void:
 	title.align = Label.ALIGN_CENTER
 	add_child(title)
 
-	# Button font
-	var btn_font := DynamicFont.new()
-	btn_font.font_data = _get_lobster_font_data()
-	btn_font.size = 24
-	btn_font.outline_size = 3
-	btn_font.outline_color = Color(0, 0, 0, 1)
-
 	# VBox for buttons
 	var vbox := VBoxContainer.new()
 	vbox.anchor_left = 0.3
@@ -83,17 +64,17 @@ func _build_ui() -> void:
 	vbox.add_constant_override("separation", 16)
 	add_child(vbox)
 
-	_local_btn = _make_button("Play", btn_font)
+	_local_btn = _make_button("Play")
 	_local_btn.connect("pressed", self, "_on_local_play")
 	vbox.add_child(_local_btn)
 
 	_local_btn.call_deferred("grab_focus")
 
 
-func _make_button(text: String, font: DynamicFont) -> Button:
+func _make_button(text: String) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.add_font_override("font", font)
+	btn.add_font_override("font", LOBSTER_FONT_28)
 	btn.rect_min_size = Vector2(0, 48)
 
 	var normal := StyleBoxFlat.new()
