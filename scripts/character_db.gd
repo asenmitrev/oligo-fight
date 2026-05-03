@@ -24,7 +24,7 @@ const _q5_lottery_path = "res://assets/5q/lottery-ticket.png"
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
 
-var JUMP_VELOCITY = -3200 if OS.get_name() == "X11" else -1680
+var JUMP_VELOCITY = -1680
 
 func _init() -> void:
 	var ipman = _make_def("ipman", "IpMan", _ipman_frames_path, Color(1, 1, 1, 1))
