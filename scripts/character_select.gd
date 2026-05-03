@@ -23,11 +23,6 @@ var char_previews: Array = []
 var p1_borders: Array = []
 var p2_borders: Array = []
 
-var _pause_menu: CanvasLayer
-var _resume_btn: Button
-var _quit_btn: Button
-var _is_paused: bool = false
-
 var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
 var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
@@ -40,7 +35,6 @@ func _ready() -> void:
 	add_child(p1_tween)
 	add_child(p2_tween)
 	_setup_select_grid()
-	_build_pause_menu()
 	call_deferred("_apply_ui_text_scale")
 	_update_ui()
 
@@ -146,98 +140,15 @@ func _apply_ui_text_scale() -> void:
 	vs.rect_scale = Vector2(UI_TEXT_SCALE, UI_TEXT_SCALE)
 
 
-func _build_pause_menu() -> void:
-	_pause_menu = CanvasLayer.new()
-	_pause_menu.layer = 20
-	add_child(_pause_menu)
-
-	var bg = ColorRect.new()
-	bg.anchor_right = 1.0
-	bg.anchor_bottom = 1.0
-	bg.color = Color(0, 0, 0, 0.75)
-	bg.mouse_filter = Control.MOUSE_FILTER_STOP
-	_pause_menu.add_child(bg)
-
-	var panel = ColorRect.new()
-	panel.color = Color(0.1, 0.1, 0.15, 0.95)
-	panel.anchor_left = 0.35
-	panel.anchor_right = 0.65
-	panel.anchor_top = 0.25
-	panel.anchor_bottom = 0.75
-	bg.add_child(panel)
-
-	var vbox = VBoxContainer.new()
-	vbox.anchor_right = 1.0
-	vbox.anchor_bottom = 1.0
-	vbox.margin_left = 20
-	vbox.margin_right = -20
-	vbox.margin_top = 20
-	vbox.margin_bottom = -20
-	vbox.add_constant_override("separation", 24)
-	panel.add_child(vbox)
-
-	var title = Label.new()
-	title.text = "PAUSED"
-	title.align = Label.ALIGN_CENTER
-	title.add_font_override("font", LOBSTER_FONT_28)
-	title.add_color_override("font_color", Color.white)
-	vbox.add_child(title)
-
-	_resume_btn = Button.new()
-	_resume_btn.text = "Resume"
-	_resume_btn.add_font_override("font", LOBSTER_FONT_28)
-	_resume_btn.connect("pressed", self, "_resume_game")
-	vbox.add_child(_resume_btn)
-
-	_quit_btn = Button.new()
-	_quit_btn.text = "Quit Game"
-	_quit_btn.add_font_override("font", LOBSTER_FONT_28)
-	_quit_btn.connect("pressed", self, "_on_pause_quit")
-	vbox.add_child(_quit_btn)
-
-	_resume_btn.focus_neighbour_bottom = _resume_btn.get_path_to(_quit_btn)
-	_resume_btn.focus_neighbour_top = _resume_btn.get_path_to(_quit_btn)
-	_quit_btn.focus_neighbour_bottom = _quit_btn.get_path_to(_resume_btn)
-	_quit_btn.focus_neighbour_top = _quit_btn.get_path_to(_resume_btn)
-
-	_pause_menu.visible = false
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		if _is_paused:
-			_resume_game()
-		else:
-			_pause_game()
-
-
-func _pause_game() -> void:
-	_is_paused = true
-	_pause_menu.visible = true
-	_resume_btn.call_deferred("grab_focus")
-	_music.stream_paused = true
-
-
-func _resume_game() -> void:
-	_is_paused = false
-	_pause_menu.visible = false
-	var focused = get_viewport().gui_get_focus_owner()
-	if focused:
-		focused.release_focus()
-	_music.stream_paused = false
-
-
-func _on_pause_quit() -> void:
-	_music.stop()
-	get_tree().quit()
+	if event.is_action_pressed("start") or event.is_action_pressed("ui_cancel"):
+		_music.stop()
+		get_tree().change_scene("res://scenes/MainMenu.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_paused:
-		if event.is_action_pressed("ui_cancel") and not event.is_action_pressed("pause"):
-			_resume_game()
-			get_viewport().set_input_as_handled()
-		return
 
 	var num := CharacterDB.all_characters.size()
 

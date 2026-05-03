@@ -795,7 +795,8 @@ func _physics_process(delta: float) -> void:
 			_proj_launch_fired = true
 			_launch_projectile()
 
-	_process_ability_logic(opp_pos)
+	if fires_projectile:
+		_process_projectiles(opp_pos)
 
 	if _proj_fires_on_walk and _proj_walk_fire_cooldown > 0:
 		_proj_walk_fire_cooldown -= 1
@@ -913,10 +914,7 @@ func _get_input_snapshot() -> InputSnapshot:
 	return _input_cache
 
 
-# Virtual methods to be overridden for performance
-func _process_ability_logic(opp_pos: Vector2) -> void:
-	if fires_projectile:
-		_process_projectiles(opp_pos)
+
 
 func _process_projectiles(opp_pos: Vector2) -> void:
 	var phz := Engine.iterations_per_second

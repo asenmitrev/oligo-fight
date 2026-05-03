@@ -2,10 +2,8 @@ extends Control
 
 onready var _music: AudioStreamPlayer = $Music
 
-var _local_btn: Button
-
-const LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
-const LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
+var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
+var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 
 func _ready() -> void:
@@ -19,6 +17,12 @@ func _ready() -> void:
 	stream.loop = true
 	_music.stream = stream
 	_music.play()
+
+
+func _input(event: InputEvent) -> void:
+	# Start button goes straight to character select
+	if event.is_action_pressed("start"):
+		_on_local_play()
 
 
 func _build_ui() -> void:
@@ -55,20 +59,51 @@ func _build_ui() -> void:
 	title.align = Label.ALIGN_CENTER
 	add_child(title)
 
-	# VBox for buttons
-	var vbox := VBoxContainer.new()
-	vbox.anchor_left = 0.3
-	vbox.anchor_right = 0.7
-	vbox.anchor_top = 0.55
-	vbox.anchor_bottom = 0.55
-	vbox.add_constant_override("separation", 16)
-	add_child(vbox)
+	# Menu buttons: Controls and Quit, centered below title
+	var btn_y := vp.y * 0.32
+	var btn_width := 260.0
+	var btn_height := 56.0
+	var gap := 16.0
 
-	_local_btn = _make_button("Play")
-	_local_btn.connect("pressed", self, "_on_local_play")
-	vbox.add_child(_local_btn)
+	var controls_btn := _make_button("Controls")
+	controls_btn.rect_size = Vector2(btn_width, btn_height)
+	controls_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y)
+	controls_btn.connect("pressed", self, "_on_controls")
+	add_child(controls_btn)
 
-	_local_btn.call_deferred("grab_focus")
+	var quit_btn := _make_button("Quit")
+	quit_btn.rect_size = Vector2(btn_width, btn_height)
+	quit_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height + gap)
+	quit_btn.connect("pressed", self, "_on_quit")
+	add_child(quit_btn)
+
+	# Start hint (smaller, below buttons)
+	var start_hint := Label.new()
+	start_hint.text = "Press START to play"
+	start_hint.add_font_override("font", LOBSTER_FONT_28)
+	start_hint.add_color_override("font_color", Color(0.5, 0.5, 0.6, 1))
+	start_hint.anchor_left = 0.0
+	start_hint.anchor_right = 1.0
+	start_hint.anchor_top = 0.0
+	start_hint.anchor_bottom = 0.0
+	start_hint.margin_top = btn_y + btn_height * 2 + gap + 12
+	start_hint.margin_bottom = btn_y + btn_height * 2 + gap + 12 + 24
+	start_hint.align = Label.ALIGN_CENTER
+	add_child(start_hint)
+
+
+func _on_local_play() -> void:
+	_music.stop()
+	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
+
+
+func _on_controls() -> void:
+	_music.stop()
+	get_tree().change_scene("res://scenes/ControlsMenu.tscn")
+
+
+func _on_quit() -> void:
+	get_tree().quit()
 
 
 func _make_button(text: String) -> Button:
@@ -101,8 +136,3 @@ func _make_button(text: String) -> Button:
 	btn.add_stylebox_override("pressed", pressed_style)
 
 	return btn
-
-
-func _on_local_play() -> void:
-	_music.stop()
-	get_tree().change_scene("res://scenes/CharacterSelect.tscn")
