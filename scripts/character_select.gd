@@ -155,11 +155,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# --- P1 navigation & confirm ---
 	if not p1_confirmed:
 		if event.is_action_pressed("p1_left"):
-			p1_index = (p1_index - 1 + num) % num
+			p1_index = (p1_index + OsUtil.reverse_direction(-1) + num) % num
 			_update_ui()
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
 		elif event.is_action_pressed("p1_right"):
-			p1_index = (p1_index + 1) % num
+			p1_index = (p1_index + OsUtil.reverse_direction(1) + num) % num
 			_update_ui()
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween)
 		elif event.is_action_pressed("p1_confirm"):
@@ -177,11 +177,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# --- P2 navigation & confirm ---
 	if not p2_confirmed:
 		if event.is_action_pressed("p2_left"):
-			p2_index = (p2_index - 1 + num) % num
+			p2_index = (p2_index + OsUtil.reverse_direction(-1) + num) % num
 			_update_ui()
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 		elif event.is_action_pressed("p2_right"):
-			p2_index = (p2_index + 1) % num
+			p2_index = (p2_index + OsUtil.reverse_direction(1) + num) % num
 			_update_ui()
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween)
 		elif event.is_action_pressed("p2_confirm"):

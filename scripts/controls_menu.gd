@@ -57,34 +57,6 @@ func _ready() -> void:
 	_music.play()
 
 
-func _input(event: InputEvent) -> void:
-	# If actively capturing a key for rebinding, route to capture handler
-	if _edit_row >= 0:
-		if _capture_input(event):
-			return
-		return
-
-	# Start button goes back to main menu
-	if event.is_action_pressed("start"):
-		_on_back()
-		return
-
-	# --- Navigation ---
-	if event.is_action_pressed("ui_up"):
-		_navigate_up()
-	elif event.is_action_pressed("ui_down"):
-		_navigate_down()
-	elif event.is_action_pressed("ui_left"):
-		_navigate_left()
-	elif event.is_action_pressed("ui_right"):
-		_navigate_right()
-	elif event.is_action_pressed("ui_accept"):
-		_on_focus_accept()
-	# Any other physical press while a row is focused -> rebind that action
-	elif _focus_target == "row" and _focus_index >= 0 and event.pressed:
-		_start_editing(_focus_index, _actions[_focus_index], _rows[_focus_index][1])
-
-
 func _navigate_up() -> void:
 	if _focus_target == "row":
 		if _focus_index > 0:
@@ -129,6 +101,47 @@ func _navigate_right() -> void:
 	if _focus_target == "button":
 		_focus_index = (_focus_index + 1) % _bottom_buttons.size()
 		_apply_focus()
+
+
+func _input(event: InputEvent) -> void:
+	# If actively capturing a key for rebinding, route to capture handler
+	if _edit_row >= 0:
+		if _capture_input(event):
+			return
+		return
+
+	# Start button goes back to main menu
+	if event.is_action_pressed("start"):
+		_on_back()
+		return
+
+	# --- Navigation (reversed on Arch X11) ---
+	var reversed = OsUtil.is_direction_reversed()
+	if event.is_action_pressed("ui_up"):
+		if reversed:
+			_navigate_down()
+		else:
+			_navigate_up()
+	elif event.is_action_pressed("ui_down"):
+		if reversed:
+			_navigate_up()
+		else:
+			_navigate_down()
+	elif event.is_action_pressed("ui_left"):
+		if reversed:
+			_navigate_right()
+		else:
+			_navigate_left()
+	elif event.is_action_pressed("ui_right"):
+		if reversed:
+			_navigate_left()
+		else:
+			_navigate_right()
+	elif event.is_action_pressed("ui_accept"):
+		_on_focus_accept()
+	# Any other physical press while a row is focused -> rebind that action
+	elif _focus_target == "row" and _focus_index >= 0 and event.pressed:
+		_start_editing(_focus_index, _actions[_focus_index], _rows[_focus_index][1])
 
 
 func _on_focus_accept() -> void:
@@ -179,8 +192,6 @@ func _scroll_to_row(row_idx: int) -> void:
 
 
 func _build_ui() -> void:
-	var vp := get_viewport().size
-
 	# Dark background
 	var bg := ColorRect.new()
 	bg.anchor_right = 1.0
@@ -198,17 +209,15 @@ func _build_ui() -> void:
 	bg_tex.modulate.a = 0.35
 	add_child(bg_tex)
 
-	# Title
+	# Title — anchor-based, stays centered at top
 	var title := Label.new()
 	title.text = "CONTROLS"
 	title.add_font_override("font", LOBSTER_FONT)
 	title.add_color_override("font_color", Color(1, 0.88, 0.1, 1))
 	title.anchor_left = 0.0
 	title.anchor_right = 1.0
-	title.anchor_top = 0.0
-	title.anchor_bottom = 0.0
-	title.margin_top = vp.y * 0.02
-	title.margin_bottom = vp.y * 0.02 + 50
+	title.anchor_top = 0.02
+	title.anchor_bottom = 0.12
 	title.align = Label.ALIGN_CENTER
 	add_child(title)
 
@@ -219,10 +228,8 @@ func _build_ui() -> void:
 	_subtitle.add_color_override("font_color", Color(0.8, 0.8, 0.9, 1))
 	_subtitle.anchor_left = 0.0
 	_subtitle.anchor_right = 1.0
-	_subtitle.anchor_top = 0.0
-	_subtitle.anchor_bottom = 0.0
-	_subtitle.margin_top = vp.y * 0.02 + 55
-	_subtitle.margin_bottom = vp.y * 0.02 + 55 + 28
+	_subtitle.anchor_top = 0.13
+	_subtitle.anchor_bottom = 0.17
 	_subtitle.align = Label.ALIGN_CENTER
 	add_child(_subtitle)
 
@@ -244,7 +251,7 @@ func _build_ui() -> void:
 	hbox.anchor_left = 0.15
 	hbox.anchor_right = 0.85
 	hbox.anchor_top = 0.85
-	hbox.anchor_bottom = 0.85
+	hbox.anchor_bottom = 0.92
 	hbox.add_constant_override("separation", 16)
 	add_child(hbox)
 

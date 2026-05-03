@@ -12,7 +12,7 @@ config_version=4
 
 config/name="OLIGO FIGHT"
 run/main_scene="res://scenes/CharacterSelect.tscn"
-boot_splash/image="res://assets/bg_character-select.png"
+boot_splash/image="res://assets/bg_character-select-splash.png"
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
 config/icon="res://icon.svg"
@@ -29,11 +29,15 @@ ControllerMapper="*res://scripts/controller_mapper.gd"
 NetworkManager="*res://scripts/network_manager.gd"
 SyncManager="*res://addons/godot-rollback-netcode/SyncManager.gd"
 ControlsSave="*res://scripts/controls_save.gd"
+OsUtil="*res://scripts/os_util.gd"
 
 [display]
 
 window/size/width=640
 window/size/height=360
+window/size/borderless=true
+window/size/fullscreen=true
+window/dpi/allow_hidpi=true
 window/vsync/use_vsync=false
 window/stretch/mode="viewport"
 window/stretch/aspect="expand"
@@ -42,6 +46,10 @@ window/fullscreen=true
 [editor_plugins]
 
 enabled=PoolStringArray(  )
+
+[global]
+
+full=false
 
 [input]
 

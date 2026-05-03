@@ -25,7 +25,7 @@ current = true
 zoom = Vector2( 2, 2 )
 
 [node name="Background" type="Sprite" parent="."]
-position = Vector2( 642, 128 )
+position = Vector2( 642, 129 )
 scale = Vector2( 4, 4 )
 texture = ExtResource( 1 )
 

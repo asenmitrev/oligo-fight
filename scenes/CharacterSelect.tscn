@@ -31,7 +31,6 @@ color = Color( 0.04, 0.04, 0.14, 1 )
 
 [node name="BgCharacter-select" type="Sprite" parent="PreviewViewportContainer/PreviewViewport"]
 position = Vector2( 320, 180 )
-scale = Vector2( 2, 2 )
 texture = ExtResource( 2 )
 
 [node name="P1Sprite" type="AnimatedSprite" parent="PreviewViewportContainer/PreviewViewport"]

@@ -21,12 +21,12 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# Arrow keys / joystick D-pad / joystick hat to navigate
 	if event.is_action_pressed("ui_down"):
-		_selected_index = (_selected_index + 1) % _menu_buttons.size()
+		_selected_index = (_selected_index + OsUtil.reverse_direction(1) + _menu_buttons.size()) % _menu_buttons.size()
 		_set_selected(_selected_index)
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("ui_up"):
-		_selected_index = (_selected_index - 1 + _menu_buttons.size()) % _menu_buttons.size()
+		_selected_index = (_selected_index + OsUtil.reverse_direction(-1) + _menu_buttons.size()) % _menu_buttons.size()
 		_set_selected(_selected_index)
 		get_viewport().set_input_as_handled()
 		return
@@ -54,8 +54,6 @@ func _set_selected(index: int) -> void:
 
 
 func _build_ui() -> void:
-	var vp := get_viewport().size
-
 	# Dark background
 	var bg := ColorRect.new()
 	bg.anchor_right = 1.0
@@ -73,64 +71,58 @@ func _build_ui() -> void:
 	bg_tex.modulate.a = 0.35
 	add_child(bg_tex)
 
-	# Title
+	# Title — anchor-based, stays at top-center regardless of screen size
 	var title := Label.new()
 	title.text = "OLIGO FIGHT"
 	title.add_font_override("font", LOBSTER_FONT)
 	title.add_color_override("font_color", Color(1, 0.88, 0.1, 1))
 	title.anchor_left = 0.0
 	title.anchor_right = 1.0
-	title.anchor_top = 0.0
-	title.anchor_bottom = 0.0
-	title.margin_top = vp.y * 0.18
-	title.margin_bottom = vp.y * 0.18 + 70
+	title.anchor_top = 0.08
+	title.anchor_bottom = 0.22
 	title.align = Label.ALIGN_CENTER
 	add_child(title)
 
-	# Menu buttons: Controls and Quit, centered below title
-	var btn_y := vp.y * 0.32
+	# Buttons wrapped in a VBoxContainer, perfectly centered
+	var vbox := VBoxContainer.new()
+	vbox.anchor_left = 0.5
+	vbox.anchor_top = 0.35
+	vbox.anchor_right = 0.5
+	vbox.anchor_bottom = 0.55
+	vbox.margin_left = -130.0   # -(btn_width / 2)
+	vbox.margin_right = 130.0   # +(btn_width / 2)
+	vbox.add_constant_override("separation", 16)
+	add_child(vbox)
+
 	var btn_width := 260.0
 	var btn_height := 56.0
-	var gap := 16.0
 
-	# Local Play button (top of menu)
+	# Local Play button
 	var play_btn := _make_button("Local Play")
-	play_btn.rect_size = Vector2(btn_width, btn_height)
-	play_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y)
+	play_btn.rect_min_size = Vector2(btn_width, btn_height)
+	play_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	play_btn.connect("pressed", self, "_on_local_play")
-	add_child(play_btn)
+	vbox.add_child(play_btn)
 	_menu_buttons.append(play_btn)
 
 	var controls_btn := _make_button("Controls")
-	controls_btn.rect_size = Vector2(btn_width, btn_height)
-	controls_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height + gap)
+	controls_btn.rect_min_size = Vector2(btn_width, btn_height)
+	controls_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	controls_btn.connect("pressed", self, "_on_controls")
-	add_child(controls_btn)
+	vbox.add_child(controls_btn)
 	_menu_buttons.append(controls_btn)
 
 	var quit_btn := _make_button("Quit")
-	quit_btn.rect_size = Vector2(btn_width, btn_height)
-	quit_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height * 2 + gap * 2)
+	quit_btn.rect_min_size = Vector2(btn_width, btn_height)
+	quit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	quit_btn.connect("pressed", self, "_on_quit")
-	add_child(quit_btn)
+	vbox.add_child(quit_btn)
 	_menu_buttons.append(quit_btn)
 
 	# Select first button
 	_set_selected(0)
 
-	# Start hint (smaller, below buttons)
-	var start_hint := Label.new()
-	start_hint.text = "Press START to play"
-	start_hint.add_font_override("font", LOBSTER_FONT_28)
-	start_hint.add_color_override("font_color", Color(0.5, 0.5, 0.6, 1))
-	start_hint.anchor_left = 0.0
-	start_hint.anchor_right = 1.0
-	start_hint.anchor_top = 0.0
-	start_hint.anchor_bottom = 0.0
-	start_hint.margin_top = btn_y + btn_height * 3 + gap * 2 + 12
-	start_hint.margin_bottom = btn_y + btn_height * 3 + gap * 2 + 12 + 24
-	start_hint.align = Label.ALIGN_CENTER
-	add_child(start_hint)
+
 
 
 func _on_local_play() -> void:
