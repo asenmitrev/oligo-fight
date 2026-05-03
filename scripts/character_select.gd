@@ -143,7 +143,7 @@ func _apply_ui_text_scale() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("start") or event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("start") or event.is_action_pressed("p1_kick") or event.is_action_pressed("p2_kick"):
 		_music.stop()
 		get_tree().change_scene("res://scenes/MainMenu.tscn")
 
@@ -152,6 +152,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	var num := CharacterDB.all_characters.size()
 
+	# --- P1 navigation & confirm ---
 	if not p1_confirmed:
 		if event.is_action_pressed("p1_left"):
 			p1_index = (p1_index - 1 + num) % num
@@ -168,10 +169,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_flash_selection(p1_borders[p1_index], P1_COLOR, p1_tween, true)
 			_check_start()
 	elif event.is_action_pressed("p1_confirm") and not p2_confirmed:
+		# P1 is confirmed — pressing confirm again toggles back (only if P2 hasn't confirmed)
 		p1_confirmed = false
 		_update_ui()
 		_set_border_width(p1_borders[p1_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)
 
+	# --- P2 navigation & confirm ---
 	if not p2_confirmed:
 		if event.is_action_pressed("p2_left"):
 			p2_index = (p2_index - 1 + num) % num
@@ -188,6 +191,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_flash_selection(p2_borders[p2_index], P2_COLOR, p2_tween, true)
 			_check_start()
 	elif event.is_action_pressed("p2_confirm") and not p1_confirmed:
+		# P2 is confirmed — pressing confirm again toggles back (only if P1 hasn't confirmed)
 		p2_confirmed = false
 		_update_ui()
 		_set_border_width(p2_borders[p2_index].get_stylebox("panel"), BORDER_WIDTH_NORMAL)

@@ -5,12 +5,11 @@ onready var _music: AudioStreamPlayer = $Music
 var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
 var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
+var _menu_buttons: Array = []  # Buttons navigable by arrow keys / joystick
+var _selected_index: int = 0
+
 
 func _ready() -> void:
-	if OS.get_name() == "X11":
-		_on_local_play()
-		return
-
 	_build_ui()
 
 	var stream: AudioStream = preload("res://assets/music/character-select.ogg")
@@ -20,9 +19,38 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Arrow keys / joystick D-pad / joystick hat to navigate
+	if event.is_action_pressed("ui_down"):
+		_selected_index = (_selected_index + 1) % _menu_buttons.size()
+		_set_selected(_selected_index)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_selected_index = (_selected_index - 1 + _menu_buttons.size()) % _menu_buttons.size()
+		_set_selected(_selected_index)
+		get_viewport().set_input_as_handled()
+		return
+
+	# ui_accept (Enter / A button) activates the selected button
+	if event.is_action_pressed("ui_accept"):
+		if _menu_buttons.size() > 0:
+			_menu_buttons[_selected_index].emit_signal("pressed")
+		get_viewport().set_input_as_handled()
+		return
+
 	# Start button goes straight to character select
 	if event.is_action_pressed("start"):
 		_on_local_play()
+
+
+func _set_selected(index: int) -> void:
+	for i in range(_menu_buttons.size()):
+		var btn: Button = _menu_buttons[i]
+		if i == index:
+			btn.grab_focus()
+			btn.modulate = Color(1, 0.88, 0.1, 1)  # Gold highlight
+		else:
+			btn.modulate = Color(1, 1, 1, 1)  # Normal white
 
 
 func _build_ui() -> void:
@@ -65,17 +93,30 @@ func _build_ui() -> void:
 	var btn_height := 56.0
 	var gap := 16.0
 
+	# Local Play button (top of menu)
+	var play_btn := _make_button("Local Play")
+	play_btn.rect_size = Vector2(btn_width, btn_height)
+	play_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y)
+	play_btn.connect("pressed", self, "_on_local_play")
+	add_child(play_btn)
+	_menu_buttons.append(play_btn)
+
 	var controls_btn := _make_button("Controls")
 	controls_btn.rect_size = Vector2(btn_width, btn_height)
-	controls_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y)
+	controls_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height + gap)
 	controls_btn.connect("pressed", self, "_on_controls")
 	add_child(controls_btn)
+	_menu_buttons.append(controls_btn)
 
 	var quit_btn := _make_button("Quit")
 	quit_btn.rect_size = Vector2(btn_width, btn_height)
-	quit_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height + gap)
+	quit_btn.rect_position = Vector2((vp.x - btn_width) / 2.0, btn_y + btn_height * 2 + gap * 2)
 	quit_btn.connect("pressed", self, "_on_quit")
 	add_child(quit_btn)
+	_menu_buttons.append(quit_btn)
+
+	# Select first button
+	_set_selected(0)
 
 	# Start hint (smaller, below buttons)
 	var start_hint := Label.new()
@@ -86,8 +127,8 @@ func _build_ui() -> void:
 	start_hint.anchor_right = 1.0
 	start_hint.anchor_top = 0.0
 	start_hint.anchor_bottom = 0.0
-	start_hint.margin_top = btn_y + btn_height * 2 + gap + 12
-	start_hint.margin_bottom = btn_y + btn_height * 2 + gap + 12 + 24
+	start_hint.margin_top = btn_y + btn_height * 3 + gap * 2 + 12
+	start_hint.margin_bottom = btn_y + btn_height * 3 + gap * 2 + 12 + 24
 	start_hint.align = Label.ALIGN_CENTER
 	add_child(start_hint)
 

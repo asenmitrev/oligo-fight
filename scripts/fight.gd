@@ -40,6 +40,10 @@ var _pause_char_btn: Button
 var _pause_quit_btn: Button
 var _is_paused: bool = false
 var _was_round_in_progress: bool = false
+# Captured at frame start so _input can detect "just pressed" and avoid
+# double-toggle when the same physical button fires through multiple
+# InputMap entries (RetroPie / ControllerMapper issue).
+var _pause_action_was_pressed: bool = false
 
 # Camera Shake
 var _shake_intensity: float = 0.0
@@ -174,6 +178,10 @@ func _setup_health_bars() -> void:
 	p2_wins_label.visible = false
 
 func _process(delta: float) -> void:
+	# Capture pause/start action state at frame start so _input can detect
+	# "just pressed" and avoid double-toggle on RetroPie.
+	_pause_action_was_pressed = Input.is_action_pressed("pause") or Input.is_action_pressed("start")
+
 	if _shake_duration <= 0 and _p1_combo_timer <= 0.0 and _p2_combo_timer <= 0.0 and _whataboutism_timer <= 0.0:
 		return
 	
@@ -380,11 +388,26 @@ func _build_pause_menu() -> void:
 	_pause_menu.visible = false
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		if _is_paused:
-			_resume_game()
-		else:
-			_pause_game()
+	# Check if this event triggers pause or start
+	var wants_pause := event.is_action_pressed("pause") or event.is_action_pressed("start")
+	if not wants_pause:
+		return
+
+	# Guard: only toggle when the action transitions from released -> pressed.
+	# _pause_action_was_pressed was captured at frame start in _process, so
+	# if it's still false here this is the first event of the press.
+	# This prevents double-toggle on RetroPie where ControllerMapper can route
+	# the same physical button through multiple InputMap entries.
+	if _pause_action_was_pressed:
+		get_viewport().set_input_as_handled()
+		return
+
+	if _is_paused:
+		_resume_game()
+	else:
+		_pause_game()
+
+	get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_paused:
