@@ -247,14 +247,15 @@ func _init() -> void:
 	q5.proj_damage = 15
 	q5.proj_speed = 0
 	q5.proj_hit_radius = 30
-	q5.proj_y_tolerance = 50
+	q5.proj_y_tolerance = 100
 	q5.proj_lifetime_ticks = 600
 	q5.proj_pool = 3
 	q5.proj_texture_path = _q5_lottery_path
 	q5.proj_scale = 0.5
 	q5.proj_spawn_x_offset = 80
-	q5.proj_spawn_y_offset = -125
+	q5.proj_spawn_y_offset = -95
 	q5.proj_lottery_mode = true
+	q5.sprite_scale = 1.1
 	_register(q5)
 
 

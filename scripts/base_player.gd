@@ -942,7 +942,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 		if _proj_lottery_mode and _proj_is_heal[i]:
 			var sdx := abs(_proj_x[i] - self_x)
 			var sdy := abs(_proj_y[i] - self_y)
-			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
+			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance:
 				_proj_active[i] = false
 				_proj_sprites[i].visible = false
 				if _proj_labels[i]: _proj_labels[i].visible = false
@@ -953,7 +953,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 
 		var dx := abs(_proj_x[i] - opp_x)
 		var dy := abs(_proj_y[i] - opp_y)
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
 			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
