@@ -412,6 +412,16 @@ func _finish_editing(action: String, new_event: InputEvent, lbl: Label) -> void:
 	var events := [new_event]
 	ControlsSave.save_action_events(action, events)
 
+	# If this is a punch action, also bind the same key to the confirm action
+	# so that the punch key doubles as the character-select confirm key.
+	var confirm_action: String = ""
+	if action == "p1_punch":
+		confirm_action = "p1_confirm"
+	elif action == "p2_punch":
+		confirm_action = "p2_confirm"
+	if confirm_action != "":
+		ControlsSave.save_action_events(confirm_action, events)
+
 	# Update display
 	lbl.text = _describe_event(new_event)
 	# Re-apply focus highlighting (which also resets colors)

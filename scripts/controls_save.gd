@@ -15,6 +15,7 @@ const P1_ACTIONS := [
 	"p1_down",
 	"p1_punch",
 	"p1_kick",
+	"p1_confirm",
 ]
 
 const UI_ACTIONS := [
