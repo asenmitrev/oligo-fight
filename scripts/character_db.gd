@@ -21,6 +21,7 @@ const _yavor_proj_path = "res://assets/yavor/fas.png"
 const _q5_frames_path = "res://resources/5q_sprite_frames.tres"
 const _q5_lottery_path = "res://assets/5q/lottery-ticket.png"
 const _asen_frames_path = "res://resources/asen_sprite_frames.tres"
+const _djolev_frames_path = "res://resources/djolev_sprite_frames.tres"
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -273,6 +274,15 @@ func _init() -> void:
 	asen.max_health = 125.0
 	asen.gong_hits_everywhere = true
 	_register(asen)
+
+	var djolev = _make_def("djolev", "Djolev", _djolev_frames_path, Color(1, 1, 1, 1))
+	djolev.speed = 350.0
+	djolev.jump_velocity = JUMP_VELOCITY
+	djolev.punch_damage = 13
+	djolev.kick_damage = 10
+	djolev.block_damage_modifier = 0.15
+	djolev.max_health = 105.0
+	_register(djolev)
 
 
 func _make_def(id: String, display_name: String, frames_path: String, mod: Color):
