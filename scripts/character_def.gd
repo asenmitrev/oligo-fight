@@ -77,6 +77,7 @@ export var flypunch_teleports: bool = false
 export var kick_teleports_behind: bool = false
 export var proj_fires_on_flypunch: bool = false
 export var proj_lottery_mode: bool = false
+export var gong_hits_everywhere: bool = false
 
 
 func ensure_loaded() -> void:

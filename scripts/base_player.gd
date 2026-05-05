@@ -52,6 +52,7 @@ var whataboutism_blocks: bool = false
 var disable_attacks_airborne: bool = false
 var flypunch_teleports: bool = false
 var kick_teleports_behind: bool = false
+var gong_hits_everywhere: bool = false
 var flykick_forward: bool = false
 var fires_projectile: bool = false
 var _proj_speed: int = 0
@@ -260,11 +261,13 @@ func apply_character(def: CharacterDef) -> void:
 	invis_damage_multiplier = def.invis_damage_multiplier
 	punch_self_damages = def.punch_self_damages
 	proj_fires_airborne = def.proj_fires_airborne
+	punch_knockback_multiplier = def.punch_knockback_multiplier
 	whataboutism_blocks = def.whataboutism_blocks
 	_whataboutism_window_ticks_max = def.whataboutism_window_ticks
 	disable_attacks_airborne = def.disable_attacks_airborne
 	flypunch_teleports = def.flypunch_teleports
 	kick_teleports_behind = def.kick_teleports_behind
+	gong_hits_everywhere = def.gong_hits_everywhere
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	_cache_all_animation_data()
@@ -486,7 +489,7 @@ func force_fall() -> void:
 	_enter_fallen()
 
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0) -> bool:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0, no_knockdown: bool = false) -> bool:
 	_end_invisibility()
 	if is_defeated or state == State.GETUP: return false
 	if state == State.FALLEN and is_on_floor(): return false
@@ -502,7 +505,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			_apply_impact(attacker_pos, knockback_multiplier)
 		else:
 			damage = int(damage * block_damage_modifier)
-			_apply_impact(attacker_pos, 0.5)
+			_apply_impact(attacker_pos, knockback_multiplier)
 			state = State.BLOCKING
 			_block_stun_ticks = BLOCK_STUN_TICKS
 			_blocked_punch = true
@@ -513,7 +516,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			if _opponent: _opponent._current_combo_count = 0
 			_handle_whataboutism_on_block()
 	else:
-		_apply_impact(attacker_pos, knockback_multiplier if is_kick else 1.0)
+		_apply_impact(attacker_pos, knockback_multiplier)
 		hit_count += 1
 		_hit_ticks = HIT_WINDOW_TICKS
 		_current_combo_count = 0
@@ -522,11 +525,13 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 	if health <= 0:
 		_enter_defeated()
 		return true
-	if not is_blocking or block_broken:
+	elif not is_blocking or block_broken:
 		if state == State.FALLEN:
 			anim.stop()
 			anim.frame = 2
 			velocity.y = -500.0
+		elif no_knockdown:
+			pass
 		elif block_broken or not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
 			var launch = is_on_floor() and hit_count >= HIT_COMBO_THRESHOLD and not block_broken
 			hit_count = 0
@@ -661,10 +666,10 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if _opponent == null: return
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
 	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
-	if y_diff > y_threshold: return
+	if y_diff > y_threshold and not gong_hits_everywhere: return
 	var facing_dir  := -1.0 if anim.flip_h else 1.0
 	var to_opponent := _opponent.global_position.x - global_position.x
-	if sign(to_opponent) != sign(facing_dir): return
+	if sign(to_opponent) != sign(facing_dir) and not gong_hits_everywhere: return
 	if punch_pulls_opponent and not is_kick:
 		if abs(to_opponent) > PULL_RANGE: return
 		_opponent._apply_pull(global_position)
@@ -674,10 +679,11 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var extension   := KICK_LEG_EXTENSION if is_kick else _punch_arm_extension
 	var hit_x       := global_position.x + facing_dir * extension
 	var fist_to_opp := abs(hit_x - _opponent.global_position.x)
-	if fist_to_opp > HIT_TARGET_RADIUS: return
+	if fist_to_opp > HIT_TARGET_RADIUS and not (gong_hits_everywhere and not is_kick): return
 	var is_counter  = _opponent._attacking
 	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
-	var hit_registered = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier)
+	var no_knockdown = gong_hits_everywhere and not is_kick
+	var hit_registered: bool = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier, no_knockdown)
 	if not hit_registered: return
 
 	if is_kick and _veli_kick_icon:
@@ -695,7 +701,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		_do_kick_teleport_behind()
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
-	if combos_enabled: _current_combo_count += 1
+	if combos_enabled and not no_knockdown: _current_combo_count += 1
 	var show_combo = combos_enabled and _current_combo_count >= 2
 	emit_signal("hit_landed", is_kick, _current_combo_count if show_combo else 0)
 

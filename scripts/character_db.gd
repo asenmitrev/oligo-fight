@@ -38,7 +38,7 @@ func _init() -> void:
 	ipman.block_damage_modifier = 0.12
 	ipman.max_health = 105
 	ipman.body_punch_enabled = false
-	ipman.kick_speed_scale = 1.2
+	ipman.kick_speed_scale = 1.1
 	ipman.fires_projectile = true
 	ipman.proj_fires_on_punch = true
 	ipman.flypunch_speed_scale = 1.5
@@ -233,6 +233,7 @@ func _init() -> void:
 	drago.max_health = 105.0
 	drago.flypunch_teleports = true
 	drago.punch_speed_scale = 0.7
+	drago.punch_lunge_scale = 0
 	_register(drago)
 
 	var q5 = _make_def("5q", "5q", _q5_frames_path, Color(1, 1, 1, 1))
@@ -254,7 +255,7 @@ func _init() -> void:
 	q5.proj_pool = 3
 	q5.proj_texture_path = _q5_lottery_path
 	q5.proj_scale = 0.5
-	q5.proj_spawn_x_offset = 180
+	q5.proj_spawn_x_offset = -180
 	q5.proj_spawn_y_offset = -50
 	q5.proj_lottery_mode = true
 	q5.sprite_scale = 1.1
@@ -263,10 +264,14 @@ func _init() -> void:
 	var asen = _make_def("asen", "Asen", _asen_frames_path, Color(1, 1, 1, 1))
 	asen.speed = 350.0
 	asen.jump_velocity = JUMP_VELOCITY
-	asen.punch_damage = 13
+	asen.punch_lunge_scale = 0
+	asen.punch_damage = 7.5
 	asen.kick_damage = 10
 	asen.block_damage_modifier = 0.15
-	asen.max_health = 105.0
+	asen.punch_knockback_multiplier = 0.0
+	asen.punch_speed_scale = 0.8
+	asen.max_health = 210.0
+	asen.gong_hits_everywhere = true
 	_register(asen)
 
 
