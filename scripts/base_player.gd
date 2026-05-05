@@ -669,12 +669,13 @@ func _do_flypunch_teleport() -> void:
 
 
 func _try_hit_opponent(is_kick: bool) -> void:
-	if is_kick and kick_heals_self > 0:
-		health = min(max_health, health + kick_heals_self)
-		if _health_bar: _health_bar.value = health
-		if kick_damage == 0:
-			return
 	if _opponent == null: return
+	if is_kick and kick_damage == 0:
+		if kick_heals_self > 0:
+			health = min(max_health, health + kick_heals_self)
+			if _health_bar: _health_bar.value = health
+		return
+
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
 	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
 	if y_diff > y_threshold and not gong_hits_everywhere: return
@@ -691,11 +692,16 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var hit_x       := global_position.x + facing_dir * extension
 	var fist_to_opp := abs(hit_x - _opponent.global_position.x)
 	if fist_to_opp > HIT_TARGET_RADIUS and not (gong_hits_everywhere and not is_kick): return
+
 	var is_counter  = _opponent._attacking
 	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
 	var no_knockdown = gong_hits_everywhere and not is_kick
 	var hit_registered: bool = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier, no_knockdown, false if is_kick else punch_insta_knockdown)
 	if not hit_registered: return
+
+	if is_kick and kick_heals_self > 0:
+		health = min(max_health, health + kick_heals_self)
+		if _health_bar: _health_bar.value = health
 
 	if is_kick and _veli_kick_icon:
 		_veli_kick_icon.visible = true

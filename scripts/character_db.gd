@@ -87,7 +87,7 @@ func _init() -> void:
 	bobe.jump_velocity = JUMP_VELOCITY
 	bobe.kick_lunge_scale = 0.0
 	bobe.punch_damage = 15
-	bobe.kick_damage = 10
+	bobe.kick_damage = 0
 	bobe.block_damage_modifier = 0.18
 	bobe.max_health = 115
 	bobe.kick_heals_self = 8
@@ -280,10 +280,11 @@ func _init() -> void:
 	djolev.jump_velocity = JUMP_VELOCITY
 	djolev.punch_damage = 0
 	djolev.kick_damage = 10
+	djolev.punch_arm_extension = 200.0
 	djolev.block_damage_modifier = 0.15
 	djolev.max_health = 105.0
 	djolev.passive_damage_per_second = 1
-	djolev.kick_heals_self = 10.0
+	djolev.kick_heals_self = 7.0
 	djolev.punch_insta_knockdown = true
 	_register(djolev)
 
