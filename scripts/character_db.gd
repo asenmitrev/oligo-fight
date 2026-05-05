@@ -20,6 +20,7 @@ const _crunch_pigeon_path = "res://assets/crunch/pigeon.png"
 const _yavor_proj_path = "res://assets/yavor/fas.png"
 const _q5_frames_path = "res://resources/5q_sprite_frames.tres"
 const _q5_lottery_path = "res://assets/5q/lottery-ticket.png"
+const _asen_frames_path = "res://resources/asen_sprite_frames.tres"
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -67,7 +68,7 @@ func _init() -> void:
 
 	var veli = _make_def("veli", "Veli", _veli_frames_path, Color(1, 1, 1, 1))
 	veli.speed = 320.0
-	veli.jump_velocity = JUMP_VELOCITY * 0.25
+	veli.jump_velocity = JUMP_VELOCITY * 0.4
 	veli.punch_damage = 0
 	veli.punch_pulls_opponent = true
 	veli.kick_damage = 20
@@ -83,6 +84,7 @@ func _init() -> void:
 	var bobe = _make_def("bobe", "Bobe", _bobe_frames_path, Color(1, 1, 1, 1))
 	bobe.speed = 330.0
 	bobe.jump_velocity = JUMP_VELOCITY
+	bobe.kick_lunge_scale = 0.0
 	bobe.punch_damage = 15
 	bobe.kick_damage = 10
 	bobe.block_damage_modifier = 0.18
@@ -144,7 +146,7 @@ func _init() -> void:
 	crunch.kick_damage = 11
 	crunch.block_damage_modifier = 0.15
 	crunch.max_health = 105
-	crunch.punch_speed_scale = 0.65
+	crunch.punch_speed_scale = 0.55
 	crunch.kick_speed_scale = 0.78
 	crunch.fires_projectile = true
 	crunch.proj_fires_on_punch = true
@@ -223,7 +225,7 @@ func _init() -> void:
 
 	var drago = _make_def("drago", "Drago", _drago_frames_path, Color(1, 1, 1, 1))
 	drago.speed = 350.0
-	drago.punch_arm_extension = 190.0  # punch animation extends 20px further than Veli's
+	drago.punch_arm_extension = 230.0  # punch animation extends 20px further than Veli's
 	drago.jump_velocity = JUMP_VELOCITY
 	drago.punch_damage = 13
 	drago.kick_damage = 10
@@ -247,16 +249,25 @@ func _init() -> void:
 	q5.proj_damage = 15
 	q5.proj_speed = 0
 	q5.proj_hit_radius = 30
-	q5.proj_y_tolerance = 100
+	q5.proj_y_tolerance = 125
 	q5.proj_lifetime_ticks = 600
 	q5.proj_pool = 3
 	q5.proj_texture_path = _q5_lottery_path
 	q5.proj_scale = 0.5
-	q5.proj_spawn_x_offset = -220
-	q5.proj_spawn_y_offset = -95
+	q5.proj_spawn_x_offset = 180
+	q5.proj_spawn_y_offset = -50
 	q5.proj_lottery_mode = true
 	q5.sprite_scale = 1.1
 	_register(q5)
+
+	var asen = _make_def("asen", "Asen", _asen_frames_path, Color(1, 1, 1, 1))
+	asen.speed = 350.0
+	asen.jump_velocity = JUMP_VELOCITY
+	asen.punch_damage = 13
+	asen.kick_damage = 10
+	asen.block_damage_modifier = 0.15
+	asen.max_health = 105.0
+	_register(asen)
 
 
 func _make_def(id: String, display_name: String, frames_path: String, mod: Color):

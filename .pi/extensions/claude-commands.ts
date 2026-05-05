@@ -21,12 +21,12 @@ export default function (pi: ExtensionAPI) {
 
       pi.registerCommand(basename, {
         description,
-        handler: async (args, ctx) => {
+        handler: async (args) => {
           let prompt = content;
           if (args) {
             prompt += `\n\nUser arguments: ${args}`;
           }
-          await ctx.sendUserMessage(prompt);
+          pi.sendUserMessage(prompt);
         },
       });
     }

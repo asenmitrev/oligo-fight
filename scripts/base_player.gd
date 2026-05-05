@@ -958,17 +958,28 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 			continue
 
 		# Self-pickup: 5q walks over their own + ticket
-		if _proj_lottery_mode and _proj_is_heal[i]:
-			var sdx := abs(_proj_x[i] - self_x)
-			var sdy := abs(_proj_y[i] - self_y)
-			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
-				_proj_active[i] = false
-				_proj_sprites[i].visible = false
-				if _proj_labels[i]: _proj_labels[i].visible = false
-				health = min(max_health, health + _proj_value[i])
-				if _health_bar:
-					_health_bar.value = health
-				continue
+		if _proj_lottery_mode:
+			if _proj_is_heal[i]:
+				var sdx := abs(_proj_x[i] - self_x)
+				var sdy := abs(_proj_y[i] - self_y)
+				if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
+					_proj_active[i] = false
+					_proj_sprites[i].visible = false
+					if _proj_labels[i]: _proj_labels[i].visible = false
+					health = min(max_health, health + _proj_value[i])
+					if _health_bar:
+						_health_bar.value = health
+					continue
+			else:
+				var sdx := abs(_proj_x[i] - self_x)
+				var sdy := abs(_proj_y[i] - self_y)
+				if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
+					_proj_active[i] = false
+					_proj_sprites[i].visible = false
+					if _proj_labels[i]: _proj_labels[i].visible = false
+					take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_value[i])
+					continue
+			
 
 		var dx := abs(_proj_x[i] - opp_x)
 		var dy := abs(_proj_y[i] - opp_y)
