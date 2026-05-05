@@ -90,7 +90,7 @@ position = Vector2( 1296.5, 180 )
 collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="WallRight"]
-position = Vector2( -4.5, -610 )
+position = Vector2( -0.5, -605 )
 shape = SubResource( 63 )
 
 [node name="HUD" type="CanvasLayer" parent="."]

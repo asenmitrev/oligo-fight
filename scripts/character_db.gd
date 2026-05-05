@@ -67,7 +67,7 @@ func _init() -> void:
 
 	var veli = _make_def("veli", "Veli", _veli_frames_path, Color(1, 1, 1, 1))
 	veli.speed = 320.0
-	veli.jump_velocity = JUMP_VELOCITY * 0.7
+	veli.jump_velocity = JUMP_VELOCITY * 0.25
 	veli.punch_damage = 0
 	veli.punch_pulls_opponent = true
 	veli.kick_damage = 20
@@ -252,7 +252,7 @@ func _init() -> void:
 	q5.proj_pool = 3
 	q5.proj_texture_path = _q5_lottery_path
 	q5.proj_scale = 0.5
-	q5.proj_spawn_x_offset = 80
+	q5.proj_spawn_x_offset = -220
 	q5.proj_spawn_y_offset = -95
 	q5.proj_lottery_mode = true
 	q5.sprite_scale = 1.1
