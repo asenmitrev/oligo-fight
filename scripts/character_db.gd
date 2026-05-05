@@ -282,6 +282,7 @@ func _init() -> void:
 	djolev.kick_damage = 10
 	djolev.block_damage_modifier = 0.15
 	djolev.max_health = 105.0
+	djolev.passive_damage_per_second = 1
 	_register(djolev)
 
 

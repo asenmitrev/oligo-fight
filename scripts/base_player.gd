@@ -53,6 +53,8 @@ var disable_attacks_airborne: bool = false
 var flypunch_teleports: bool = false
 var kick_teleports_behind: bool = false
 var gong_hits_everywhere: bool = false
+var passive_damage_per_second: int = 0
+var _passive_damage_cooldown: int = 0
 var flykick_forward: bool = false
 var fires_projectile: bool = false
 var _proj_speed: int = 0
@@ -268,6 +270,8 @@ func apply_character(def: CharacterDef) -> void:
 	flypunch_teleports = def.flypunch_teleports
 	kick_teleports_behind = def.kick_teleports_behind
 	gong_hits_everywhere = def.gong_hits_everywhere
+	passive_damage_per_second = def.passive_damage_per_second
+	_passive_damage_cooldown = 0
 	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
 	anim.offset = Vector2(0, -64) + def.sprite_offset
 	_cache_all_animation_data()
@@ -386,6 +390,7 @@ func reset_for_round() -> void:
 		_proj_sprites[i].visible = false
 		if _proj_labels[i]: _proj_labels[i].visible = false
 	_invis_ticks = 0
+	_passive_damage_cooldown = 0
 	anim.modulate.a = 1.0
 	if _veli_kick_icon:
 		_veli_kick_icon.visible = false
@@ -835,6 +840,20 @@ func _physics_process(delta: float) -> void:
 	if _invis_ticks > 0:
 		_invis_ticks -= 1
 		if _invis_ticks == 0: anim.modulate.a = 1.0
+
+	# Passive damage: deal damage every second (60 physics ticks)
+	if passive_damage_per_second > 0 and _opponent:
+		_passive_damage_cooldown += 1
+		
+		if _passive_damage_cooldown >= Engine.iterations_per_second:
+			_passive_damage_cooldown = 0
+			var h = max(0, _opponent.health - passive_damage_per_second)
+			_opponent.health = h;
+			print(h)
+			if _health_bar: _opponent._health_bar.value = h
+			if health <= 0:
+				_opponent._enter_defeated()
+				return
 
 	_knockback_x *= 5.0 / 6.0
 
