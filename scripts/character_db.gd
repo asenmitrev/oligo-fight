@@ -270,7 +270,7 @@ func _init() -> void:
 	asen.block_damage_modifier = 0.15
 	asen.punch_knockback_multiplier = 0.0
 	asen.punch_speed_scale = 0.8
-	asen.max_health = 210.0
+	asen.max_health = 125.0
 	asen.gong_hits_everywhere = true
 	_register(asen)
 
