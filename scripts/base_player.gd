@@ -44,6 +44,7 @@ var fall_gravity_scale: float = 1.0
 var invulnerable_when_airborne: bool = false
 var partial_loop_jump: bool = false
 var punch_pulls_opponent: bool = false
+var punch_insta_knockdown: bool = false
 var punch_makes_invisible: bool = false
 var invis_damage_multiplier: float = 1.0
 var punch_self_damages: bool = false
@@ -215,6 +216,7 @@ func apply_character(def: CharacterDef) -> void:
 	kick_heals_self = def.kick_heals_self
 	walk_self_heal = def.walk_self_heal
 	kick_knockback_multiplier = def.kick_knockback_multiplier
+	punch_insta_knockdown = def.punch_insta_knockdown
 	fires_projectile = def.fires_projectile
 	_proj_fires_on_punch = def.proj_fires_on_punch
 	_proj_fires_on_kick = def.proj_fires_on_kick
@@ -494,11 +496,14 @@ func force_fall() -> void:
 	_enter_fallen()
 
 
-func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0, no_knockdown: bool = false) -> bool:
+func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, damage: int = 15, knockback_multiplier: float = 1.0, no_knockdown: bool = false, force_knockdown: bool = false) -> bool:
 	_end_invisibility()
 	if is_defeated or state == State.GETUP: return false
 	if state == State.FALLEN and is_on_floor(): return false
 	if invulnerable_when_airborne and not is_on_floor(): return false
+	if force_knockdown: 
+		_enter_fallen()
+		return true
 	var to_opp_block := 0.0
 	if _opponent: to_opp_block = _opponent.global_position.x - global_position.x
 	var is_blocking = _check_blocking(to_opp_block)
@@ -667,7 +672,8 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if is_kick and kick_heals_self > 0:
 		health = min(max_health, health + kick_heals_self)
 		if _health_bar: _health_bar.value = health
-		return
+		if kick_damage == 0:
+			return
 	if _opponent == null: return
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
 	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
@@ -688,7 +694,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	var is_counter  = _opponent._attacking
 	var _dmg_mult: float = invis_damage_multiplier if _invis_ticks > 0 else 1.0
 	var no_knockdown = gong_hits_everywhere and not is_kick
-	var hit_registered: bool = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier, no_knockdown)
+	var hit_registered: bool = _opponent.take_hit(is_kick, global_position, is_counter, int((kick_damage if is_kick else punch_damage) * _dmg_mult), kick_knockback_multiplier if is_kick else punch_knockback_multiplier, no_knockdown, false if is_kick else punch_insta_knockdown)
 	if not hit_registered: return
 
 	if is_kick and _veli_kick_icon:

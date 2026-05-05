@@ -278,11 +278,13 @@ func _init() -> void:
 	var djolev = _make_def("djolev", "Djolev", _djolev_frames_path, Color(1, 1, 1, 1))
 	djolev.speed = 350.0
 	djolev.jump_velocity = JUMP_VELOCITY
-	djolev.punch_damage = 13
+	djolev.punch_damage = 0
 	djolev.kick_damage = 10
 	djolev.block_damage_modifier = 0.15
 	djolev.max_health = 105.0
 	djolev.passive_damage_per_second = 1
+	djolev.kick_heals_self = 10.0
+	djolev.punch_insta_knockdown = true
 	_register(djolev)
 
 
