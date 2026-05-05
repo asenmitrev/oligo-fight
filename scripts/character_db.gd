@@ -67,7 +67,7 @@ func _init() -> void:
 
 	var veli = _make_def("veli", "Veli", _veli_frames_path, Color(1, 1, 1, 1))
 	veli.speed = 320.0
-	veli.jump_velocity = JUMP_VELOCITY * 0.5
+	veli.jump_velocity = JUMP_VELOCITY * 0.7
 	veli.punch_damage = 0
 	veli.punch_pulls_opponent = true
 	veli.kick_damage = 20

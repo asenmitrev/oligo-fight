@@ -5,7 +5,7 @@ const CharacterDef = preload("res://scripts/character_def.gd")
 var speed := 350.0
 var jump_speed := 350.0
 var jump_velocity := -1700.0
-const GRAVITY := 4800.0
+const GRAVITY := 3600.0
 const FLOOR_SNAP := Vector2(0, 24)
 
 var punch_damage := 15
@@ -619,19 +619,38 @@ func _end_invisibility() -> void:
 func _do_kick_teleport_behind() -> void:
 	if _opponent == null: return
 	var my_facing = -1.0 if anim.flip_h else 1.0
-	_opponent.global_position.x = global_position.x - my_facing * 300.0
-	_opponent.global_position.y = global_position.y
-	_opponent.velocity.x = 0.0
+	var target_x: float = global_position.x - my_facing * 300.0
+	var target_y: float = global_position.y
+
+	# Clamp to map bounds so the opponent doesn't teleport through walls
+	var clamped_x: float= clamp(target_x, 10.0, 1270.0)
+	var clamped_y: float= clamp(target_y, 100.0, 460.0)
+
+	# Only teleport if the target is within bounds
+	if abs(target_x - clamped_x) < 5.0 and abs(target_y - clamped_y) < 5.0:
+		_opponent.global_position.x = clamped_x
+		_opponent.global_position.y = clamped_y
+		_opponent.velocity.x = 0.0
 
 
 func _do_flypunch_teleport() -> void:
 	if _opponent == null: return
 	# "behind" = the side the opponent is NOT facing
 	var opp_facing := -1.0 if _opponent.anim.flip_h else 1.0
-	global_position.x = _opponent.global_position.x - opp_facing * 120.0
-	global_position.y = _opponent.global_position.y
-	velocity.y = 0.0
-	anim.flip_h = _opponent.anim.flip_h
+	var target_x := _opponent.global_position.x - opp_facing * 120.0
+	var target_y := _opponent.global_position.y
+
+	# Clamp to map bounds so Drago doesn't teleport through walls
+	# Map walls are at ~x=10 (left) and ~x=1270 (right), ground at ~y=436
+	var clamped_x := clamp(target_x, 10.0, 1270.0)
+	var clamped_y := clamp(target_y, 100.0, 460.0)
+
+	# Only teleport if the target is within bounds
+	if abs(target_x - clamped_x) < 5.0 and abs(target_y - clamped_y) < 5.0:
+		global_position.x = clamped_x
+		global_position.y = clamped_y
+		velocity.y = 0.0
+		anim.flip_h = _opponent.anim.flip_h
 
 
 func _try_hit_opponent(is_kick: bool) -> void:
@@ -942,7 +961,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 		if _proj_lottery_mode and _proj_is_heal[i]:
 			var sdx := abs(_proj_x[i] - self_x)
 			var sdy := abs(_proj_y[i] - self_y)
-			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance:
+			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
 				_proj_active[i] = false
 				_proj_sprites[i].visible = false
 				if _proj_labels[i]: _proj_labels[i].visible = false
@@ -953,7 +972,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 
 		var dx := abs(_proj_x[i] - opp_x)
 		var dy := abs(_proj_y[i] - opp_y)
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance:
+		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
 			_proj_active[i] = false
 			_proj_sprites[i].visible = false
 			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
