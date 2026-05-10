@@ -25,10 +25,15 @@ position = Vector2( 640, 180 )
 current = true
 zoom = Vector2( 2, 2 )
 
-[node name="Background" type="Sprite" parent="."]
-position = Vector2( 642, 129 )
-scale = Vector2( 4, 4 )
+[node name="BgLayer" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Background" type="TextureRect" parent="BgLayer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
 texture = ExtResource( 1 )
+expand = true
+stretch_mode = 1
 
 [node name="Player" type="KinematicBody2D" parent="."]
 position = Vector2( 320, 380 )

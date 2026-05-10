@@ -327,7 +327,7 @@ func _apply_fight_background() -> void:
 			GameState.fight_background_index,
 			0,
 			FIGHT_BACKGROUNDS.size() - 1))
-	$Background.texture = load(FIGHT_BACKGROUNDS[idx])
+	$BgLayer/Background.texture = load(FIGHT_BACKGROUNDS[idx])
 
 func _build_pause_menu() -> void:
 	_pause_menu = CanvasLayer.new()
@@ -343,8 +343,8 @@ func _build_pause_menu() -> void:
 
 	var panel = ColorRect.new()
 	panel.color = Color(0.1, 0.1, 0.15, 0.95)
-	panel.anchor_left = 0.35
-	panel.anchor_right = 0.65
+	panel.anchor_left = 0.25
+	panel.anchor_right = 0.75
 	panel.anchor_top = 0.25
 	panel.anchor_bottom = 0.75
 	bg.add_child(panel)
