@@ -146,6 +146,7 @@ func _init() -> void:
 	crunch.punch_damage = 13
 	crunch.kick_damage = 11
 	crunch.block_damage_modifier = 0.15
+	crunch.sprite_scale = 0.9
 	crunch.max_health = 105
 	crunch.punch_speed_scale = 0.55
 	crunch.kick_speed_scale = 0.78
@@ -268,6 +269,7 @@ func _init() -> void:
 	asen.punch_lunge_scale = 0
 	asen.punch_damage = 7.5
 	asen.kick_damage = 10
+	asen.sprite_scale = 1.05
 	asen.block_damage_modifier = 0.15
 	asen.punch_knockback_multiplier = 0.0
 	asen.punch_speed_scale = 0.8
@@ -280,6 +282,7 @@ func _init() -> void:
 	djolev.jump_velocity = JUMP_VELOCITY
 	djolev.punch_damage = 0
 	djolev.kick_damage = 10
+	djolev.sprite_scale = 1.1
 	djolev.punch_arm_extension = 200.0
 	djolev.block_damage_modifier = 0.15
 	djolev.max_health = 105.0

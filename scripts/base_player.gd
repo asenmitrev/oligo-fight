@@ -979,6 +979,13 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 	var self_x: float = global_position.x
 	var self_y: float = global_position.y
 
+	var pending_self_heal: int = 0
+	var pending_self_damage: int = 0
+	var pending_self_damage_pos: Vector2 = Vector2.ZERO
+	var pending_opp_heal: int = 0
+	var pending_opp_damage: int = 0
+	var pending_opp_damage_pos: Vector2 = Vector2.ZERO
+
 	for i in range(_proj_pool):
 		if not _proj_active[i]:
 			# Sprite/label were already hidden when the slot deactivated.
@@ -996,26 +1003,18 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 
 		# Self-pickup: 5q walks over their own + ticket
 		if _proj_lottery_mode:
-			if _proj_is_heal[i]:
-				var sdx := abs(_proj_x[i] - self_x)
-				var sdy := abs(_proj_y[i] - self_y)
-				if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
-					_proj_active[i] = false
-					_proj_sprites[i].visible = false
-					if _proj_labels[i]: _proj_labels[i].visible = false
-					health = min(max_health, health + _proj_value[i])
-					if _health_bar:
-						_health_bar.value = health
-					continue
-			else:
-				var sdx := abs(_proj_x[i] - self_x)
-				var sdy := abs(_proj_y[i] - self_y)
-				if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
-					_proj_active[i] = false
-					_proj_sprites[i].visible = false
-					if _proj_labels[i]: _proj_labels[i].visible = false
-					take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_value[i])
-					continue
+			var sdx := abs(_proj_x[i] - self_x)
+			var sdy := abs(_proj_y[i] - self_y)
+			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
+				_proj_active[i] = false
+				_proj_sprites[i].visible = false
+				if _proj_labels[i]: _proj_labels[i].visible = false
+				if _proj_is_heal[i]:
+					pending_self_heal += _proj_value[i]
+				else:
+					pending_self_damage += _proj_value[i]
+					pending_self_damage_pos = Vector2(_proj_x[i], _proj_y[i])
+				continue
 			
 
 		var dx := abs(_proj_x[i] - opp_x)
@@ -1027,14 +1026,10 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 			if _proj_lottery_mode:
 				var val: int = _proj_value[i]
 				if _proj_is_heal[i]:
-					_opponent.health = min(_opponent.max_health, _opponent.health + val)
-					if _opponent._health_bar:
-						_opponent._health_bar.value = _opponent.health
+					pending_opp_heal += val
 				else:
-					var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, val)
-					if registered:
-						_hitstop_ticks = HITSTOP_TICKS
-						emit_signal("hit_landed", false, 0)
+					pending_opp_damage += val
+					pending_opp_damage_pos = Vector2(_proj_x[i], _proj_y[i])
 			else:
 				var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_damage)
 				if registered:
@@ -1059,6 +1054,23 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 		var fps := _proj_anim_fps_kick if is_kick_p else _proj_anim_fps
 		if hf * vf > 1:
 			s.frame = (_proj_lifetime[i] * fps / phz) % (hf * vf)
+
+	if pending_self_heal > 0:
+		health = min(max_health, health + pending_self_heal)
+		if _health_bar:
+			_health_bar.value = health
+	if pending_self_damage > 0:
+		take_hit(false, pending_self_damage_pos, false, pending_self_damage)
+	if _opponent:
+		if pending_opp_heal > 0:
+			_opponent.health = min(_opponent.max_health, _opponent.health + pending_opp_heal)
+			if _opponent._health_bar:
+				_opponent._health_bar.value = _opponent.health
+		if pending_opp_damage > 0:
+			var registered: bool = _opponent.take_hit(false, pending_opp_damage_pos, false, pending_opp_damage)
+			if registered:
+				_hitstop_ticks = HITSTOP_TICKS
+				emit_signal("hit_landed", false, 0)
 
 
 func _update_animation_state(direction: float, is_on_floor_t: bool, should_block_visually: bool, to_opp: float, dist_to_opp: float) -> void:

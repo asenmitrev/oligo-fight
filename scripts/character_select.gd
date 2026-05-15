@@ -143,7 +143,7 @@ func _apply_ui_text_scale() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("start") or event.is_action_pressed("p1_kick") or event.is_action_pressed("p2_kick"):
+	if event.is_action_pressed("start"):
 		_music.stop()
 		get_tree().change_scene("res://scenes/MainMenu.tscn")
 
