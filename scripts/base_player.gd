@@ -58,33 +58,15 @@ var passive_damage_per_second: int = 0
 var _passive_damage_cooldown: int = 0
 var flykick_forward: bool = false
 var fires_projectile: bool = false
-var _proj_speed: int = 0
-var _proj_damage: int = 10
-var _proj_hit_radius: int = 0
-var _proj_y_tolerance: int = 0
-var _proj_lifetime_ticks: int = 0
+
+# Projectile runtime state
+var _proj_cfg = null  # ProjectileConfig
+var _projs: Array = []
 var _proj_pool: int = 0
-var _proj_spawn_x_offset: int = 70
-var _proj_spawn_y_offset: int = 200
+var _proj_next: int = 0
 var _proj_pending_is_kick: bool = false
 var _proj_pending_is_flypunch: bool = false
-var _proj_fires_on_punch: bool = false
-var _proj_fires_on_kick: bool = false
-var _proj_fires_on_walk: bool = false
-var _proj_fires_on_flypunch: bool = false
-var _proj_walk_fire_rate: int = 10
 var _proj_walk_fire_cooldown: int = 0
-var _proj_texture_punch: Texture
-var _proj_texture_kick_tex: Texture
-var _proj_scale_base: float = 3.0
-var _proj_scale_kick: float = 0.0
-var _proj_anim_hframes: int = 1
-var _proj_anim_vframes: int = 1
-var _proj_anim_fps: int = 8
-var _proj_kick_upwards: bool = false
-var _proj_anim_hframes_kick: int = 1
-var _proj_anim_vframes_kick: int = 1
-var _proj_anim_fps_kick: int = 8
 
 export var action_left: String = "p1_left"
 export var action_right: String = "p1_right"
@@ -147,20 +129,6 @@ var _inp_jump_jp: bool = false
 var _inp_punch_jp: bool = false
 var _inp_kick_jp: bool = false
 
-# Projectile state
-var _proj_active: Array = []
-var _proj_x: Array = []
-var _proj_y: Array = []
-var _proj_vy: Array = []
-var _proj_dir: Array = []
-var _proj_lifetime: Array = []
-var _proj_next: int = 0
-var _proj_sprites: Array = []
-var _proj_is_kick: Array = []
-var _proj_value: Array = []
-var _proj_is_heal: Array = []
-var _proj_labels: Array = []
-var _proj_lottery_mode: bool = false
 var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
 # Physics-tick timing
@@ -176,7 +144,49 @@ var _anim_ticks_remaining: int = -1
 var _anim_metadata: Dictionary = {}
 
 
+class ProjectileConfig:
+	var speed: int = 0
+	var damage: int = 10
+	var hit_radius: int = 0
+	var y_tolerance: int = 0
+	var lifetime_ticks: int = 0
+	var spawn_x_offset: int = 70
+	var spawn_y_offset: int = 200
+	var scale_base: float = 3.0
+	var scale_kick: float = 0.0
+	var anim_hframes: int = 1
+	var anim_vframes: int = 1
+	var anim_fps: int = 8
+	var anim_hframes_kick: int = 1
+	var anim_vframes_kick: int = 1
+	var anim_fps_kick: int = 8
+	var texture_punch: Texture
+	var texture_kick: Texture
+	var lottery_mode: bool = false
+	var fires_on_punch: bool = false
+	var fires_on_kick: bool = false
+	var fires_on_walk: bool = false
+	var fires_on_flypunch: bool = false
+	var walk_fire_rate: int = 10
+	var kick_upwards: bool = false
+
+
+class Projectile:
+	var active: bool = false
+	var x: float = 0.0
+	var y: float = 0.0
+	var vy: float = 0.0
+	var dir: int = 1
+	var lifetime: int = 0
+	var is_kick: bool = false
+	var value: int = 0
+	var is_heal: bool = false
+	var sprite = null
+	var label = null
+
+
 func _ready() -> void:
+	_proj_cfg = ProjectileConfig.new()
 	_start_position = global_position
 	add_to_group("players")
 	collision_mask |= 2
@@ -218,30 +228,31 @@ func apply_character(def: CharacterDef) -> void:
 	kick_knockback_multiplier = def.kick_knockback_multiplier
 	punch_insta_knockdown = def.punch_insta_knockdown
 	fires_projectile = def.fires_projectile
-	_proj_fires_on_punch = def.proj_fires_on_punch
-	_proj_fires_on_kick = def.proj_fires_on_kick
-	_proj_fires_on_walk = def.proj_fires_on_walk
-	_proj_fires_on_flypunch = def.proj_fires_on_flypunch
-	_proj_walk_fire_rate = def.proj_walk_fire_rate
-	_proj_texture_punch = def.get_proj_texture()
-	_proj_texture_kick_tex = def.get_proj_texture_kick()
-	_proj_scale_base = def.proj_scale
-	_proj_scale_kick = def.proj_scale_kick
-	_proj_anim_hframes_kick = def.proj_anim_hframes_kick
-	_proj_anim_vframes_kick = def.proj_anim_vframes_kick
-	_proj_anim_fps_kick = def.proj_anim_fps_kick
-	_proj_speed = def.proj_speed
-	_proj_damage = def.proj_damage
-	_proj_hit_radius = def.proj_hit_radius
-	_proj_y_tolerance = def.proj_y_tolerance
-	_proj_kick_upwards = def.proj_kick_upwards
-	_proj_lifetime_ticks = def.proj_lifetime_ticks
-	_proj_spawn_x_offset = def.proj_spawn_x_offset
-	_proj_spawn_y_offset = def.proj_spawn_y_offset
-	_proj_anim_hframes = def.proj_anim_hframes
-	_proj_anim_vframes = def.proj_anim_vframes
-	_proj_anim_fps = def.proj_anim_fps
-	_proj_lottery_mode = def.proj_lottery_mode
+	_proj_cfg = ProjectileConfig.new()
+	_proj_cfg.fires_on_punch = def.proj_fires_on_punch
+	_proj_cfg.fires_on_kick = def.proj_fires_on_kick
+	_proj_cfg.fires_on_walk = def.proj_fires_on_walk
+	_proj_cfg.fires_on_flypunch = def.proj_fires_on_flypunch
+	_proj_cfg.walk_fire_rate = def.proj_walk_fire_rate
+	_proj_cfg.texture_punch = def.get_proj_texture()
+	_proj_cfg.texture_kick = def.get_proj_texture_kick()
+	_proj_cfg.scale_base = def.proj_scale
+	_proj_cfg.scale_kick = def.proj_scale_kick
+	_proj_cfg.anim_hframes_kick = def.proj_anim_hframes_kick
+	_proj_cfg.anim_vframes_kick = def.proj_anim_vframes_kick
+	_proj_cfg.anim_fps_kick = def.proj_anim_fps_kick
+	_proj_cfg.speed = def.proj_speed
+	_proj_cfg.damage = def.proj_damage
+	_proj_cfg.hit_radius = def.proj_hit_radius
+	_proj_cfg.y_tolerance = def.proj_y_tolerance
+	_proj_cfg.kick_upwards = def.proj_kick_upwards
+	_proj_cfg.lifetime_ticks = def.proj_lifetime_ticks
+	_proj_cfg.spawn_x_offset = def.proj_spawn_x_offset
+	_proj_cfg.spawn_y_offset = def.proj_spawn_y_offset
+	_proj_cfg.anim_hframes = def.proj_anim_hframes
+	_proj_cfg.anim_vframes = def.proj_anim_vframes
+	_proj_cfg.anim_fps = def.proj_anim_fps
+	_proj_cfg.lottery_mode = def.proj_lottery_mode
 
 	_init_projectile_pool(def.proj_pool)
 
@@ -281,51 +292,28 @@ func apply_character(def: CharacterDef) -> void:
 
 
 func _init_projectile_pool(pool_size: int) -> void:
-	for s in _proj_sprites: s.queue_free()
-	for l in _proj_labels:
-		if l: l.queue_free()
-	_proj_sprites.clear()
-	_proj_labels.clear()
-	_proj_active.clear()
-	_proj_x.clear()
-	_proj_y.clear()
-	_proj_vy.clear()
-	_proj_dir.clear()
-	_proj_lifetime.clear()
-	_proj_is_kick.clear()
-	_proj_value.clear()
-	_proj_is_heal.clear()
+	for p in _projs:
+		p.sprite.queue_free()
+		if p.label: p.label.queue_free()
+	_projs.clear()
 	_proj_next = 0
 	_proj_pool = pool_size
-	# Lottery mode is the only path that actually renders text on projectiles;
-	# use a shared BitmapFont (no runtime rasterization).
 	var shared_font: BitmapFont = null
-	if _proj_lottery_mode and _proj_pool > 0:
+	if _proj_cfg.lottery_mode and _proj_pool > 0:
 		shared_font = LOBSTER_FONT_28
-	for i in range(_proj_pool):
-		_proj_active.append(false)
-		_proj_x.append(0.0)
-		_proj_y.append(0.0)
-		_proj_vy.append(0.0)
-		_proj_dir.append(1)
-		_proj_lifetime.append(0)
-		_proj_is_kick.append(false)
-		_proj_value.append(0)
-		_proj_is_heal.append(false)
-		var s := Sprite.new()
-		s.set_as_toplevel(true)
-		s.visible = false
-		add_child(s)
-		_proj_sprites.append(s)
+	for _i in range(_proj_pool):
+		var p = Projectile.new()
+		p.sprite = Sprite.new()
+		p.sprite.set_as_toplevel(true)
+		p.sprite.visible = false
+		add_child(p.sprite)
 		if shared_font != null:
-			var l := Label.new()
-			l.set_as_toplevel(true)
-			l.visible = false
-			l.add_font_override("font", shared_font)
-			add_child(l)
-			_proj_labels.append(l)
-		else:
-			_proj_labels.append(null)
+			p.label = Label.new()
+			p.label.set_as_toplevel(true)
+			p.label.visible = false
+			p.label.add_font_override("font", shared_font)
+			add_child(p.label)
+		_projs.append(p)
 
 
 func _cache_all_animation_data() -> void:
@@ -336,7 +324,7 @@ func _cache_all_animation_data() -> void:
 		var variants := [["", 1.0]]
 		if (anim_name == "punch" or anim_name == "body_punch") and proj_fires_airborne:
 			variants = [["", punch_speed_scale], ["_air", flypunch_speed_scale]]
-		elif anim_name == "flypunch" and _proj_fires_on_flypunch:
+		elif anim_name == "flypunch" and _proj_cfg.fires_on_flypunch:
 			variants = [["", flypunch_speed_scale]]
 		else:
 			var ss := 1.0
@@ -358,7 +346,7 @@ func _cache_all_animation_data() -> void:
 				target_frame = 2
 				data.is_kick = true
 			if target_frame >= 0: data.hit_tick = (target_frame * phz + fps_int - 1) / fps_int
-			var _fires: bool = (fires_projectile and ((_proj_fires_on_punch and anim_name == "punch") or (_proj_fires_on_kick and anim_name == "kick") or (_proj_fires_on_flypunch and anim_name == "flypunch")))
+			var _fires: bool = (fires_projectile and ((_proj_cfg.fires_on_punch and anim_name == "punch") or (_proj_cfg.fires_on_kick and anim_name == "kick") or (_proj_cfg.fires_on_flypunch and anim_name == "flypunch")))
 			if _fires:
 				var proj_frame := 3 if anim_name == "punch" else 2
 				data.proj_tick = (proj_frame * phz + fps_int - 1) / fps_int
@@ -386,11 +374,11 @@ func reset_for_round() -> void:
 	_blocked_punch = false
 	_opponent = null
 	_proj_next = 0
-	for i in range(_proj_pool):
-		_proj_active[i] = false
-		_proj_lifetime[i] = 0
-		_proj_sprites[i].visible = false
-		if _proj_labels[i]: _proj_labels[i].visible = false
+	for p in _projs:
+		p.active = false
+		p.lifetime = 0
+		p.sprite.visible = false
+		if p.label: p.label.visible = false
 	_invis_ticks = 0
 	_passive_damage_cooldown = 0
 	anim.modulate.a = 1.0
@@ -724,38 +712,35 @@ func _try_hit_opponent(is_kick: bool) -> void:
 
 
 func _launch_projectile() -> void:
+	var cfg = _proj_cfg
 	var facing_dir := -1 if anim.flip_h else 1
 	var i := _proj_next
 	_proj_next = (_proj_next + 1) % _proj_pool
-	_proj_active[i] = true
-	_proj_is_kick[i] = _proj_pending_is_kick
-	_proj_dir[i] = facing_dir
-	_proj_x[i] = global_position.x + facing_dir * _proj_spawn_x_offset
-	if _proj_pending_is_flypunch:
-		_proj_y[i] = _start_position.y - _proj_spawn_y_offset
-	else:
-		_proj_y[i] = global_position.y - _proj_spawn_y_offset
-	_proj_vy[i] = float(-_proj_speed) if _proj_kick_upwards and _proj_pending_is_kick else 0.0
-	_proj_lifetime[i] = 0
-	if _proj_lottery_mode:
+	var p = _projs[i]
+	p.active = true
+	p.is_kick = _proj_pending_is_kick
+	p.dir = facing_dir
+	p.x = global_position.x + facing_dir * cfg.spawn_x_offset
+	p.y = (_start_position.y - cfg.spawn_y_offset) if _proj_pending_is_flypunch else (global_position.y - cfg.spawn_y_offset)
+	p.vy = float(-cfg.speed) if cfg.kick_upwards and _proj_pending_is_kick else 0.0
+	p.lifetime = 0
+	if cfg.lottery_mode:
 		var values = [5, 10, 20, 30]
-		_proj_value[i] = values[randi() % 4]
-		_proj_is_heal[i] = randi() % 2 == 0
-		var l: Label = _proj_labels[i]
-		l.text = ("+" if _proj_is_heal[i] else "-") + str(_proj_value[i])
-		l.add_color_override("font_color", Color(0.2, 1.0, 0.2, 1.0) if _proj_is_heal[i] else Color(1.0, 0.2, 0.2, 1.0))
-	var s: Sprite = _proj_sprites[i]
-	if _proj_pending_is_kick and _proj_texture_kick_tex:
-		s.texture = _proj_texture_kick_tex
-		s.hframes = _proj_anim_hframes_kick
-		s.vframes = _proj_anim_vframes_kick
-		var sk := _proj_scale_kick if _proj_scale_kick > 0.0 else _proj_scale_base
-		s.scale = Vector2(sk, sk)
+		p.value = values[randi() % 4]
+		p.is_heal = randi() % 2 == 0
+		p.label.text = ("+" if p.is_heal else "-") + str(p.value)
+		p.label.add_color_override("font_color", Color(0.2, 1.0, 0.2, 1.0) if p.is_heal else Color(1.0, 0.2, 0.2, 1.0))
+	if _proj_pending_is_kick and cfg.texture_kick:
+		p.sprite.texture = cfg.texture_kick
+		p.sprite.hframes = cfg.anim_hframes_kick
+		p.sprite.vframes = cfg.anim_vframes_kick
+		var sk: float = cfg.scale_kick if cfg.scale_kick > 0.0 else cfg.scale_base
+		p.sprite.scale = Vector2(sk, sk)
 	else:
-		s.texture = _proj_texture_punch
-		s.hframes = _proj_anim_hframes
-		s.vframes = _proj_anim_vframes
-		s.scale = Vector2(_proj_scale_base, _proj_scale_base)
+		p.sprite.texture = cfg.texture_punch
+		p.sprite.hframes = cfg.anim_hframes
+		p.sprite.vframes = cfg.anim_vframes
+		p.sprite.scale = Vector2(cfg.scale_base, cfg.scale_base)
 
 
 func _action_pressed(action: String) -> bool:
@@ -850,7 +835,7 @@ func _tick_timers() -> bool:
 			_anim_hit_fired = true
 			if flypunch_teleports and _current_anim == "flypunch":
 				_do_flypunch_teleport()
-			elif _proj_fires_on_flypunch and _current_anim == "flypunch":
+			elif _proj_cfg.fires_on_flypunch and _current_anim == "flypunch":
 				pass
 			else:
 				var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
@@ -869,7 +854,7 @@ func _tick_timers() -> bool:
 	if fires_projectile:
 		_process_projectiles(_opponent.global_position if _opponent else Vector2.ZERO)
 
-	if _proj_fires_on_walk and _proj_walk_fire_cooldown > 0:
+	if _proj_cfg.fires_on_walk and _proj_walk_fire_cooldown > 0:
 		_proj_walk_fire_cooldown -= 1
 
 	if _hit_ticks > 0:
@@ -986,8 +971,15 @@ func _get_input_snapshot() -> InputSnapshot:
 
 
 
+func _deactivate_proj(p) -> void:
+	p.active = false
+	p.sprite.visible = false
+	if p.label: p.label.visible = false
+
+
 func _process_projectiles(opp_pos: Vector2) -> void:
 	var phz := Engine.iterations_per_second
+	var cfg = _proj_cfg
 	var opp_x: float = opp_pos.x
 	var opp_y: float = opp_pos.y
 	var self_x: float = global_position.x
@@ -1000,86 +992,70 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 	var pending_opp_damage: int = 0
 	var pending_opp_damage_pos: Vector2 = Vector2.ZERO
 
-	for i in range(_proj_pool):
-		if not _proj_active[i]:
-			# Sprite/label were already hidden when the slot deactivated.
+	for p in _projs:
+		if not p.active:
 			continue
 
-		_proj_x[i] += _proj_dir[i] * _proj_speed
-		_proj_y[i] += _proj_vy[i]
-		_proj_lifetime[i] += 1
+		p.x += p.dir * cfg.speed
+		p.y += p.vy
+		p.lifetime += 1
 
-		if _proj_lifetime[i] > _proj_lifetime_ticks or _proj_x[i] < -200 or _proj_x[i] > 1500:
-			_proj_active[i] = false
-			_proj_sprites[i].visible = false
-			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
+		if p.lifetime > cfg.lifetime_ticks or p.x < -200 or p.x > 1500:
+			_deactivate_proj(p)
 			continue
 
-		# Self-pickup: 5q walks over their own + ticket
-		if _proj_lottery_mode:
-			var sdx := abs(_proj_x[i] - self_x)
-			var sdy := abs(_proj_y[i] - self_y)
-			if sdx < _proj_hit_radius and sdy < _proj_y_tolerance and self_y + 50 >= _proj_y[i]:
-				_proj_active[i] = false
-				_proj_sprites[i].visible = false
-				if _proj_labels[i]: _proj_labels[i].visible = false
-				if _proj_is_heal[i]:
-					pending_self_heal += _proj_value[i]
+		if cfg.lottery_mode:
+			var sdx := abs(p.x - self_x)
+			var sdy := abs(p.y - self_y)
+			if sdx < cfg.hit_radius and sdy < cfg.y_tolerance and self_y + 50 >= p.y:
+				_deactivate_proj(p)
+				if p.is_heal:
+					pending_self_heal += p.value
 				else:
-					pending_self_damage += _proj_value[i]
-					pending_self_damage_pos = Vector2(_proj_x[i], _proj_y[i])
+					pending_self_damage += p.value
+					pending_self_damage_pos = Vector2(p.x, p.y)
 				continue
-			
 
-		var dx := abs(_proj_x[i] - opp_x)
-		var dy := abs(_proj_y[i] - opp_y)
-		if dx < _proj_hit_radius and dy < _proj_y_tolerance and opp_y + 50 >= _proj_y[i]:
-			_proj_active[i] = false
-			_proj_sprites[i].visible = false
-			if _proj_lottery_mode and _proj_labels[i]: _proj_labels[i].visible = false
-			if _proj_lottery_mode:
-				var val: int = _proj_value[i]
-				if _proj_is_heal[i]:
-					pending_opp_heal += val
+		var dx := abs(p.x - opp_x)
+		var dy := abs(p.y - opp_y)
+		if dx < cfg.hit_radius and dy < cfg.y_tolerance and opp_y + 50 >= p.y:
+			_deactivate_proj(p)
+			if cfg.lottery_mode:
+				if p.is_heal:
+					pending_opp_heal += p.value
 				else:
-					pending_opp_damage += val
-					pending_opp_damage_pos = Vector2(_proj_x[i], _proj_y[i])
+					pending_opp_damage += p.value
+					pending_opp_damage_pos = Vector2(p.x, p.y)
 			else:
-				var registered: bool = _opponent.take_hit(false, Vector2(_proj_x[i], _proj_y[i]), false, _proj_damage)
+				var registered: bool = _opponent.take_hit(false, Vector2(p.x, p.y), false, cfg.damage)
 				if registered:
 					_hitstop_ticks = HITSTOP_TICKS
 					emit_signal("hit_landed", false, 0)
 			continue
 
-		var s: Sprite = _proj_sprites[i]
-		s.visible = true
-		s.global_position = Vector2(_proj_x[i], _proj_y[i])
-		s.flip_h = (_proj_dir[i] < 0)
+		p.sprite.visible = true
+		p.sprite.global_position = Vector2(p.x, p.y)
+		p.sprite.flip_h = (p.dir < 0)
 
-		if _proj_lottery_mode:
-			var l: Label = _proj_labels[i]
-			if l:
-				l.visible = true
-				l.rect_global_position = Vector2(_proj_x[i], _proj_y[i] - 30)
+		if cfg.lottery_mode and p.label:
+			p.label.visible = true
+			p.label.rect_global_position = Vector2(p.x, p.y - 30)
 
-		var is_kick_p: bool  = _proj_is_kick[i]
-		var hf := _proj_anim_hframes_kick if is_kick_p else _proj_anim_hframes
-		var vf := _proj_anim_vframes_kick if is_kick_p else _proj_anim_vframes
-		var fps := _proj_anim_fps_kick if is_kick_p else _proj_anim_fps
+		var hf: int = cfg.anim_hframes_kick if p.is_kick else cfg.anim_hframes
+		var vf: int= cfg.anim_vframes_kick if p.is_kick else cfg.anim_vframes
+		var fps: int= cfg.anim_fps_kick if p.is_kick else cfg.anim_fps
 		if hf * vf > 1:
-			s.frame = (_proj_lifetime[i] * fps / phz) % (hf * vf)
+			p.sprite.frame = (p.lifetime * fps / phz) % (hf * vf)
 
 	if pending_self_heal > 0:
 		health = min(max_health, health + pending_self_heal)
-		if _health_bar:
-			_health_bar.value = health
+		if _health_bar: _health_bar.value = health
 	if pending_self_damage > 0:
 		take_hit(false, pending_self_damage_pos, false, pending_self_damage)
 	if _opponent:
 		if pending_opp_heal > 0:
 			_opponent.health = min(_opponent.max_health, _opponent.health + pending_opp_heal)
-			if _opponent._health_bar:
-				_opponent._health_bar.value = _opponent.health
+			if _opponent._health_bar: _opponent._health_bar.value = _opponent.health
 		if pending_opp_damage > 0:
 			var registered: bool = _opponent.take_hit(false, pending_opp_damage_pos, false, pending_opp_damage)
 			if registered:
@@ -1107,10 +1083,10 @@ func _update_animation_state(direction: float, is_on_floor_t: bool, should_block
 				if _health_bar: _health_bar.value = health
 			elif walk_self_heal > 0:
 				_has_healed_on_walk = false
-			if _proj_fires_on_walk and _proj_walk_fire_cooldown == 0:
+			if _proj_cfg.fires_on_walk and _proj_walk_fire_cooldown == 0:
 				_proj_pending_is_kick = false
 				_launch_projectile()
-				_proj_walk_fire_cooldown = _proj_walk_fire_rate
+				_proj_walk_fire_cooldown = _proj_cfg.walk_fire_rate
 		else:
 			_play_anim("idle")
 	if state == State.BLOCKING and _current_anim != "block":
