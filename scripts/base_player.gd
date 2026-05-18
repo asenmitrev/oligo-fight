@@ -773,7 +773,7 @@ func _physics_process(delta: float) -> void:
 
 	var is_on_floor_t = is_on_floor()
 	_handle_pending_abilities(is_on_floor_t)
-	if state == State.NORMAL and _pending_whataboutism: return # already handled or waiting
+	if state == State.NORMAL and _pending_whataboutism: return
 
 	var opp_pos := Vector2.ZERO
 	var opp_attacking := false
@@ -790,6 +790,33 @@ func _physics_process(delta: float) -> void:
 		to_opp = opp_pos.x - global_position.x
 		if (to_opp > 0 and inp.left) or (to_opp < 0 and inp.right): is_blocking_input = true
 
+	_handle_attack_input(inp, is_on_floor_t, is_blocking_input)
+	if _tick_timers(): return
+
+	if not is_on_floor_t:
+		var grav_scale := fall_gravity_scale if state == State.NORMAL else 1.0
+		velocity.y += GRAVITY * (3.0 if inp.down else 1.0) * grav_scale * delta
+
+	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
+		_current_anim = ""
+		_play_anim("falls")
+
+	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
+		velocity.x = 0.0
+		velocity = _move_with_floor_snap()
+		return
+
+	var direction := float(inp.right) - float(inp.left)
+	var dist_to_opp := abs(to_opp)
+	var should_block_visually := is_blocking_input and opp_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
+	velocity.x = _calculate_velocity_x(inp, is_on_floor_t, to_opp, opp_attacking, dist_to_opp)
+	velocity = _move_with_floor_snap()
+	_apply_ipman_attraction()
+
+	_update_animation_state(direction, is_on_floor_t, should_block_visually, to_opp, dist_to_opp)
+
+
+func _handle_attack_input(inp: InputSnapshot, is_on_floor_t: bool, is_blocking_input: bool) -> void:
 	if state == State.BLOCKING and _blocked_punch:
 		if inp.jump_jp and is_on_floor_t:
 			_block_stun_ticks = 0
@@ -807,13 +834,15 @@ func _physics_process(delta: float) -> void:
 				_play_anim("flykick" if not is_on_floor_t else "kick")
 		if inp.jump_jp and is_on_floor_t and not _attacking: velocity.y = jump_velocity
 
+
+func _tick_timers() -> bool:
 	if _anim_ticks_remaining > 0:
 		_anim_ticks_remaining -= 1
 		if _anim_ticks_remaining == 0: _handle_animation_finished()
 
 	if _hitstop_ticks > 0:
 		_hitstop_ticks -= 1
-		return
+		return true
 
 	if _attacking and not _anim_hit_fired and _attack_hit_tick >= 0:
 		_attack_tick_count += 1
@@ -838,7 +867,7 @@ func _physics_process(delta: float) -> void:
 			_launch_projectile()
 
 	if fires_projectile:
-		_process_projectiles(opp_pos)
+		_process_projectiles(_opponent.global_position if _opponent else Vector2.ZERO)
 
 	if _proj_fires_on_walk and _proj_walk_fire_cooldown > 0:
 		_proj_walk_fire_cooldown -= 1
@@ -856,16 +885,14 @@ func _physics_process(delta: float) -> void:
 	# Passive damage: deal damage every second (60 physics ticks)
 	if passive_damage_per_second > 0 and _opponent:
 		_passive_damage_cooldown += 1
-		
 		if _passive_damage_cooldown >= Engine.iterations_per_second:
 			_passive_damage_cooldown = 0
 			var h = max(0, _opponent.health - passive_damage_per_second)
-			_opponent.health = h;
-			print(h)
+			_opponent.health = h
 			if _health_bar: _opponent._health_bar.value = h
-			if health <= 0:
+			if _opponent.health <= 0 and not _opponent.is_defeated:
 				_opponent._enter_defeated()
-				return
+				return true
 
 	_knockback_x *= 5.0 / 6.0
 
@@ -879,57 +906,44 @@ func _physics_process(delta: float) -> void:
 		_whataboutism_window_ticks -= 1
 		if _whataboutism_window_ticks == 0: _whataboutism_block_count = 0
 
-	if not is_on_floor_t:
-		var grav_scale := fall_gravity_scale if state == State.NORMAL else 1.0
-		velocity.y += GRAVITY * (3.0 if inp.down else 1.0) * grav_scale * delta
+	return false
 
-	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
-		_current_anim = ""
-		_play_anim("falls")
 
-	if state == State.FALLEN or state == State.GETUP or state == State.BLOCKING:
-		velocity.x = 0.0
-		velocity = _move_with_floor_snap()
-		return
-
+func _calculate_velocity_x(inp: InputSnapshot, is_on_floor_t: bool, to_opp: float, opp_attacking: bool, dist_to_opp: float) -> float:
 	var direction := float(inp.right) - float(inp.left)
 	var is_walking_back := (direction != 0 and sign(direction) != sign(to_opp)) if to_opp != 0 else false
-	var dist_to_opp := abs(to_opp)
+	var is_blocking_input := (to_opp > 0 and inp.left) or (to_opp < 0 and inp.right)
 	var should_block_visually := is_blocking_input and opp_attacking and dist_to_opp < PROXIMITY_BLOCK_RANGE
 
 	if state == State.HIT and should_block_visually and is_on_floor_t:
-		velocity.x = 0.0
+		return 0.0
 	elif _attacking and (is_on_floor_t or (_lunge_upwards_kick and _attack_is_kick)) and not fires_projectile:
 		var lunge := 1.0 if not anim.flip_h else -1.0
 		var lunge_scale := kick_lunge_scale if _attack_is_kick else punch_lunge_scale
-		velocity.x = lunge * (speed * 0.3 * lunge_scale)
 		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t: velocity.y = -(speed * 0.7 * lunge_scale)
+		return lunge * (speed * 0.3 * lunge_scale)
 	elif _attacking and flykick_forward and _current_anim == "flykick":
 		var lunge := 1.0 if not anim.flip_h else -1.0
-		velocity.x = lunge * 2000.0
+		return lunge * 2000.0
 	else:
 		var current_speed := speed * (WALK_BACK_SPEED_MULT if is_walking_back else 1.0)
 		if velocity.y != 0: current_speed = jump_speed
-		velocity.x = direction * current_speed
+		return direction * current_speed
 
-	velocity = _move_with_floor_snap()
 
-	# Attraction to IpMan - all non-IpMan characters drift towards him.
-	# Resolve the target once per round; subsequent ticks just check the cached ref.
-	if display_name != "IpMan":
-		if not _ipman_lookup_done:
-			_ipman_lookup_done = true
-			for p in get_tree().get_nodes_in_group("players"):
-				var other: KinematicBody2D = p
-				if other != self and other.display_name == "IpMan":
-					_ipman_target = other
-					break
-		if _ipman_target != null and is_instance_valid(_ipman_target):
-			var to_ipman: Vector2 = _ipman_target.global_position - global_position
-			if to_ipman.length() > 1.0:
-				global_position += to_ipman.normalized() * 0.5
-
-	_update_animation_state(direction, is_on_floor_t, should_block_visually, to_opp, dist_to_opp)
+func _apply_ipman_attraction() -> void:
+	if display_name == "IpMan": return
+	if not _ipman_lookup_done:
+		_ipman_lookup_done = true
+		for p in get_tree().get_nodes_in_group("players"):
+			var other: KinematicBody2D = p
+			if other != self and other.display_name == "IpMan":
+				_ipman_target = other
+				break
+	if _ipman_target != null and is_instance_valid(_ipman_target):
+		var to_ipman: Vector2 = _ipman_target.global_position - global_position
+		if to_ipman.length() > 1.0:
+			global_position += to_ipman.normalized() * 0.5
 
 
 func _handle_pending_abilities(is_on_floor_t: bool) -> void:
