@@ -505,6 +505,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			damage = int(damage * block_damage_modifier)
 			_apply_impact(attacker_pos, knockback_multiplier)
 			state = State.BLOCKING
+			_attacking = false
 			_block_stun_ticks = BLOCK_STUN_TICKS
 			_blocked_punch = true
 			_play_anim("block")
