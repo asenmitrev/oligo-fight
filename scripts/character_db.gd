@@ -22,6 +22,7 @@ const _q5_frames_path = "res://resources/5q_sprite_frames.tres"
 const _q5_lottery_path = "res://assets/5q/lottery-ticket.png"
 const _asen_frames_path = "res://resources/asen_sprite_frames.tres"
 const _djolev_frames_path = "res://resources/djolev_sprite_frames.tres"
+const _valka_frames_path = "res://resources/valka_sprite_frames.tres"
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -290,6 +291,16 @@ func _init() -> void:
 	djolev.kick_heals_self = 7.0
 	djolev.punch_insta_knockdown = true
 	_register(djolev)
+
+	var valka = _make_def("valka", "Valka", _valka_frames_path, Color(1, 1, 1, 1))
+	valka.speed = 350.0
+	valka.jump_velocity = JUMP_VELOCITY
+	valka.punch_damage = 13
+
+	valka.kick_damage = 10
+	valka.block_damage_modifier = 0.15
+	valka.max_health = 105.0
+	_register(valka)
 
 
 func _make_def(id: String, display_name: String, frames_path: String, mod: Color):

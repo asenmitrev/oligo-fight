@@ -67,6 +67,41 @@ var _p2_combo_timer: float = 0.0
 const COMBO_DISPLAY_DURATION := 2.5
 const COMBO_FADE_START := 1.0
 
+# Camera shake presets
+const PUNCH_SHAKE_INTENSITY        := 3.0
+const PUNCH_SHAKE_DURATION         := 0.1
+const KICK_SHAKE_INTENSITY         := 8.0
+const KICK_SHAKE_DURATION          := 0.15
+const WHATABOUTISM_SHAKE_INTENSITY := 10.0
+const WHATABOUTISM_SHAKE_DURATION  := 0.25
+const KO_SHAKE_INTENSITY           := 15.0
+const KO_SHAKE_DURATION            := 0.5
+
+# Veli win sequence
+const VELI_WIN_DELAY_TAUNT  := 1.0   # pause before Simonka reacts
+const VELI_WIN_DELAY_GETUP  := 0.8   # time for Simonka to stand up
+const VELI_WIN_DELAY_PUNCH  := 0.3   # delay between punch input and Veli falling
+const VELI_WIN_DELAY_FINISH := 1.0   # wait after fall before scene transition
+const VELI_WIN_STRIKE_RANGE := 220.0 # max distance for Simonka to land the counter-punch
+
+const WIN_SCREEN_DELAY := 2.0
+
+# Combo pop-up animation
+const COMBO_SCALE_START      := 1.3
+const COMBO_SCALE_LERP_SPEED := 12.0
+
+# Whataboutism pop-up animation
+const WHATABOUTISM_SCALE_START      := 1.4
+const WHATABOUTISM_SCALE_LERP_SPEED := 10.0
+
+# Win circle flash tween
+const CIRCLE_FLASH_DURATION := 0.9
+
+# Win circle modulate colors
+var CIRCLE_EMPTY_COLOR  := Color(0.35, 0.35, 0.35, 1.0)
+var CIRCLE_FILLED_COLOR := Color(1.0, 1.0, 1.0, 1.0)
+var CIRCLE_FLASH_COLOR  := Color(3.0, 3.0, 3.0, 1.0)
+
 var LOBSTER_FONT: BitmapFont = load("res://assets/fonts/lobster52.fnt")
 var LOBSTER_FONT_28: BitmapFont = load("res://assets/fonts/lobster28.fnt")
 
@@ -207,7 +242,7 @@ func _process(delta: float) -> void:
 	if _whataboutism_timer > 0.0:
 		_whataboutism_timer = max(0.0, _whataboutism_timer - delta)
 		if _whataboutism_node:
-			_whataboutism_node.rect_scale = _whataboutism_node.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * 10.0)
+			_whataboutism_node.rect_scale = _whataboutism_node.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * WHATABOUTISM_SCALE_LERP_SPEED)
 			if _whataboutism_timer < WHATABOUTISM_FADE_START:
 				_whataboutism_node.modulate.a = _whataboutism_timer / WHATABOUTISM_FADE_START
 			if _whataboutism_timer == 0.0:
@@ -219,29 +254,29 @@ func shake_camera(intensity: float, duration: float) -> void:
 
 func _on_p1_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	if is_heavy:
-		shake_camera(8.0, 0.15)
+		shake_camera(KICK_SHAKE_INTENSITY, KICK_SHAKE_DURATION)
 	else:
-		shake_camera(3.0, 0.1)
+		shake_camera(PUNCH_SHAKE_INTENSITY, PUNCH_SHAKE_DURATION)
 	if combo_count >= 2:
 		_show_combo(_p1_combo_root, _p1_combo_label, combo_count, _p1, _p2)
 		_p1_combo_timer = COMBO_DISPLAY_DURATION
 
 func _on_p2_hit_landed(is_heavy: bool, combo_count: int) -> void:
 	if is_heavy:
-		shake_camera(8.0, 0.15)
+		shake_camera(KICK_SHAKE_INTENSITY, KICK_SHAKE_DURATION)
 	else:
-		shake_camera(3.0, 0.1)
+		shake_camera(PUNCH_SHAKE_INTENSITY, PUNCH_SHAKE_DURATION)
 	if combo_count >= 2:
 		_show_combo(_p2_combo_root, _p2_combo_label, combo_count, _p2, _p1)
 		_p2_combo_timer = COMBO_DISPLAY_DURATION
 
 func _on_whataboutism() -> void:
-	shake_camera(10.0, 0.25)
+	shake_camera(WHATABOUTISM_SHAKE_INTENSITY, WHATABOUTISM_SHAKE_DURATION)
 	if _whataboutism_node == null:
 		_setup_whataboutism()
 	_whataboutism_timer = WHATABOUTISM_DISPLAY_DURATION
 	_whataboutism_node.modulate.a = 1.0
-	_whataboutism_node.rect_scale = Vector2(1.4, 1.4)
+	_whataboutism_node.rect_scale = Vector2(WHATABOUTISM_SCALE_START, WHATABOUTISM_SCALE_START)
 
 func _setup_whataboutism() -> void:
 	var tex = load("res://assets/rado/whatabaoutism.png") as Texture
@@ -310,13 +345,13 @@ func _show_combo(root: Control, label: Label, count: int, attacker: KinematicBod
 	label.text = str(count)
 	_update_combo_pos(root, attacker, opponent)
 	root.modulate.a = 1.0
-	root.rect_scale = Vector2(1.3, 1.3)
+	root.rect_scale = Vector2(COMBO_SCALE_START, COMBO_SCALE_START)
 
 func _tick_combo_label(root: Control, t: float, delta: float) -> void:
 	if t <= 0.0:
 		root.modulate.a = 0.0
 		return
-	root.rect_scale = root.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * 12.0)
+	root.rect_scale = root.rect_scale.linear_interpolate(Vector2(1.0, 1.0), delta * COMBO_SCALE_LERP_SPEED)
 	if t < COMBO_FADE_START:
 		root.modulate.a = t / COMBO_FADE_START
 	else:
@@ -483,7 +518,7 @@ func _setup_win_circles() -> void:
 		tr.texture = circle_tex
 		tr.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
 		tr.expand = true
-		tr.modulate = Color(0.35, 0.35, 0.35, 1.0) # empty = dim gray
+		tr.modulate = CIRCLE_EMPTY_COLOR
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p1_hbox.add_child(tr)
 		_p1_circles.append(tr)
@@ -507,7 +542,7 @@ func _setup_win_circles() -> void:
 		tr.texture = circle_tex
 		tr.rect_min_size = Vector2(CIRCLE_SIZE, CIRCLE_SIZE)
 		tr.expand = true
-		tr.modulate = Color(0.35, 0.35, 0.35, 1.0) # empty = dim gray
+		tr.modulate = CIRCLE_EMPTY_COLOR
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		p2_hbox.add_child(tr)
 		_p2_circles.append(tr)
@@ -516,13 +551,13 @@ func _setup_win_circles() -> void:
 	add_child(_win_tween)
 
 func _set_circle_filled(circle: TextureRect, filled: bool) -> void:
-	circle.modulate = Color(1, 1, 1, 1) if filled else Color(0.35, 0.35, 0.35, 1.0)
+	circle.modulate = CIRCLE_FILLED_COLOR if filled else CIRCLE_EMPTY_COLOR
 
 func _flash_circle(circle: TextureRect) -> void:
-	circle.modulate = Color(3.0, 3.0, 3.0, 1.0)
+	circle.modulate = CIRCLE_FLASH_COLOR
 	_win_tween.interpolate_property(circle, "modulate",
-		Color(3.0, 3.0, 3.0, 1.0), Color(1.0, 1.0, 1.0, 1.0),
-		0.9, Tween.TRANS_SINE, Tween.EASE_OUT)
+		CIRCLE_FLASH_COLOR, CIRCLE_FILLED_COLOR,
+		CIRCLE_FLASH_DURATION, Tween.TRANS_SINE, Tween.EASE_OUT)
 	_win_tween.start()
 
 func _update_wins_display() -> void:
@@ -548,7 +583,7 @@ func _on_player_defeated() -> void:
 	round_in_progress = false
 	_set_players_frozen(true)
 	_set_players_input_disabled(true)
-	shake_camera(15.0, 0.5) # Heavy shake on KO
+	shake_camera(KO_SHAKE_INTENSITY, KO_SHAKE_DURATION)
 	_p1_combo_timer = 0.0
 	_p2_combo_timer = 0.0
 
@@ -586,35 +621,35 @@ func _on_player_defeated() -> void:
 		win_label.text = win_text
 		win_screen.visible = true
 
-		yield(get_tree().create_timer(1.0), "timeout")
+		yield(get_tree().create_timer(VELI_WIN_DELAY_TAUNT), "timeout")
 
 		# Simonka stands back up
 		loser.frozen = false
 		loser.anim.flip_h = winner.global_position.x < loser.global_position.x
 		loser.force_getup()
-		yield(get_tree().create_timer(0.8), "timeout")
+		yield(get_tree().create_timer(VELI_WIN_DELAY_GETUP), "timeout")
 
 		# If they are close, she hits him
 		var dist = winner.global_position.distance_to(loser.global_position)
 		winner.frozen = false # Unfreeze winner too so he can fall
 		winner.stay_down = true # Ensure he stays on the ground
-		if dist < 220:
+		if dist < VELI_WIN_STRIKE_RANGE:
 			loser.force_punch()
-			yield(get_tree().create_timer(0.3), "timeout")
+			yield(get_tree().create_timer(VELI_WIN_DELAY_PUNCH), "timeout")
 			winner.force_fall()
 		else:
 			winner.force_fall()
 
-		yield(get_tree().create_timer(1.0), "timeout")
+		yield(get_tree().create_timer(VELI_WIN_DELAY_FINISH), "timeout")
 	else:
 		if p1_wins >= 2 or p2_wins >= 2:
 			win_label.text = win_text
 			win_screen.visible = true
-			yield(get_tree().create_timer(2.0), "timeout")
+			yield(get_tree().create_timer(WIN_SCREEN_DELAY), "timeout")
 		else:
 			win_label.text = round_text
 			win_screen.visible = true
-			yield(get_tree().create_timer(2.0), "timeout")
+			yield(get_tree().create_timer(WIN_SCREEN_DELAY), "timeout")
 
 	if p1_wins >= 2 or p2_wins >= 2:
 		get_tree().change_scene("res://scenes/CharacterSelect.tscn")

@@ -25,6 +25,56 @@ const BLOCK_STUN_TICKS     := 12
 const WALK_BACK_SPEED_MULT := 0.65
 const COMBO_INPUT_WINDOW_TICKS := 30
 
+# Hit physics velocities
+const HIT_BOUNCE_VELOCITY    := -500.0   # upward push when hit while already airborne
+const LAUNCH_VELOCITY        := -900.0   # upward launch on combo knockdown
+const STRONG_LAUNCH_VELOCITY := -1100.0  # stronger launch for launch_punch ability
+const LAUNCH_KNOCKBACK_MULT  := 3.0      # knockback multiplier for launch_punch
+const FAST_FALL_MULTIPLIER   := 3.0      # gravity scale when holding down mid-air
+const KNOCKBACK_DECAY_FACTOR := 5.0 / 6.0  # per-tick friction on _knockback_x
+
+# Movement fractions (relative to character speed)
+const LUNGE_HORIZONTAL_FRACTION := 0.3
+const LUNGE_VERTICAL_FRACTION   := 0.7
+const FLYKICK_FORWARD_SPEED     := 2000.0
+
+# Map bounds — used for teleport clamping
+const MAP_LEFT_BOUND          := 10.0
+const MAP_RIGHT_BOUND         := 1270.0
+const MAP_TOP_BOUND           := 100.0
+const MAP_BOTTOM_BOUND        := 460.0
+const TELEPORT_SNAP_TOLERANCE := 5.0    # cancel teleport if target would clip a wall
+
+# Teleport offsets
+const KICK_TELEPORT_OFFSET     := 300.0  # distance behind attacker where opponent is placed
+const FLYPUNCH_TELEPORT_OFFSET := 120.0  # distance behind opponent where self is placed
+
+# Hit detection
+const HIT_Y_THRESHOLD_AIRBORNE := 330.0  # max Y delta to connect with an airborne opponent
+const HIT_Y_THRESHOLD_STANDING := 120.0  # max Y delta to connect with a standing opponent
+const FLIP_DIRECTION_THRESHOLD := 50.0   # min dist to opponent before flipping sprite to face them
+const PUNCH_SELF_DAMAGE        := 5      # HP cost per punch for punch_self_damages characters
+
+# Projectile out-of-bounds and collision
+const PROJ_OUT_BOUND_LEFT    := -200.0
+const PROJ_OUT_BOUND_RIGHT   := 1500.0
+const PROJ_GROUND_TOLERANCE  := 50.0    # Y margin for projectile ground-level collision
+
+# Lottery projectile
+const LOTTERY_DAMAGE_VALUES := [5, 10, 20, 30]
+
+# Sprite defaults
+const SPRITE_BASE_SCALE := 3.0    # pixel scale for AnimatedSprite (128px frame → 384px)
+const SPRITE_Y_OFFSET   := -64.0  # anchor: half of 128px frame height
+
+# IpMan passive attraction
+const IPMAN_ATTRACTION_SPEED := 0.5  # pixels per physics tick
+
+# Veli kick icon
+const VELI_ICON_SCALE    := 1.2
+const VELI_ICON_Y_OFFSET := -220.0
+const VELI_ICON_X_SIDE   := 140.0
+
 # Shared character config flags
 var launch_punch: bool = false
 var combos_enabled: bool = true
@@ -261,10 +311,10 @@ func apply_character(def: CharacterDef) -> void:
 			_veli_kick_icon = Sprite.new()
 			_veli_kick_icon.texture = load("res://assets/veli/empathetic-kick.png")
 			_veli_kick_icon.visible = false
-			_veli_kick_icon.scale = Vector2(1.2, 1.2)
+			_veli_kick_icon.scale = Vector2(VELI_ICON_SCALE, VELI_ICON_SCALE)
 			_veli_kick_icon.z_index = 5
 			add_child(_veli_kick_icon)
-		_veli_kick_icon.position = Vector2(0, -220)
+		_veli_kick_icon.position = Vector2(0, VELI_ICON_Y_OFFSET)
 	elif _veli_kick_icon:
 		_veli_kick_icon.visible = false
 
@@ -285,8 +335,8 @@ func apply_character(def: CharacterDef) -> void:
 	gong_hits_everywhere = def.gong_hits_everywhere
 	passive_damage_per_second = def.passive_damage_per_second
 	_passive_damage_cooldown = 0
-	anim.scale = Vector2(3.0, 3.0) * def.sprite_scale
-	anim.offset = Vector2(0, -64) + def.sprite_offset
+	anim.scale = Vector2(SPRITE_BASE_SCALE, SPRITE_BASE_SCALE) * def.sprite_scale
+	anim.offset = Vector2(0, SPRITE_Y_OFFSET) + def.sprite_offset
 	_cache_all_animation_data()
 	anim.play("idle")
 
@@ -528,7 +578,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 		if state == State.FALLEN:
 			anim.stop()
 			anim.frame = 2
-			velocity.y = -500.0
+			velocity.y = HIT_BOUNCE_VELOCITY
 		elif no_knockdown:
 			pass
 		elif block_broken or not is_on_floor() or hit_count >= HIT_COMBO_THRESHOLD:
@@ -536,7 +586,7 @@ func take_hit(is_kick: bool, attacker_pos: Vector2, is_counter: bool = false, da
 			hit_count = 0
 			_hit_ticks = 0
 			_enter_fallen()
-			if launch: velocity.y = -900.0
+			if launch: velocity.y = LAUNCH_VELOCITY
 		else:
 			_enter_hit()
 	_hitstop_ticks = HITSTOP_TICKS
@@ -599,8 +649,8 @@ func _enter_launched(attacker_pos: Vector2) -> void:
 	_attacking = false
 	_block_stun_ticks = 0
 	_blocked_punch = false
-	_apply_impact(attacker_pos, 3)
-	velocity.y = -1100.0
+	_apply_impact(attacker_pos, LAUNCH_KNOCKBACK_MULT)
+	velocity.y = STRONG_LAUNCH_VELOCITY
 	_current_anim = ""
 	_play_anim("jump")
 
@@ -623,15 +673,15 @@ func _end_invisibility() -> void:
 func _do_kick_teleport_behind() -> void:
 	if _opponent == null: return
 	var my_facing = -1.0 if anim.flip_h else 1.0
-	var target_x: float = global_position.x - my_facing * 300.0
+	var target_x: float = global_position.x - my_facing * KICK_TELEPORT_OFFSET
 	var target_y: float = global_position.y
 
 	# Clamp to map bounds so the opponent doesn't teleport through walls
-	var clamped_x: float= clamp(target_x, 10.0, 1270.0)
-	var clamped_y: float= clamp(target_y, 100.0, 460.0)
+	var clamped_x: float = clamp(target_x, MAP_LEFT_BOUND, MAP_RIGHT_BOUND)
+	var clamped_y: float = clamp(target_y, MAP_TOP_BOUND, MAP_BOTTOM_BOUND)
 
 	# Only teleport if the target is within bounds
-	if abs(target_x - clamped_x) < 5.0 and abs(target_y - clamped_y) < 5.0:
+	if abs(target_x - clamped_x) < TELEPORT_SNAP_TOLERANCE and abs(target_y - clamped_y) < TELEPORT_SNAP_TOLERANCE:
 		_opponent.global_position.x = clamped_x
 		_opponent.global_position.y = clamped_y
 		_opponent.velocity.x = 0.0
@@ -641,16 +691,15 @@ func _do_flypunch_teleport() -> void:
 	if _opponent == null: return
 	# "behind" = the side the opponent is NOT facing
 	var opp_facing := -1.0 if _opponent.anim.flip_h else 1.0
-	var target_x := _opponent.global_position.x - opp_facing * 120.0
+	var target_x := _opponent.global_position.x - opp_facing * FLYPUNCH_TELEPORT_OFFSET
 	var target_y := _opponent.global_position.y
 
 	# Clamp to map bounds so Drago doesn't teleport through walls
-	# Map walls are at ~x=10 (left) and ~x=1270 (right), ground at ~y=436
-	var clamped_x := clamp(target_x, 10.0, 1270.0)
-	var clamped_y := clamp(target_y, 100.0, 460.0)
+	var clamped_x := clamp(target_x, MAP_LEFT_BOUND, MAP_RIGHT_BOUND)
+	var clamped_y := clamp(target_y, MAP_TOP_BOUND, MAP_BOTTOM_BOUND)
 
 	# Only teleport if the target is within bounds
-	if abs(target_x - clamped_x) < 5.0 and abs(target_y - clamped_y) < 5.0:
+	if abs(target_x - clamped_x) < TELEPORT_SNAP_TOLERANCE and abs(target_y - clamped_y) < TELEPORT_SNAP_TOLERANCE:
 		global_position.x = clamped_x
 		global_position.y = clamped_y
 		velocity.y = 0.0
@@ -666,7 +715,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		return
 
 	var y_diff = abs(global_position.y - _opponent.global_position.y)
-	var y_threshold = 330 if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else 120
+	var y_threshold = HIT_Y_THRESHOLD_AIRBORNE if (_opponent.state == State.FALLEN and not _opponent.is_on_floor()) else HIT_Y_THRESHOLD_STANDING
 	if y_diff > y_threshold and not gong_hits_everywhere: return
 	var facing_dir  := -1.0 if anim.flip_h else 1.0
 	var to_opponent := _opponent.global_position.x - global_position.x
@@ -695,7 +744,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if is_kick and _veli_kick_icon:
 		_veli_kick_icon.visible = true
 		var side = -1.0 if anim.flip_h else 1.0
-		_veli_kick_icon.position = Vector2(side * 140, -220)
+		_veli_kick_icon.position = Vector2(side * VELI_ICON_X_SIDE, VELI_ICON_Y_OFFSET)
 
 	_hitstop_ticks = HITSTOP_TICKS
 	if punch_makes_invisible and not is_kick:
@@ -726,7 +775,7 @@ func _launch_projectile() -> void:
 	p.vy = float(-cfg.speed) if cfg.kick_upwards and _proj_pending_is_kick else 0.0
 	p.lifetime = 0
 	if cfg.lottery_mode:
-		var values = [5, 10, 20, 30]
+		var values = LOTTERY_DAMAGE_VALUES
 		p.value = values[randi() % 4]
 		p.is_heal = randi() % 2 == 0
 		p.label.text = ("+" if p.is_heal else "-") + str(p.value)
@@ -781,7 +830,7 @@ func _physics_process(delta: float) -> void:
 
 	if not is_on_floor_t:
 		var grav_scale := fall_gravity_scale if state == State.NORMAL else 1.0
-		velocity.y += GRAVITY * (3.0 if inp.down else 1.0) * grav_scale * delta
+		velocity.y += GRAVITY * (FAST_FALL_MULTIPLIER if inp.down else 1.0) * grav_scale * delta
 
 	if state == State.FALLEN and _current_anim == "jump" and velocity.y >= 0:
 		_current_anim = ""
@@ -841,7 +890,7 @@ func _tick_timers() -> bool:
 			else:
 				var _is_kick_attack := _attack_is_kick or _current_anim == "flykick"
 				if punch_self_damages and not _is_kick_attack:
-					health -= 5
+					health -= PUNCH_SELF_DAMAGE
 					if _health_bar: _health_bar.value = health
 					if health <= 0 and not is_defeated: _enter_defeated()
 				_try_hit_opponent(_is_kick_attack)
@@ -880,7 +929,7 @@ func _tick_timers() -> bool:
 				_opponent._enter_defeated()
 				return true
 
-	_knockback_x *= 5.0 / 6.0
+	_knockback_x *= KNOCKBACK_DECAY_FACTOR
 
 	if _block_stun_ticks > 0:
 		_block_stun_ticks -= 1
@@ -906,11 +955,11 @@ func _calculate_velocity_x(inp: InputSnapshot, is_on_floor_t: bool, to_opp: floa
 	elif _attacking and (is_on_floor_t or (_lunge_upwards_kick and _attack_is_kick)) and not fires_projectile:
 		var lunge := 1.0 if not anim.flip_h else -1.0
 		var lunge_scale := kick_lunge_scale if _attack_is_kick else punch_lunge_scale
-		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t: velocity.y = -(speed * 0.7 * lunge_scale)
-		return lunge * (speed * 0.3 * lunge_scale)
+		if _lunge_upwards_kick and _attack_is_kick and is_on_floor_t: velocity.y = -(speed * LUNGE_VERTICAL_FRACTION * lunge_scale)
+		return lunge * (speed * LUNGE_HORIZONTAL_FRACTION * lunge_scale)
 	elif _attacking and flykick_forward and _current_anim == "flykick":
 		var lunge := 1.0 if not anim.flip_h else -1.0
-		return lunge * 2000.0
+		return lunge * FLYKICK_FORWARD_SPEED
 	else:
 		var current_speed := speed * (WALK_BACK_SPEED_MULT if is_walking_back else 1.0)
 		if velocity.y != 0: current_speed = jump_speed
@@ -929,7 +978,7 @@ func _apply_ipman_attraction() -> void:
 	if _ipman_target != null and is_instance_valid(_ipman_target):
 		var to_ipman: Vector2 = _ipman_target.global_position - global_position
 		if to_ipman.length() > 1.0:
-			global_position += to_ipman.normalized() * 0.5
+			global_position += to_ipman.normalized() * IPMAN_ATTRACTION_SPEED
 
 
 func _handle_pending_abilities(is_on_floor_t: bool) -> void:
@@ -1001,14 +1050,14 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 		p.y += p.vy
 		p.lifetime += 1
 
-		if p.lifetime > cfg.lifetime_ticks or p.x < -200 or p.x > 1500:
+		if p.lifetime > cfg.lifetime_ticks or p.x < PROJ_OUT_BOUND_LEFT or p.x > PROJ_OUT_BOUND_RIGHT:
 			_deactivate_proj(p)
 			continue
 
 		if cfg.lottery_mode:
 			var sdx := abs(p.x - self_x)
 			var sdy := abs(p.y - self_y)
-			if sdx < cfg.hit_radius and sdy < cfg.y_tolerance and self_y + 50 >= p.y:
+			if sdx < cfg.hit_radius and sdy < cfg.y_tolerance and self_y + PROJ_GROUND_TOLERANCE >= p.y:
 				_deactivate_proj(p)
 				if p.is_heal:
 					pending_self_heal += p.value
@@ -1019,7 +1068,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 
 		var dx := abs(p.x - opp_x)
 		var dy := abs(p.y - opp_y)
-		if dx < cfg.hit_radius and dy < cfg.y_tolerance and opp_y + 50 >= p.y:
+		if dx < cfg.hit_radius and dy < cfg.y_tolerance and opp_y + PROJ_GROUND_TOLERANCE >= p.y:
 			_deactivate_proj(p)
 			if cfg.lottery_mode:
 				if p.is_heal:
@@ -1096,5 +1145,5 @@ func _update_animation_state(direction: float, is_on_floor_t: bool, should_block
 			anim.frame = 1
 			anim.stop()
 	if not _attacking and is_on_floor_t and (state == State.NORMAL or state == State.BLOCKING):
-		if _opponent and dist_to_opp > 50:
+		if _opponent and dist_to_opp > FLIP_DIRECTION_THRESHOLD:
 			anim.flip_h = to_opp < 0
