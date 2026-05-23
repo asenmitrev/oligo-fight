@@ -108,6 +108,9 @@ var passive_damage_per_second: int = 0
 var _passive_damage_cooldown: int = 0
 var flykick_forward: bool = false
 var fires_projectile: bool = false
+var jump_teleports: bool = false
+var _jump_teleport_pending: bool = false
+var _jump_teleport_was_airborne: bool = false
 
 # Projectile runtime state
 var _proj_cfg = null  # ProjectileConfig
@@ -334,6 +337,7 @@ func apply_character(def: CharacterDef) -> void:
 	kick_teleports_behind = def.kick_teleports_behind
 	gong_hits_everywhere = def.gong_hits_everywhere
 	passive_damage_per_second = def.passive_damage_per_second
+	jump_teleports = def.jump_teleports
 	_passive_damage_cooldown = 0
 	anim.scale = Vector2(SPRITE_BASE_SCALE, SPRITE_BASE_SCALE) * def.sprite_scale
 	anim.offset = Vector2(0, SPRITE_Y_OFFSET) + def.sprite_offset
@@ -443,6 +447,7 @@ func reset_for_round() -> void:
 	_proj_launch_tick = -1
 	_proj_launch_count = 0
 	_proj_pending_is_flypunch = false
+	_jump_teleport_pending = false
 	global_position = _start_position
 	if _health_bar: _health_bar.value = health
 	_play_anim("idle")
@@ -515,6 +520,10 @@ func _handle_animation_finished() -> void:
 			hit_count = 0
 			if _opponent: _opponent._current_combo_count = 0
 		_:
+			if _jump_teleport_pending and _current_anim == "jump":
+				_jump_teleport_pending = false
+				_do_jump_teleport()
+				return
 			if _attacking:
 				_attacking = false
 				if state == State.NORMAL: _play_anim("idle")
@@ -668,6 +677,18 @@ func _end_invisibility() -> void:
 	if _invis_ticks > 0:
 		_invis_ticks = 0
 		anim.modulate.a = 1.0
+
+
+func _do_jump_teleport() -> void:
+	var mid := (MAP_LEFT_BOUND + MAP_RIGHT_BOUND) / 2.0
+	var half := mid - MAP_LEFT_BOUND
+	var target_x: float
+	if global_position.x >= mid:
+		target_x = MAP_LEFT_BOUND + randf() * half
+	else:
+		target_x = mid + randf() * half
+	global_position = Vector2(target_x, global_position.y)
+	velocity = Vector2.ZERO
 
 
 func _do_kick_teleport_behind() -> void:
@@ -867,7 +888,15 @@ func _handle_attack_input(inp: InputSnapshot, is_on_floor_t: bool, is_blocking_i
 			elif inp.kick_jp:
 				_attacking = true
 				_play_anim("flykick" if not is_on_floor_t else "kick")
-		if inp.jump_jp and is_on_floor_t and not _attacking: velocity.y = jump_velocity
+		if inp.jump_jp and is_on_floor_t and not _attacking:
+			if jump_teleports:
+				_jump_teleport_pending = true
+				_play_anim("jump")
+				var _phz := Engine.iterations_per_second
+				var _fps_int: int = max(1, int(round(anim.frames.get_animation_speed("jump") * anim.speed_scale)))
+				_anim_ticks_remaining = (anim.frames.get_frame_count("jump") * _phz + _fps_int - 1) / _fps_int
+			else:
+				velocity.y = jump_velocity
 
 
 func _tick_timers() -> bool:
@@ -940,6 +969,8 @@ func _tick_timers() -> bool:
 	if _whataboutism_window_ticks > 0:
 		_whataboutism_window_ticks -= 1
 		if _whataboutism_window_ticks == 0: _whataboutism_block_count = 0
+
+	pass
 
 	return false
 
@@ -1114,7 +1145,7 @@ func _process_projectiles(opp_pos: Vector2) -> void:
 
 
 func _update_animation_state(direction: float, is_on_floor_t: bool, should_block_visually: bool, to_opp: float, dist_to_opp: float) -> void:
-	if state == State.NORMAL and not _attacking:
+	if state == State.NORMAL and not _attacking and not _jump_teleport_pending:
 		if should_block_visually and is_on_floor_t:
 			_play_anim("block")
 			if anim.frame >= 1:

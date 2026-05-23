@@ -80,6 +80,7 @@ export var proj_lottery_mode: bool = false
 export var gong_hits_everywhere: bool = false
 export var passive_damage_per_second: int = 0
 export var punch_insta_knockdown: bool = false
+export var jump_teleports: bool = false
 
 func ensure_loaded() -> void:
 	# Lazy-load sprite frames

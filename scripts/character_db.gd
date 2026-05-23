@@ -296,10 +296,12 @@ func _init() -> void:
 	valka.speed = 350.0
 	valka.jump_velocity = JUMP_VELOCITY
 	valka.punch_damage = 13
-
+	valka.max_health = 135.0
 	valka.kick_damage = 10
 	valka.block_damage_modifier = 0.15
 	valka.max_health = 105.0
+	valka.block_damage_modifier = 0.0
+	valka.jump_teleports = true
 	_register(valka)
 
 
