@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/on_kick_simonka.ogg-df03292b5e57b3bd478088b43f4f1299.oggstr"
+
+[deps]
+
+source_file="res://assets/simonka/sfx/on_kick_simonka.ogg"
+dest_files=[ "res://.import/on_kick_simonka.ogg-df03292b5e57b3bd478088b43f4f1299.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

@@ -6,6 +6,8 @@ const _georgi_frames: SpriteFrames = preload("res://resources/georgi_sprite_fram
 const _boekov_frames: SpriteFrames = preload("res://resources/boekov_sprite_frames.tres")
 const _boekov_preview_frames: SpriteFrames = preload("res://resources/boekov_preview_sprite_frames.tres")
 const _kraska_frames: SpriteFrames = preload("res://resources/kraska_sprite_frames.tres")
+const _simonka_punch_sound: AudioStream = preload("res://assets/simonka/sfx/on_punch_simonka.ogg")
+const _simonka_kick_sound: AudioStream = preload("res://assets/simonka/sfx/on_kick_simonka.ogg")
 
 var _by_display_name: Dictionary = {}
 var all_characters: Array = []
@@ -34,6 +36,8 @@ func _init() -> void:
 	simonka.block_damage_modifier = 0.12
 	simonka.max_health = 100
 	simonka.sprite_scale = 0.9
+	simonka.on_punch_sound = _simonka_punch_sound
+	simonka.on_kick_sound = _simonka_kick_sound
 	_register(simonka)
 
 	var georgi = _make_def("georgi", "Georgi", _georgi_frames, Color(1, 1, 1, 1))
