@@ -18,6 +18,8 @@ export var launch_punch: bool = false
 export var combos_enabled: bool = true
 export var body_punch_enabled: bool = false
 export var kick_speed_scale: float = 1.0
+export var on_punch_sound: AudioStream = null
+export var on_kick_sound: AudioStream = null
 
 
 func get_preview_sprite_frames() -> SpriteFrames:

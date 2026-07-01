@@ -66,6 +66,8 @@ var launch_punch: bool = false
 var combos_enabled: bool = true
 var body_punch_enabled: bool = false
 var kick_speed_scale: float = 1.0
+var on_punch_sound: AudioStream = null
+var on_kick_sound: AudioStream = null
 var stay_down: bool = false
 var input_disabled: bool = false
 var _input_buffer: Array = []
@@ -77,6 +79,8 @@ var _pending_special: bool = false
 var _anim_hit_fired: bool = false
 var _hit_target_frame: int = -1
 var _attack_is_kick: bool = false
+
+var _sfx_player: AudioStreamPlayer2D
 
 
 func _ready() -> void:
@@ -91,12 +95,16 @@ func _ready() -> void:
 		_health_bar = get_node(health_bar_path)
 		_health_bar.max_value = max_health
 		_health_bar.value = health
+	_sfx_player = AudioStreamPlayer2D.new()
+	add_child(_sfx_player)
 
 
 func apply_character(def: CharacterDef) -> void:
 	display_name = def.display_name
 	anim.frames = def.sprite_frames
 	anim.modulate = def.modulate
+	on_punch_sound = def.on_punch_sound
+	on_kick_sound = def.on_kick_sound
 	_punch_arm_extension = def.punch_arm_extension
 	speed = def.speed
 	jump_velocity = def.jump_velocity
@@ -396,6 +404,7 @@ func _try_hit_opponent(is_kick: bool) -> void:
 	if not hit_registered:
 		return
 	_hitstop_timer = HITSTOP_SECONDS
+	_play_attack_sound(is_kick)
 
 	if launch_punch and not is_kick and not _opponent.is_defeated:
 		_opponent._enter_launched(global_position)
@@ -413,6 +422,14 @@ func _try_hit_opponent(is_kick: bool) -> void:
 		_current_combo_count += 1
 	var show_combo = combos_enabled and (_opponent.state == State.FALLEN)
 	emit_signal("hit_landed", is_kick, _current_combo_count if show_combo else 0)
+
+
+func _play_attack_sound(is_kick: bool) -> void:
+	var sound: AudioStream = on_kick_sound if is_kick else on_punch_sound
+	if sound == null:
+		return
+	_sfx_player.stream = sound
+	_sfx_player.play()
 
 
 func _record_input(input_type: String) -> void:
