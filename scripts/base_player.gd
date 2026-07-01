@@ -44,6 +44,7 @@ const MAP_RIGHT_BOUND         := 1270.0
 const MAP_TOP_BOUND           := 100.0
 const MAP_BOTTOM_BOUND        := 460.0
 const TELEPORT_SNAP_TOLERANCE := 5.0    # cancel teleport if target would clip a wall
+const JUMP_TELEPORT_SAFE_DIST  := 200.0  # minimum distance from opponent when jump-teleporting
 
 # Teleport offsets
 const KICK_TELEPORT_OFFSET     := 300.0  # distance behind attacker where opponent is placed
@@ -83,6 +84,7 @@ var kick_speed_scale: float = 1.0
 var punch_speed_scale: float = 1.0
 var flykick_speed_scale: float = 1.0
 var flypunch_speed_scale: float = 1.0
+var jump_speed_scale: float = 1.0
 var kick_lunge_scale: float = 1.0
 var punch_lunge_scale: float = 1.0
 var kick_heals_self: int = 0
@@ -274,6 +276,7 @@ func apply_character(def: CharacterDef) -> void:
 	punch_speed_scale = def.punch_speed_scale
 	flykick_speed_scale = def.flykick_speed_scale
 	flypunch_speed_scale = def.flypunch_speed_scale
+	jump_speed_scale = def.jump_speed_scale
 	kick_lunge_scale = def.kick_lunge_scale
 	punch_lunge_scale = def.punch_lunge_scale
 	kick_heals_self = def.kick_heals_self
@@ -386,6 +389,7 @@ func _cache_all_animation_data() -> void:
 			elif anim_name == "flykick": ss = flykick_speed_scale
 			elif anim_name == "punch" or anim_name == "body_punch": ss = punch_speed_scale
 			elif anim_name == "flypunch": ss = flypunch_speed_scale
+			elif anim_name == "jump": ss = jump_speed_scale
 			variants = [["", ss]]
 		for v in variants:
 			var suffix: String = v[0]
@@ -606,7 +610,7 @@ func _handle_whataboutism_on_block() -> void:
 	if whataboutism_blocks:
 		_whataboutism_window_ticks = _whataboutism_window_ticks_max
 		_whataboutism_block_count += 1
-		if _whataboutism_block_count >= 3:
+		if _whataboutism_block_count >= 2:
 			_whataboutism_block_count = 0
 			_whataboutism_window_ticks = 0
 			emit_signal("whataboutism_triggered")
@@ -682,11 +686,15 @@ func _end_invisibility() -> void:
 func _do_jump_teleport() -> void:
 	var mid := (MAP_LEFT_BOUND + MAP_RIGHT_BOUND) / 2.0
 	var half := mid - MAP_LEFT_BOUND
+	var opp_x := _opponent.global_position.x if _opponent else -99999.0
 	var target_x: float
-	if global_position.x >= mid:
-		target_x = MAP_LEFT_BOUND + randf() * half
-	else:
-		target_x = mid + randf() * half
+	for _i in range(10):
+		if global_position.x >= mid:
+			target_x = MAP_LEFT_BOUND + randf() * half
+		else:
+			target_x = mid + randf() * half
+		if abs(target_x - opp_x) >= JUMP_TELEPORT_SAFE_DIST:
+			break
 	global_position = Vector2(target_x, global_position.y)
 	velocity = Vector2.ZERO
 

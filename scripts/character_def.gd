@@ -29,6 +29,7 @@ export var lunge_upwards_kick: bool = false
 export var punch_speed_scale: float = 1.2
 export var flykick_speed_scale: float = 1.0
 export var flypunch_speed_scale: float = 1.0
+export var jump_speed_scale: float = 1.0
 export var kick_lunge_scale: float = 1.0
 export var punch_lunge_scale: float = 1.0
 export var kick_heals_self: int = 0

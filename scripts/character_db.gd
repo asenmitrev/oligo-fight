@@ -208,6 +208,7 @@ func _init() -> void:
 	yavor.jump_velocity = JUMP_VELOCITY
 	yavor.punch_damage = 13
 	yavor.kick_damage = 10
+	yavor.punch_speed_scale = 1.1
 	yavor.block_damage_modifier = 0.15
 	yavor.max_health = 105.0
 	yavor.punch_arm_extension = 160
@@ -296,12 +297,12 @@ func _init() -> void:
 	valka.speed = 350.0
 	valka.jump_velocity = JUMP_VELOCITY
 	valka.punch_damage = 13
-	valka.max_health = 135.0
 	valka.kick_damage = 10
-	valka.block_damage_modifier = 0.15
-	valka.max_health = 105.0
-	valka.block_damage_modifier = 0.0
+	valka.max_health = 125.0
+	valka.block_damage_modifier = 0.1
 	valka.jump_teleports = true
+	valka.jump_speed_scale = 2.0
+	valka.punch_lunge_scale = 8.0
 	_register(valka)
 
 
